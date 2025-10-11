@@ -1,4 +1,5 @@
-// Fictional stock market simulation with Chart.js, dark theme, animated transitions
+// Dashboard-style compact stock market simulation
+
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies" },
     { symbol: "FRUIQ", name: "FruityQ Foods" },
@@ -22,32 +23,23 @@ const STOCKS = [
     { symbol: "TREND", name: "Trendify Retail" }
 ];
 
-// Portfolio setup
-let portfolio = {
-    cash: 10000,
-    stocks: {}
-};
-STOCKS.forEach(stock => {
-    portfolio.stocks[stock.symbol] = 0;
-});
+let portfolio = { cash: 10000, stocks: {} };
+STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
 
-// Initial prices
-let prices = {};
-function randomPrice() {
-    return +(Math.random() * 900 + 100).toFixed(2);
-}
+let prices = {}, prevPrices = {};
+function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 function setRandomPrices() {
+    prevPrices = {...prices};
     STOCKS.forEach(stock => {
         prices[stock.symbol] = randomPrice();
     });
 }
 setRandomPrices();
 
-// Portfolio value tracking
 let portfolioHistory = [getPortfolioValue()];
 let day = 1;
 
-// Chart.js setup with animated transitions
+// Chart.js setup
 let ctx = document.getElementById('portfolioChart').getContext('2d');
 let chartData = {
     labels: [day],
@@ -55,10 +47,10 @@ let chartData = {
         label: 'Portfolio Value',
         data: [portfolioHistory[0]],
         borderColor: '#00FC87',
-        backgroundColor: 'rgba(14,210,247,0.15)',
+        backgroundColor: 'rgba(14,210,247,0.10)',
         fill: true,
-        tension: 0.3,
-        pointRadius: 5,
+        tension: 0.28,
+        pointRadius: 4,
         pointBackgroundColor: '#00FC87',
         pointBorderColor: '#23263A'
     }]
@@ -67,21 +59,10 @@ let portfolioChart = new Chart(ctx, {
     type: 'line',
     data: chartData,
     options: {
-        animation: {
-            duration: 900,
-            easing: 'easeOutCubic'
-        },
+        animation: { duration: 700, easing: 'easeOutQuad' },
         scales: {
-            x: {
-                title: { display: true, text: 'Day', color: '#00FC87' },
-                grid: { color: '#23263A' },
-                ticks: { color: '#00FC87' }
-            },
-            y: {
-                title: { display: true, text: 'Portfolio Value ($)', color: '#00FC87' },
-                grid: { color: '#23263A' },
-                ticks: { color: '#00FC87' }
-            }
+            x: { display: false },
+            y: { display: false }
         },
         plugins: {
             legend: { display: false },
@@ -96,97 +77,77 @@ let portfolioChart = new Chart(ctx, {
     }
 });
 
-function updatePortfolioView() {
-    document.getElementById('cash').textContent = `Cash: $${portfolio.cash.toFixed(2)}`;
-    let ul = document.getElementById('stocks');
-    ul.innerHTML = "";
+function updateCash() {
+    document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
+}
+function updateStockTable() {
+    let tbody = document.getElementById('stock-table');
+    tbody.innerHTML = "";
     STOCKS.forEach(stock => {
-        let qty = portfolio.stocks[stock.symbol] || 0;
-        if (qty > 0) {
-            let li = document.createElement('li');
-            li.textContent = `${stock.name} (${stock.symbol}): ${qty} shares`;
-            ul.appendChild(li);
-        }
+        let price = prices[stock.symbol];
+        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+        let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${stock.symbol}</td>
+            <td>$${price.toFixed(2)}</td>
+            <td class="${className}">${changeStr}</td>
+        `;
+        tbody.appendChild(tr);
     });
 }
-
-function updateMarketView() {
-    let tbody = document.getElementById('market-stocks');
+function updateTradeTable() {
+    let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
         let tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${stock.name} (${stock.symbol})</td>
-            <td>$${prices[stock.symbol]}</td>
+            <td>${stock.symbol}</td>
             <td>
-                <input type="number" min="1" value="1" style="width:60px;" id="buy_${stock.symbol}">
+                <input type="number" min="1" value="1" style="width:40px;" id="buy_${stock.symbol}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
             </td>
             <td>
-                <input type="number" min="1" value="1" style="width:60px;" id="sell_${stock.symbol}">
+                <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
                 <button onclick="sellStock('${stock.symbol}')">Sell</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
-
 window.buyStock = function(symbol) {
     let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
     let cost = prices[symbol] * qty;
     if (qty > 0 && portfolio.cash >= cost) {
         portfolio.cash -= cost;
         portfolio.stocks[symbol] += qty;
-        updatePortfolioView();
-    } else {
-        animateButton(`buy_${symbol}`, false);
+        updateCash();
+        updateLeaderboard();
     }
 };
-
 window.sellStock = function(symbol) {
     let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
     let owned = portfolio.stocks[symbol];
     if (qty > 0 && owned >= qty) {
         portfolio.cash += prices[symbol] * qty;
         portfolio.stocks[symbol] -= qty;
-        updatePortfolioView();
-    } else {
-        animateButton(`sell_${symbol}`, false);
+        updateCash();
+        updateLeaderboard();
     }
 };
-
-// Animate input field on error
-function animateButton(inputId, success) {
-    let input = document.getElementById(inputId);
-    input.style.transition = "box-shadow 0.3s";
-    input.style.boxShadow = success ? "0 0 12px #00FC87" : "0 0 14px #FC0032";
-    setTimeout(() => {
-        input.style.boxShadow = "";
-    }, 500);
-}
-
 document.getElementById('next-day').onclick = function() {
     setRandomPrices();
-    updateMarketView();
+    updateStockTable();
+    updateTradeTable();
     day++;
     let value = getPortfolioValue();
     portfolioHistory.push(value);
     portfolioChart.data.labels.push(day);
     portfolioChart.data.datasets[0].data.push(value);
     portfolioChart.update();
-    animateCard('.chart-section');
+    updateLeaderboard();
 };
-
-// Animate card highlight
-function animateCard(selector) {
-    let el = document.querySelector(selector);
-    if (!el) return;
-    el.style.boxShadow = "0 0 36px 4px #00fc87";
-    setTimeout(() => {
-        el.style.boxShadow = "";
-    }, 800);
-}
-
 function getPortfolioValue() {
     let value = portfolio.cash;
     STOCKS.forEach(stock => {
@@ -194,13 +155,10 @@ function getPortfolioValue() {
     });
     return value;
 }
-
-// Leaderboard using localStorage
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
     return scores.sort((a, b) => b.value - a.value).slice(0, 10);
 }
-
 function saveScore() {
     let name = prompt("Enter your name for the leaderboard:");
     if (!name) return;
@@ -210,21 +168,21 @@ function saveScore() {
     localStorage.setItem('leaderboard_scores', JSON.stringify(scores));
     updateLeaderboard();
 }
-
 document.getElementById('save-score').onclick = saveScore;
-
 function updateLeaderboard() {
     let scores = loadScores();
     let ul = document.getElementById('scores');
     ul.innerHTML = "";
     scores.forEach((score, idx) => {
+        let initials = score.name.split(' ').map(w=>w[0]).join('').toUpperCase();
         let li = document.createElement('li');
-        li.innerHTML = `<span style="color:#00FC87;">${idx+1}.</span> ${score.name}: <span style="color:#0ED2F7;">$${score.value}</span>`;
+        li.innerHTML = `<span style="background:#00fc87; color:#21293a; border-radius:50%; padding:2px 8px; margin-right:6px;">${initials}</span> <strong>${score.name}</strong>: <span class="price-up">$${score.value}</span>`;
         ul.appendChild(li);
     });
 }
 
 // Initial UI setup
-updatePortfolioView();
-updateMarketView();
+updateCash();
+updateStockTable();
+updateTradeTable();
 updateLeaderboard();
