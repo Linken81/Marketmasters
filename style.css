@@ -3,7 +3,7 @@ html, body {
     width: 100%;
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', Arial, sans-serif;
     background: #3687c6;
 }
 
@@ -15,136 +15,185 @@ html, body {
         "header header header"
         "left-panel stocks-panel leaderboard-panel"
         "left-panel stocks-panel leaderboard-panel";
-    gap: 20px;
+    gap: 32px;
     height: 100vh;
     width: 100vw;
     position: relative;
-    padding: 18px;
+    padding: 32px;
     box-sizing: border-box;
 }
 
 .header {
     grid-area: header;
     display: flex;
-    align-items: flex-start;
-    font-size: 2rem;
+    align-items: flex-end;
+    font-size: 2.2rem;
     font-weight: bold;
     background: transparent;
-    padding-left: 10px;
+    padding-left: 12px;
+    height: 80px;
+    letter-spacing: 1px;
+    color: #151f2b;
 }
 
 .left-panel {
     grid-area: left-panel;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 32px;
+}
+
+.box {
+    background: rgba(255,255,255,0.09);
+    border: 2px solid #23406c;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(40, 70, 130, 0.07);
+    padding: 24px 32px;
+    margin-bottom: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .chart-panel {
-    border: 2px solid #222;
-    background: #3687c6;
-    padding: 18px 18px 0 18px;
-    min-height: 160px;
+    min-height: 150px;
     max-height: 200px;
-    margin-bottom: 10px;
 }
 
 .chart-title {
     font-size: 1.2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #23406c;
 }
 
 .cash {
-    font-size: 1.1rem;
-    margin-top: 10px;
+    font-size: 1rem;
+    margin-top: 18px;
+    color: #23406c;
 }
 
 .trade-panel {
-    border: 2px solid #222;
-    background: #3687c6;
-    padding: 18px 18px 18px 18px;
     min-height: 180px;
-    max-height: 240px;
+    max-height: 340px;
+    justify-content: flex-start;
+}
+
+.trade-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #23406c;
 }
 
 .stocks-panel {
     grid-area: stocks-panel;
-    border: 2px solid #222;
-    background: #3687c6;
-    padding: 18px 0 0 0;
-    min-width: 0;
+    align-items: flex-start;
 }
 
 .stocks-title {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     font-weight: bold;
-    text-align: center;
-    margin-bottom: 5px;
+    text-align: left;
+    margin-bottom: 20px;
+    color: #23406c;
 }
 
 .leaderboard-panel {
     grid-area: leaderboard-panel;
-    border: 2px solid #222;
-    background: #3687c6;
-    padding: 18px 0 0 0;
-    min-width: 0;
+    align-items: flex-start;
 }
 
 .leaderboard-title {
     font-size: 1.2rem;
     font-weight: bold;
-    text-align: center;
-    margin-bottom: 5px;
+    margin-bottom: 20px;
+    color: #23406c;
 }
 
 .buttons-panel {
     position: absolute;
-    right: 50px;
+    right: 48px;
     bottom: 36px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
+    z-index: 10;
 }
 
 #next-day {
-    padding: 12px 30px;
+    padding: 14px 36px;
     background: #27d13c;
     color: #222;
-    font-size: 1.1em;
+    font-size: 1.08em;
     font-weight: 700;
-    border-radius: 5px;
-    border: 2px solid #222;
-    margin-bottom: 8px;
+    border-radius: 7px;
+    border: none;
+    box-shadow: 0 2px 8px #23406c44;
+    margin-bottom: 6px;
     cursor: pointer;
+    transition: background 0.18s;
+}
+
+#next-day:hover {
+    background: #1fa028;
+    color: #fff;
 }
 
 #save-score {
-    padding: 12px 28px;
+    padding: 14px 34px;
     background: #ffe600;
     color: #222;
-    font-size: 1.1em;
+    font-size: 1.08em;
     font-weight: 700;
-    border-radius: 5px;
-    border: 2px solid #222;
+    border-radius: 7px;
+    border: none;
+    box-shadow: 0 2px 8px #23406c44;
     cursor: pointer;
+    transition: background 0.18s;
+}
+
+#save-score:hover {
+    background: #ffb800;
+    color: #fff;
 }
 
 table {
     width: 100%;
-    border-collapse: collapse;
-    background: transparent;
+    border-collapse: separate;
+    border-spacing: 0 5px;
     font-size: 1em;
+    background: none;
 }
 
-th, td {
-    border: none;
-    padding: 4px 8px;
+th {
     text-align: left;
+    font-weight: 700;
+    font-size: 1.07em;
+    color: #23406c;
+    padding-bottom: 6px;
+    letter-spacing: 0.5px;
+}
+
+td {
+    font-size: 1em;
+    color: #23263a;
+    padding: 2px 8px;
 }
 
 ul {
     list-style: none;
     padding: 0;
     margin: 0;
+}
+
+@media (max-width: 1100px) {
+    .dashboard {
+        grid-template-columns: 1fr 1.7fr 1fr;
+        grid-template-rows: 70px 200px 1fr;
+        gap: 18px;
+        padding: 10px;
+    }
+    .box { padding: 16px 10px; }
+    .buttons-panel { right: 10px; bottom: 12px; }
 }
