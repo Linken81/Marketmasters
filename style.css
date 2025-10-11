@@ -3,187 +3,155 @@ html, body {
     width: 100%;
     margin: 0;
     padding: 0;
-    font-family: 'Roboto', Arial, sans-serif;
-    background: linear-gradient(135deg, #1d2235 70%, #23263A 100%);
-    color: #E7EBF3;
-    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #3687c6; /* blue wireframe color */
 }
 
-the dashboard {
+.dashboard {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 56px 1fr 180px;
+    grid-template-columns: 1.7fr 2.2fr 1.3fr;
+    grid-template-rows: 90px 220px 1fr;
     grid-template-areas:
         "header header header"
-        "stock-list chart-panel leaderboard-panel"
-        ".        trade-panel   .";
-    gap: 8px;
+        "chart-panel stocks-panel leaderboard-panel"
+        "trade-panel stocks-panel leaderboard-panel";
+    gap: 0px;
     height: 100vh;
     width: 100vw;
-    box-sizing: border-box;
-    padding: 6px;
+    position: relative;
 }
 
-.panel {
-    background: #23263A;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.13);
-    padding: 8px 12px;
+.header {
+    grid-area: header;
     display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 18px 0 0 30px;
+    font-size: 2rem;
+    font-weight: bold;
+    background: transparent;
 }
 
-.header { grid-area: header; }
-.stock-list { grid-area: stock-list; }
-.chart-panel { grid-area: chart-panel; }
-.leaderboard-panel { grid-area: leaderboard-panel; }
-.trade-panel { grid-area: trade-panel; height: 180px; }
+.logo {
+    margin-right: 30px;
+}
 
-.stock-list {
-    overflow-y: auto;
-    font-size: 0.97em;
-    min-width: 0;
+.cash {
+    margin-top: 60px;
+    margin-left: -110px;
+    font-size: 1.2rem;
+    font-weight: normal;
 }
 
 .chart-panel {
+    grid-area: chart-panel;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
-    min-width: 0;
-    min-height: 0;
-    max-height: 320px;   /* Chart panel max height */
+    margin: 0 0 0 40px;
+    padding-top: 18px;
+    border: 2px solid #222;
+    min-height: 180px;
+    max-height: 220px;
+    background: transparent;
 }
 
-.chart-panel h3 {
-    margin-top: 7px;
-    margin-bottom: 2px;
-    color: #21e6c1;
-    font-size: 1em;
-    font-weight: 600;
-    text-align: center;
-}
-
-.leaderboard-panel {
-    font-size: 0.98em;
-    overflow-y: auto;
-    min-width: 0;
+.chart-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
 }
 
 .trade-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    overflow-x: auto;
-    overflow-y: auto;
-    font-size: 0.98em;
+    grid-area: trade-panel;
+    margin: 0 0 0 40px;
+    border: 2px solid #222;
+    background: transparent;
+    min-height: 180px;
+    max-height: 250px;
+    padding-top: 18px;
 }
 
+.stocks-panel {
+    grid-area: stocks-panel;
+    border: 2px solid #222;
+    background: transparent;
+    padding: 18px 0 0 30px;
+    min-width: 0;
+}
+
+.stocks-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.leaderboard-panel {
+    grid-area: leaderboard-panel;
+    border: 2px solid #222;
+    background: transparent;
+    padding: 18px 0 0 30px;
+    min-width: 0;
+}
+
+.leaderboard-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.buttons-panel {
+    position: absolute;
+    right: 50px;
+    bottom: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#next-day {
+    padding: 12px 30px;
+    background: #27d13c;
+    color: #222;
+    font-size: 1.1em;
+    font-weight: 700;
+    border-radius: 5px;
+    border: 2px solid #222;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+#save-score {
+    padding: 12px 28px;
+    background: #ffe600;
+    color: #222;
+    font-size: 1.1em;
+    font-weight: 700;
+    border-radius: 5px;
+    border: 2px solid #222;
+    cursor: pointer;
+}
+
+/* Table and other elements can be styled as you wish */
 table {
     width: 100%;
     border-collapse: collapse;
-    background: #23263A;
-    font-size: 0.93rem;
-    table-layout: fixed;
+    background: transparent;
+    font-size: 1em;
 }
 
 th, td {
-    border: 1px solid #2b2d42;
-    padding: 3px 2px;
-    text-align: center;
-    min-width: 0;
-    max-width: 90px;
-    word-break: break-word;
-}
-
-th {
-    background: #202539;
-    color: #21e6c1;
-    font-weight: 600;
-    font-size: 0.95em;
-}
-
-.price-up { color: #21e6c1; font-weight: 700; }
-.price-down { color: #FC0032; font-weight: 700; }
-.price-same { color: #aaa; }
-
-input[type="number"] {
-    width: 28px;
-    background: #202539;
-    color: #E7EBF3;
-    border: 1px solid #21e6c1;
-    border-radius: 4px;
-    padding: 2px;
-    font-size: 0.93em;
-    margin-right: 1px;
-}
-
-button {
-    padding: 2px 10px;
-    background: #21e6c1;
-    color: #202539;
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 0.93em;
-    margin: 0 1px;
-    box-shadow: 0 1px 4px #21e6c122;
-    transition: background 0.12s, transform 0.12s;
-}
-
-button:active,
-button:hover {
-    background: #17b8a3;
-    color: #fff;
-    transform: scale(0.97);
-}
-
-#next-day,
-#save-score {
-    width: 100%;
-    padding: 3px 0;
-    font-size: 1em;
-    background: #21e6c1;
-    color: #202539;
-    margin-top: 2px;
-    border-radius: 4px;
-    box-shadow: 0 1px 4px #21e6c122;
-}
-
-canvas {
-    width: 98% !important;
-    max-width: 220px;
-    max-height: 60px;
-    background: #181A20;
-    border-radius: 6px;
-    margin: 4px auto 0 auto;
-    display: block;
+    padding: 4px 8px;
+    text-align: left;
 }
 
 ul {
     list-style: none;
     padding: 0;
     margin: 0;
-}
-
-@media screen and (max-width: 900px) {
-    .dashboard {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 44px 1fr 120px;
-        grid-template-areas:
-            "header header"
-            "stock-list chart-panel"
-            ". trade-panel .";
-    }
-    .leaderboard-panel {
-        display: none;
-    }
-    .chart-panel canvas {
-        max-width: 120px;
-        max-height: 40px;
-    }
 }
