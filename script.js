@@ -93,6 +93,7 @@ function updateStockTable() {
             <td>${stock.symbol}</td>
             <td>$${price.toFixed(2)}</td>
             <td class="${className}">${changeStr}</td>
+            <td></td>
         `;
         tbody.appendChild(tr);
     });
@@ -116,6 +117,29 @@ function updateTradeTable() {
         tbody.appendChild(tr);
     });
 }
+function updatePortfolioTable() {
+    let tbody = document.getElementById('portfolio-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let owned = portfolio.stocks[stock.symbol];
+        if (owned > 0) {
+            let price = prices[stock.symbol];
+            let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+            let totalValue = owned * price;
+            let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+            let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${stock.symbol}</td>
+                <td>${owned}</td>
+                <td>$${price.toFixed(2)}</td>
+                <td>$${totalValue.toFixed(2)}</td>
+                <td class="${className}">${changeStr}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    });
+}
 window.buyStock = function(symbol) {
     let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
     let cost = prices[symbol] * qty;
@@ -124,6 +148,7 @@ window.buyStock = function(symbol) {
         portfolio.stocks[symbol] += qty;
         updateCash();
         updateLeaderboard();
+        updatePortfolioTable();
     }
 };
 window.sellStock = function(symbol) {
@@ -134,6 +159,7 @@ window.sellStock = function(symbol) {
         portfolio.stocks[symbol] -= qty;
         updateCash();
         updateLeaderboard();
+        updatePortfolioTable();
     }
 };
 document.getElementById('next-day').onclick = function() {
@@ -147,6 +173,7 @@ document.getElementById('next-day').onclick = function() {
     portfolioChart.data.datasets[0].data.push(value);
     portfolioChart.update();
     updateLeaderboard();
+    updatePortfolioTable();
 };
 function getPortfolioValue() {
     let value = portfolio.cash;
@@ -186,3 +213,4 @@ updateCash();
 updateStockTable();
 updateTradeTable();
 updateLeaderboard();
+updatePortfolioTable();
