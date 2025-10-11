@@ -1,9 +1,10 @@
 html, body {
     height: 100%;
     width: 100%;
+    min-width: 0;
+    min-height: 0;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
     font-family: 'Roboto', Arial, sans-serif;
     background: linear-gradient(135deg, #1d2235 70%, #23263A 100%);
     color: #E7EBF3;
@@ -12,10 +13,11 @@ html, body {
 
 .dashboard {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1.5fr; /* Wider sides, compact center */
-    grid-template-rows: 56px 1fr 170px;
+    grid-template-columns: 1fr 1fr 1fr;           /* 3 equal columns */
+    grid-template-rows: 56px 320px 1fr 160px;     /* header, chart, main, trade */
     grid-template-areas:
         "header header header"
+        "stock-list chart-panel leaderboard-panel"
         "stock-list chart-panel leaderboard-panel"
         "trade trade trade";
     gap: 8px;
@@ -45,6 +47,7 @@ html, body {
     font-size: 1.20rem;
     color: #21e6c1;
     font-weight: 700;
+    background: transparent;
 }
 
 .stock-list {
@@ -52,7 +55,7 @@ html, body {
     overflow-y: auto;
     font-size: 0.97em;
     min-width: 0;
-    max-height: calc(100vh - 56px - 170px - 22px);
+    max-height: calc(100vh - 56px - 320px - 160px - 24px);
 }
 
 .chart-panel {
@@ -63,7 +66,7 @@ html, body {
     justify-content: flex-start;
     min-width: 0;
     min-height: 0;
-    max-height: 320px;   /* Maximum height for center panel */
+    max-height: 320px;   /* Chart panel max height */
 }
 
 .chart-panel h3 {
@@ -80,7 +83,7 @@ html, body {
     font-size: 0.98em;
     overflow-y: auto;
     min-width: 0;
-    max-height: calc(100vh - 56px - 170px - 22px);
+    max-height: calc(100vh - 56px - 160px - 24px);
 }
 
 .trade-panel {
@@ -89,7 +92,7 @@ html, body {
     font-size: 0.98em;
     overflow-x: auto;
     overflow-y: auto;
-    height: 170px;
+    height: 160px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -169,7 +172,7 @@ button:hover {
 
 canvas {
     width: 98% !important;
-    max-width: 200px;
+    max-width: 220px;
     max-height: 60px;
     background: #181A20;
     border-radius: 6px;
