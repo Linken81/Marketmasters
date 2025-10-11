@@ -1,3 +1,28 @@
+/* Make buy input wider and align better in Trade panel */
+input[type="number"].buy-input {
+    width: 70px;
+    border-radius: 5px;
+    border: 1px solid #21e6c1;
+    background: #202539;
+    color: #e7ebf3;
+    font-size: 0.96em;
+    padding: 3px 4px;
+    margin-right: 4px;
+    outline: none;
+    transition: border 0.12s;
+}
+input[type="number"].buy-input:focus {
+    border-color: #FC0032;
+    background: #181a20;
+}
+
+/* Wider Sell/Buy columns in Portfolio for buttons */
+#portfolio-table td:last-child, #portfolio-table th:last-child {
+    min-width: 200px;
+    white-space: nowrap;
+}
+
+/* --- existing styles below --- */
 html, body {
     height: 100%;
     width: 100%;
@@ -180,11 +205,6 @@ tr:hover {
     background: #b00024;
     color: #fff;
     box-shadow: 0 4px 18px #fc0032cc;
-}
-
-#portfolio-table td:last-child, #portfolio-table th:last-child {
-    min-width: 200px;
-    white-space: nowrap;
 }
 
 .buttons-row {
