@@ -6,35 +6,60 @@ html, body {
     font-family: 'Segoe UI', Arial, sans-serif;
     background: #181A20;
     color: #F5F6FA;
+    overflow: hidden; /* Prevent scrolling */
 }
 
 .game-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1fr;
-    gap: 14px;
+    grid-template-rows: 80px 1fr 1fr;
+    gap: 8px;
     height: 100vh;
     width: 100vw;
     box-sizing: border-box;
-    padding: 12px;
+    padding: 8px;
 }
 
 .card {
     background: #23263A;
-    border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.20);
-    padding: 18px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+    padding: 12px;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-width: 0;
+    min-height: 0;
     height: 100%;
+    max-height: 100%;
     overflow: hidden;
+}
+
+.portfolio {
+    grid-column: 1 / 2;
+    grid-row: 2 / 4;
+    max-width: 350px;
+}
+
+.market {
+    grid-column: 2 / 4;
+    grid-row: 2 / 3;
+    max-height: 320px;
+}
+
+.leaderboard {
+    grid-column: 2 / 4;
+    grid-row: 3 / 4;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .portfolio ul,
 .leaderboard ul {
     flex: 1;
     overflow-y: auto;
-    margin: 10px 0;
+    margin: 4px 0;
     padding: 0;
     list-style: none;
 }
@@ -43,13 +68,13 @@ html, body {
     width: 100%;
     border-collapse: collapse;
     background: #23263A;
-    font-size: 1rem;
-    margin-bottom: 8px;
+    font-size: 0.93rem;
+    margin-bottom: 2px;
 }
 
 .market th, .market td {
     border: 1px solid #2b2d42;
-    padding: 8px 8px;
+    padding: 4px 4px;
     text-align: center;
 }
 
@@ -61,7 +86,7 @@ html, body {
 
 .market tbody {
     display: block;
-    max-height: 45vh;
+    max-height: 140px;
     overflow-y: auto;
 }
 
@@ -72,14 +97,15 @@ html, body {
 }
 
 button {
-    padding: 8px 16px;
+    padding: 5px 10px;
     background: linear-gradient(90deg,#00FC87,#0ED2F7);
     color: #181A20;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 700;
-    margin-top: 8px;
+    margin-top: 4px;
+    font-size: 0.9em;
     transition: background 0.2s, transform 0.2s;
 }
 
@@ -90,27 +116,37 @@ button:hover {
 
 canvas {
     width: 100% !important;
-    max-height: 24vh;
+    max-width: 320px;
+    max-height: 120px;
     background: #181A20;
-    border-radius: 8px;
-    margin-top: 12px;
+    border-radius: 6px;
+    margin-top: 6px;
 }
 
 @media screen and (max-width: 900px) {
     .game-grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: repeat(3, 1fr);
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 50px 1fr 1fr;
+        gap: 6px;
         height: 100vh;
-        gap: 12px;
     }
-    .card {
-        min-height: 0;
-        height: 33vh;
+    .portfolio {
+        grid-column: 1 / 2;
+        grid-row: 2 / 4;
+        max-width: 220px;
     }
-    .market tbody {
-        max-height: 20vh;
+    .market {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+        max-height: 120px;
+    }
+    .leaderboard {
+        grid-column: 2 / 3;
+        grid-row: 3 / 4;
+        max-height: 100px;
     }
     canvas {
-        max-height: 10vh;
+        max-width: 180px;
+        max-height: 50px;
     }
 }
