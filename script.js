@@ -143,7 +143,7 @@ function updatePortfolioTable() {
                 <td>$${price.toFixed(2)}</td>
                 <td>$${totalValue.toFixed(2)}</td>
                 <td class="${className}">${changeStr}</td>
-                <td>
+                <td style="white-space:nowrap; min-width:200px;">
                     <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
                     <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
                     <button class="sell-all-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
