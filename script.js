@@ -24,7 +24,6 @@ const STOCKS = [
 let portfolio = { cash: 10000, stocks: {} };
 STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
 
-// Track the number of shares held before the latest buy (for correct change calculation)
 let prevOwned = {};
 STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
 
@@ -120,6 +119,7 @@ function updateTradeTable() {
     });
 }
 
+// Portfolio table with Sell All button
 function updatePortfolioTable() {
     let tbody = document.getElementById('portfolio-table');
     tbody.innerHTML = "";
@@ -131,7 +131,6 @@ function updatePortfolioTable() {
             let totalValue = owned * price;
             let valueChange = 0;
 
-            // Only apply change to shares held before the last buy
             if (prevPrice !== undefined && prevPrice !== price && prevOwned[stock.symbol] > 0) {
                 valueChange = (price - prevPrice) * prevOwned[stock.symbol];
             }
@@ -147,6 +146,7 @@ function updatePortfolioTable() {
                 <td>
                     <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
                     <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
+                    <button class="sell-all-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -160,7 +160,6 @@ window.buyStock = function(symbol) {
     if (qty > 0 && portfolio.cash >= cost) {
         portfolio.cash -= cost;
         portfolio.stocks[symbol] += qty;
-        // Do NOT update prevOwned here (only update before Next Day)
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
@@ -172,7 +171,6 @@ window.sellStock = function(symbol) {
     if (qty > 0 && owned >= qty) {
         portfolio.cash += prices[symbol] * qty;
         portfolio.stocks[symbol] -= qty;
-        // FIX: If all shares sold, reset prevOwned for this stock
         if (portfolio.stocks[symbol] === 0) {
             prevOwned[symbol] = 0;
         }
@@ -181,8 +179,18 @@ window.sellStock = function(symbol) {
         updatePortfolioTable();
     }
 };
+window.sellAllStock = function(symbol) {
+    let owned = portfolio.stocks[symbol];
+    if (owned > 0) {
+        portfolio.cash += prices[symbol] * owned;
+        portfolio.stocks[symbol] = 0;
+        prevOwned[symbol] = 0;
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
 document.getElementById('next-day').onclick = function() {
-    // Before price changes, update prevOwned to current holdings
     STOCKS.forEach(stock => {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
