@@ -120,7 +120,6 @@ function updateTradeTable() {
     });
 }
 
-// FIXED: Change only reflects price movement of shares held before the latest buy
 function updatePortfolioTable() {
     let tbody = document.getElementById('portfolio-table');
     tbody.innerHTML = "";
