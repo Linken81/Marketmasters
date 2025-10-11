@@ -143,7 +143,7 @@ tr:hover {
 .price-down { color: #FC0032; font-weight: 700; }
 .price-same { color: #aaa; }
 
-.action-btn, #next-day, #save-score, .sell-btn {
+.action-btn, #next-day, #save-score, .sell-btn, .sell-all-btn {
     padding: 7px 20px;
     background: #21e6c1;
     color: #23263a;
@@ -159,6 +159,25 @@ tr:hover {
 
 .action-btn:hover, #next-day:hover, #save-score:hover, .sell-btn:hover {
     background: #FC0032;
+    color: #fff;
+    box-shadow: 0 4px 18px #fc0032cc;
+}
+
+.sell-all-btn {
+    padding: 7px 12px;
+    background: #FC0032;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0 2px;
+    box-shadow: 0 2px 8px #fc003233;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.sell-all-btn:hover {
+    background: #b00024;
     color: #fff;
     box-shadow: 0 4px 18px #fc0032cc;
 }
