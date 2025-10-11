@@ -100,7 +100,7 @@ function updateStockTable() {
     });
 }
 
-// FIXED: Trade panel shows Price between Stock and Buy
+// Trade panel now includes Price column/value
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
@@ -126,9 +126,15 @@ function updatePortfolioTable() {
         let owned = portfolio.stocks[stock.symbol];
         if (owned > 0) {
             let price = prices[stock.symbol];
-            let prevPrice = prevPrices[stock.symbol] || price;
+            let prevPrice = prevPrices[stock.symbol];
             let totalValue = owned * price;
-            let valueChange = (price - prevPrice) * owned;
+
+            // Only show change if price changed since last day
+            let valueChange = 0;
+            if (prevPrice !== undefined && prevPrice !== price) {
+                valueChange = (price - prevPrice) * owned;
+            }
+            // If just bought, or it's the first day, show zero change
             let changeStr = (valueChange > 0 ? "+" : "") + valueChange.toFixed(2);
             let className = valueChange > 0 ? "price-up" : valueChange < 0 ? "price-down" : "price-same";
             let tr = document.createElement('tr');
