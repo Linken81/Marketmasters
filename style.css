@@ -1,10 +1,9 @@
 html, body {
     height: 100%;
     width: 100%;
-    min-width: 0;
-    min-height: 0;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
     font-family: 'Roboto', Arial, sans-serif;
     background: linear-gradient(135deg, #1d2235 70%, #23263A 100%);
     color: #E7EBF3;
@@ -14,10 +13,9 @@ html, body {
 .dashboard {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 56px 320px 1fr 160px;
+    grid-template-rows: 56px 1fr 170px; /* header, main dashboard, trade */
     grid-template-areas:
         "header header header"
-        "stock-list chart-panel leaderboard-panel"
         "stock-list chart-panel leaderboard-panel"
         "trade trade trade";
     gap: 8px;
@@ -55,7 +53,6 @@ html, body {
     overflow-y: auto;
     font-size: 0.97em;
     min-width: 0;
-    max-height: calc(100vh - 56px - 320px - 160px - 24px);
 }
 
 .chart-panel {
@@ -83,7 +80,6 @@ html, body {
     font-size: 0.98em;
     overflow-y: auto;
     min-width: 0;
-    max-height: calc(100vh - 56px - 160px - 24px);
 }
 
 .trade-panel {
@@ -92,7 +88,7 @@ html, body {
     font-size: 0.98em;
     overflow-x: auto;
     overflow-y: auto;
-    height: 160px;
+    height: 170px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -189,10 +185,9 @@ ul {
 @media screen and (max-width: 900px) {
     .dashboard {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 44px 120px 1fr 120px;
+        grid-template-rows: 44px 1fr 120px;
         grid-template-areas:
             "header header"
-            "stock-list chart-panel"
             "stock-list chart-panel"
             "trade trade";
     }
