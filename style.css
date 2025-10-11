@@ -12,8 +12,8 @@ html, body {
 
 .dashboard {
     display: grid;
-    grid-template-columns: 240px 1fr 240px;
-    grid-template-rows: 56px 1fr 130px;
+    grid-template-columns: 1.5fr 1fr 1.5fr; /* Wider sides, compact center */
+    grid-template-rows: 56px 1fr 170px;
     grid-template-areas:
         "header header header"
         "stock-list chart-panel leaderboard-panel"
@@ -52,7 +52,7 @@ html, body {
     overflow-y: auto;
     font-size: 0.97em;
     min-width: 0;
-    max-height: calc(100vh - 56px - 130px - 22px);
+    max-height: calc(100vh - 56px - 170px - 22px);
 }
 
 .chart-panel {
@@ -63,7 +63,7 @@ html, body {
     justify-content: flex-start;
     min-width: 0;
     min-height: 0;
-    max-height: calc(100vh - 56px - 130px - 22px);
+    max-height: 320px;   /* Maximum height for center panel */
 }
 
 .chart-panel h3 {
@@ -80,7 +80,7 @@ html, body {
     font-size: 0.98em;
     overflow-y: auto;
     min-width: 0;
-    max-height: calc(100vh - 56px - 130px - 22px);
+    max-height: calc(100vh - 56px - 170px - 22px);
 }
 
 .trade-panel {
@@ -89,7 +89,7 @@ html, body {
     font-size: 0.98em;
     overflow-x: auto;
     overflow-y: auto;
-    height: 130px;
+    height: 170px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -108,7 +108,7 @@ th, td {
     padding: 3px 2px;
     text-align: center;
     min-width: 0;
-    max-width: 85px;
+    max-width: 90px;
     word-break: break-word;
 }
 
@@ -169,8 +169,8 @@ button:hover {
 
 canvas {
     width: 98% !important;
-    max-width: 220px;
-    max-height: 70px;
+    max-width: 200px;
+    max-height: 60px;
     background: #181A20;
     border-radius: 6px;
     margin: 4px auto 0 auto;
@@ -186,7 +186,7 @@ ul {
 @media screen and (max-width: 900px) {
     .dashboard {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 44px 120px 1fr 90px;
+        grid-template-rows: 44px 120px 1fr 120px;
         grid-template-areas:
             "header header"
             "stock-list chart-panel"
