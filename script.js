@@ -1,247 +1,260 @@
-const STOCKS = [
-    { symbol: "ZOOMX", name: "Zoomix Technologies" },
-    { symbol: "FRUIQ", name: "FruityQ Foods" },
-    { symbol: "SOLARO", name: "Solaro Energy" },
-    { symbol: "ROBIX", name: "Robix Robotics" },
-    { symbol: "DRONZ", name: "Dronz Delivery" },
-    { symbol: "AQUIX", name: "Aquix Water Corp" },
-    { symbol: "GLOBO", name: "Globon Airlines" },
-    { symbol: "NUTRO", name: "Nutro Nutrition" },
-    { symbol: "PIXEL", name: "PixelWave Media" },
-    { symbol: "VOYZA", name: "Voyza Travel" },
-    { symbol: "FLEXI", name: "Flexi Fitness" },
-    { symbol: "MEDIX", name: "Medix Health" },
-    { symbol: "ECOFY", name: "Ecofy Solutions" },
-    { symbol: "ASTRO", name: "Astro Mining" },
-    { symbol: "NEURA", name: "NeuraTech Labs" },
-    { symbol: "BERRY", name: "BerrySoft Drinks" },
-    { symbol: "FASHN", name: "Fashn Apparel" },
-    { symbol: "SPECT", name: "Spectra Security" },
-    { symbol: "INNOV", name: "Innovado Systems" },
-    { symbol: "TREND", name: "Trendify Retail" }
-];
-
-let portfolio = { cash: 10000, stocks: {} };
-STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
-
-let prevOwned = {};
-STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
-
-let prices = {}, prevPrices = {};
-function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
-function setRandomPrices() {
-    prevPrices = {...prices};
-    STOCKS.forEach(stock => {
-        prices[stock.symbol] = randomPrice();
-    });
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', 'Roboto', Arial, sans-serif;
+    background: radial-gradient(circle at 45% 25%, #23263a 65%, #181a20 100%);
+    color: #e7ebf3;
 }
-setRandomPrices();
 
-let portfolioHistory = [getPortfolioValue()];
-let day = 1;
+.dashboard {
+    display: grid;
+    grid-template-columns: 1.6fr 2.4fr 1.3fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas:
+        "header header header"
+        "left-panel center-panel right-panel";
+    height: 100vh;
+    width: 100vw;
+    gap: 20px;
+    padding: 18px;
+    box-sizing: border-box;
+}
 
-// Chart.js setup
-let ctx = document.getElementById('portfolioChart').getContext('2d');
-let chartData = {
-    labels: [day],
-    datasets: [{
-        label: 'Portfolio Value',
-        data: [portfolioHistory[0]],
-        borderColor: '#00FC87',
-        backgroundColor: 'rgba(14,210,247,0.10)',
-        fill: true,
-        tension: 0.28,
-        pointRadius: 4,
-        pointBackgroundColor: '#00FC87',
-        pointBorderColor: '#23263A'
-    }]
-};
-let portfolioChart = new Chart(ctx, {
-    type: 'line',
-    data: chartData,
-    options: {
-        animation: { duration: 700, easing: 'easeOutQuad' },
-        scales: {
-            x: { display: false },
-            y: { display: false }
-        },
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: '#23263A',
-                titleColor: '#00FC87',
-                bodyColor: '#F5F6FA',
-                borderColor: '#00FC87',
-                borderWidth: 1
-            }
-        }
+.header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    background: #212433dd;
+    border-radius: 9px;
+    box-shadow: 0 4px 20px #0005;
+    padding: 0 24px;
+    letter-spacing: 0.7px;
+    color: #21e6c1;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.left-panel, .center-panel, .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.panel, .card {
+    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px #0002;
+    padding: 18px 18px 14px 18px;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid #212433;
+    transition: box-shadow 0.15s;
+}
+
+.panel:hover {
+    box-shadow: 0 6px 24px #21e6c11a;
+    border-color: #21e6c1;
+}
+
+.panel-title {
+    color: #21e6c1;
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin-bottom: 9px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    position: relative;
+}
+
+.panel-title:after {
+    content: "";
+    display: block;
+    height: 2px;
+    width: 26px;
+    background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
+    border-radius: 2px;
+    margin-left: 6px;
+}
+
+.chart-container {
+    background: #181a20cc;
+    border-radius: 8px;
+    box-shadow: 0 1px 7px #21e6c122;
+    padding: 10px 0 10px 0;
+    margin-bottom: 6px;
+    min-height: 90px;
+    max-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.97em;
+    background: none;
+}
+
+th, td {
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 0.97em;
+    border-bottom: 1px solid #222b;
+    transition: background 0.13s;
+}
+
+th {
+    color: #21e6c1;
+    font-weight: 600;
+    background: #202539;
+}
+
+tr {
+    transition: background 0.13s;
+}
+
+tr:hover {
+    background: #23263a99;
+}
+
+.price-up::before {
+    content: "▲ ";
+    color: #21e6c1;
+    font-weight: bold;
+}
+
+.price-down::before {
+    content: "▼ ";
+    color: #FC0032;
+    font-weight: bold;
+}
+
+.price-up { color: #21e6c1; font-weight: 700; }
+.price-down { color: #FC0032; font-weight: 700; }
+.price-same { color: #aaa; }
+
+.action-btn, #next-day, #save-score, .sell-btn, .sell-all-btn {
+    padding: 7px 20px;
+    background: #21e6c1;
+    color: #23263a;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0 2px;
+    box-shadow: 0 2px 8px #21e6c133;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.action-btn:hover, #next-day:hover, #save-score:hover, .sell-btn:hover {
+    background: #FC0032;
+    color: #fff;
+    box-shadow: 0 4px 18px #fc0032cc;
+}
+
+.sell-all-btn {
+    padding: 7px 12px;
+    background: #FC0032;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0 2px;
+    box-shadow: 0 2px 8px #fc003233;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.sell-all-btn:hover {
+    background: #b00024;
+    color: #fff;
+    box-shadow: 0 4px 18px #fc0032cc;
+}
+
+.buttons-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 7px;
+    justify-content: flex-end;
+}
+
+input[type="number"] {
+    width: 38px;
+    border-radius: 5px;
+    border: 1px solid #21e6c1;
+    background: #202539;
+    color: #e7ebf3;
+    font-size: 0.96em;
+    padding: 3px 2px;
+    margin-right: 2px;
+    outline: none;
+    transition: border 0.12s;
+}
+
+input[type="number"]:focus {
+    border-color: #FC0032;
+    background: #181a20;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.leaderboard-list li {
+    padding: 7px 12px;
+    background: #212433cc;
+    border-radius: 6px;
+    color: #21e6c1;
+    font-weight: 500;
+    font-size: 0.99em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 6px #21e6c144;
+    border-left: 3px solid #21e6c1;
+    position: relative;
+}
+
+.leaderboard-list li::after {
+    content: "🏆";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.05em;
+    opacity: 0.7;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    background: #181a20;
+}
+::-webkit-scrollbar-thumb {
+    background: #23263a;
+    border-radius: 6px;
+}
+
+@media (max-width: 1200px) {
+    .dashboard {
+        grid-template-columns: 1fr 1.1fr 0.9fr;
+        grid-template-rows: 44px 1fr;
+        gap: 8px;
+        padding: 6px;
     }
-});
-
-function updateCash() {
-    document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
+    .panel, .card { padding: 8px 8px; }
+    .header { font-size: 1.08rem; padding: 0 7px;}
 }
-
-function updateStockTable() {
-    let tbody = document.getElementById('stock-table');
-    tbody.innerHTML = "";
-    STOCKS.forEach(stock => {
-        let price = prices[stock.symbol];
-        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
-        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
-        let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${stock.symbol}</td>
-            <td>$${price.toFixed(2)}</td>
-            <td class="${className}">${changeStr}</td>
-            <td></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function updateTradeTable() {
-    let tbody = document.getElementById('trade-table');
-    tbody.innerHTML = "";
-    STOCKS.forEach(stock => {
-        let price = prices[stock.symbol];
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${stock.symbol}</td>
-            <td>$${price.toFixed(2)}</td>
-            <td>
-                <input type="number" min="1" value="1" style="width:40px;" id="buy_${stock.symbol}">
-                <button onclick="buyStock('${stock.symbol}')">Buy</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// Portfolio table with Sell All button
-function updatePortfolioTable() {
-    let tbody = document.getElementById('portfolio-table');
-    tbody.innerHTML = "";
-    STOCKS.forEach(stock => {
-        let owned = portfolio.stocks[stock.symbol];
-        if (owned > 0) {
-            let price = prices[stock.symbol];
-            let prevPrice = prevPrices[stock.symbol];
-            let totalValue = owned * price;
-            let valueChange = 0;
-
-            if (prevPrice !== undefined && prevPrice !== price && prevOwned[stock.symbol] > 0) {
-                valueChange = (price - prevPrice) * prevOwned[stock.symbol];
-            }
-            let changeStr = (valueChange > 0 ? "+" : "") + valueChange.toFixed(2);
-            let className = valueChange > 0 ? "price-up" : valueChange < 0 ? "price-down" : "price-same";
-            let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${stock.symbol}</td>
-                <td>${owned}</td>
-                <td>$${price.toFixed(2)}</td>
-                <td>$${totalValue.toFixed(2)}</td>
-                <td class="${className}">${changeStr}</td>
-                <td>
-                    <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
-                    <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
-                    <button class="sell-all-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        }
-    });
-}
-
-window.buyStock = function(symbol) {
-    let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
-    let cost = prices[symbol] * qty;
-    if (qty > 0 && portfolio.cash >= cost) {
-        portfolio.cash -= cost;
-        portfolio.stocks[symbol] += qty;
-        updateCash();
-        updateLeaderboard();
-        updatePortfolioTable();
-    }
-};
-window.sellStock = function(symbol) {
-    let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
-    let owned = portfolio.stocks[symbol];
-    if (qty > 0 && owned >= qty) {
-        portfolio.cash += prices[symbol] * qty;
-        portfolio.stocks[symbol] -= qty;
-        if (portfolio.stocks[symbol] === 0) {
-            prevOwned[symbol] = 0;
-        }
-        updateCash();
-        updateLeaderboard();
-        updatePortfolioTable();
-    }
-};
-window.sellAllStock = function(symbol) {
-    let owned = portfolio.stocks[symbol];
-    if (owned > 0) {
-        portfolio.cash += prices[symbol] * owned;
-        portfolio.stocks[symbol] = 0;
-        prevOwned[symbol] = 0;
-        updateCash();
-        updateLeaderboard();
-        updatePortfolioTable();
-    }
-};
-document.getElementById('next-day').onclick = function() {
-    STOCKS.forEach(stock => {
-        prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
-    });
-    setRandomPrices();
-    updateStockTable();
-    updateTradeTable();
-    day++;
-    let value = getPortfolioValue();
-    portfolioHistory.push(value);
-    portfolioChart.data.labels.push(day);
-    portfolioChart.data.datasets[0].data.push(value);
-    portfolioChart.update();
-    updateLeaderboard();
-    updatePortfolioTable();
-};
-function getPortfolioValue() {
-    let value = portfolio.cash;
-    STOCKS.forEach(stock => {
-        value += portfolio.stocks[stock.symbol] * prices[stock.symbol];
-    });
-    return value;
-}
-function loadScores() {
-    let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
-    return scores.sort((a, b) => b.value - a.value).slice(0, 10);
-}
-function saveScore() {
-    let name = prompt("Enter your name for the leaderboard:");
-    if (!name) return;
-    let value = getPortfolioValue();
-    let scores = loadScores();
-    scores.push({ name, value: +value.toFixed(2) });
-    localStorage.setItem('leaderboard_scores', JSON.stringify(scores));
-    updateLeaderboard();
-}
-document.getElementById('save-score').onclick = saveScore;
-function updateLeaderboard() {
-    let scores = loadScores();
-    let ul = document.getElementById('scores');
-    ul.innerHTML = "";
-    scores.forEach((score, idx) => {
-        let initials = score.name.split(' ').map(w=>w[0]).join('').toUpperCase();
-        let li = document.createElement('li');
-        li.innerHTML = `<span style="background:#00fc87; color:#21293a; border-radius:50%; padding:2px 8px; margin-right:6px;">${initials}</span> <strong>${score.name}</strong>: <span class="price-up">$${score.value}</span>`;
-        ul.appendChild(li);
-    });
-}
-
-// Initial UI setup
-updateCash();
-updateStockTable();
-updateTradeTable();
-updateLeaderboard();
-updatePortfolioTable();
