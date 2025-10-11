@@ -1,9 +1,25 @@
 // Basic stock market simulation
 const STOCKS = [
-    { symbol: "AAPL", name: "Apple" },
-    { symbol: "GOOG", name: "Google" },
-    { symbol: "TSLA", name: "Tesla" },
-    { symbol: "AMZN", name: "Amazon" }
+    { symbol: "ZOOMX", name: "Zoomix Technologies" },
+    { symbol: "FRUIQ", name: "FruityQ Foods" },
+    { symbol: "SOLARO", name: "Solaro Energy" },
+    { symbol: "ROBIX", name: "Robix Robotics" },
+    { symbol: "DRONZ", name: "Dronz Delivery" },
+    { symbol: "AQUIX", name: "Aquix Water Corp" },
+    { symbol: "GLOBO", name: "Globon Airlines" },
+    { symbol: "NUTRO", name: "Nutro Nutrition" },
+    { symbol: "PIXEL", name: "PixelWave Media" },
+    { symbol: "VOYZA", name: "Voyza Travel" },
+    { symbol: "FLEXI", name: "Flexi Fitness" },
+    { symbol: "MEDIX", name: "Medix Health" },
+    { symbol: "ECOFY", name: "Ecofy Solutions" },
+    { symbol: "ASTRO", name: "Astro Mining" },
+    { symbol: "NEURA", name: "NeuraTech Labs" },
+    { symbol: "BERRY", name: "BerrySoft Drinks" },
+    { symbol: "FASHN", name: "Fashn Apparel" },
+    { symbol: "SPECT", name: "Spectra Security" },
+    { symbol: "INNOV", name: "Innovado Systems" },
+    { symbol: "TREND", name: "Trendify Retail" }
 ];
 
 let portfolio = {
