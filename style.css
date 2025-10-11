@@ -1,83 +1,132 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
+    font-family: 'Roboto', Arial, sans-serif;
     background: #181A20;
     color: #F5F6FA;
 }
-.dashboard {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 28px;
-}
-header {
-    text-align: center;
-    margin-bottom: 32px;
-}
-h1 {
+
+.ticker-bar {
+    background: #23263A;
     color: #00FC87;
-    font-size: 2.7rem;
-    margin-bottom: 0;
+    font-weight: 700;
+    padding: 8px 0;
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    border-bottom: 2px solid #00FC87;
 }
-.subtitle {
-    color: #888;
-    font-size: 1.1rem;
-    margin-top: 8px;
-    margin-bottom: 0;
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    max-width: 1300px;
+    margin: 20px auto;
 }
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 .card {
     background: #23263A;
     border-radius: 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.30);
-    padding: 24px;
-    margin-bottom: 28px;
-    transition: box-shadow 0.3s;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.20);
+    padding: 20px;
+    margin-bottom: 0;
 }
-.card:hover {
-    box-shadow: 0 12px 44px rgba(0,252,135,0.13);
+
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
-main {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 28px;
+
+.avatar {
+    background: linear-gradient(135deg,#00FC87 60%,#0ED2F7 100%);
+    color: #23263A;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px #00FC8744;
 }
-.portfolio-info span {
-    font-size: 1.5rem;
-    color: #00FC87;
-    font-weight: bold;
+
+.tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
 }
-ul {
-    list-style: none;
-    padding: 0;
+
+.tab {
+    background: #23263A;
+    border: none;
+    border-radius: 6px 6px 0 0;
+    padding: 10px 22px;
+    color: #F5F6FA;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 1.12rem;
+    transition: background 0.2s;
 }
+
+.tab.active {
+    background: linear-gradient(90deg,#00FC87,#0ED2F7);
+    color: #181A20;
+}
+
+.tab-content {
+    display: block;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
     background: #23263A;
+    font-size: 1rem;
 }
+
 th, td {
-    border: 1px solid #32364E;
-    padding: 10px 14px;
+    border: 1px solid #2b2d42;
+    padding: 8px 12px;
     text-align: center;
 }
+
 th {
     background: #181A20;
     color: #00FC87;
-    font-weight: bold;
 }
-td {
-    font-size: 1.07rem;
-}
+
 input[type="number"] {
-    width: 60px;
+    width: 50px;
     background: #181A20;
     color: #F5F6FA;
     border: 1px solid #00FC87;
     border-radius: 4px;
     padding: 4px;
 }
+
+.price-up { color: #00FC87; font-weight: 700; }
+.price-down { color: #FC0032; font-weight: 700; }
+.price-same { color: #aaa; }
+.badge { border-radius: 6px; padding: 2px 8px; margin-left: 5px; font-size: 0.98em; }
+.gain { background: #00FC8733; color: #00FC87; }
+.loss { background: #FC003233; color: #FC0032; }
+.best { background: #0ED2F766; color: #0ED2F7; }
+
 button {
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: linear-gradient(90deg,#00FC87,#0ED2F7);
     color: #181A20;
     border: none;
@@ -88,19 +137,21 @@ button {
     box-shadow: 0 2px 8px rgba(0,252,135,0.08);
     transition: background 0.2s, transform 0.2s;
 }
+
 button:hover {
     background: linear-gradient(90deg,#0ED2F7,#00FC87);
-    transform: translateY(-2px) scale(1.04);
+    transform: scale(1.04);
 }
-.leaderboard-section ul li {
-    padding: 4px 0;
-    font-size: 1.08rem;
-}
+
 @media screen and (max-width: 900px) {
-    main {
+    .main-grid {
         grid-template-columns: 1fr;
     }
-    .dashboard {
-        padding: 10px;
+    .sidebar {
+        flex-direction: row;
+        gap: 12px;
+    }
+    .portfolio-section, .stats-section {
+        min-width: 220px;
     }
 }
