@@ -101,7 +101,7 @@ function updateStockTable() {
     });
 }
 
-// Trade panel - wider buy input box
+// Trade panel - wider buy input box, cost display
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
@@ -114,9 +114,23 @@ function updateTradeTable() {
             <td>
                 <input type="number" min="1" value="1" class="buy-input" id="buy_${stock.symbol}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
+                <span class="buy-cost" id="buy_cost_${stock.symbol}">$${price.toFixed(2)}</span>
             </td>
         `;
         tbody.appendChild(tr);
+
+        // Add event listener for cost updating
+        setTimeout(() => { // ensure DOM is ready
+            const qtyInput = document.getElementById(`buy_${stock.symbol}`);
+            const costSpan = document.getElementById(`buy_cost_${stock.symbol}`);
+            if (qtyInput && costSpan) {
+                qtyInput.addEventListener('input', function () {
+                    let qty = parseInt(qtyInput.value) || 0;
+                    let cost = qty * price;
+                    costSpan.textContent = `$${cost.toFixed(2)}`;
+                });
+            }
+        }, 0);
     });
 }
 
