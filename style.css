@@ -1,156 +1,192 @@
-body {
+html, body {
+    height: 100%;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
     font-family: 'Roboto', Arial, sans-serif;
-    background: linear-gradient(135deg, #181A20 65%, #253A5F 100%);
+    background: linear-gradient(135deg, #1d2235 70%, #23263A 100%);
     color: #E7EBF3;
     overflow: hidden;
 }
 
-.dashboard {
+.game-grid {
     display: grid;
-    grid-template-columns: 220px 1fr 260px;
-    grid-template-rows: 54px 1fr 140px;
-    grid-template-areas:
-        "header header header"
-        "stock-list chart-panel leaderboard-panel"
-        "order-history order-history order-history";
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 60% 40%;
+    gap: 8px;
     height: 100vh;
-    gap: 10px;
-    padding: 12px;
+    width: 100vw;
     box-sizing: border-box;
+    padding: 8px;
 }
 
-.panel {
-    background: #21293a;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px #0ED2F722;
-    padding: 10px;
-    overflow: hidden;
-    font-size: 0.97rem;
-    min-width: 0;
-    min-height: 0;
-}
-
-.header {
-    grid-area: header;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 1.5rem;
-    color: #00FC87;
-    background: transparent;
-    letter-spacing: 0.09em;
-    font-weight: 700;
-}
-
-.logo-green {
-    color: #00FC87;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-}
-
-.stock-list {
-    grid-area: stock-list;
-}
-
-.chart-panel {
-    grid-area: chart-panel;
+.card {
+    background: #23263A;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
-.leaderboard-panel {
-    grid-area: leaderboard-panel;
+.portfolio {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.market {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    min-width: 0;
+    max-width: 430px;
+    display: flex;
+    flex-direction: column;
+}
+
+.leaderboard {
+    grid-column: 3 / 4;
+    grid-row: 1 / 2;
+}
+
+.chartbox {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    align-self: flex-end;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.portfolio ul,
+.leaderboard ul {
+    flex: 1;
+    overflow-y: auto;
+    margin: 4px 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.93em;
+}
+
+.market table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #23263A;
+    font-size: 0.95em;
+    margin-bottom: 4px;
+    table-layout: fixed;
+}
+
+.market th, .market td {
+    border: 1px solid #2b2d42;
+    padding: 4px 2px;
+    text-align: center;
+    min-width: 0;
+    max-width: 110px;
+    word-break: break-word;
+}
+
+.market th {
+    background: #202539;
+    color: #21e6c1;
+    font-weight: 600;
+    font-size: 0.99em;
+}
+
+.market tbody {
+    display: block;
+    max-height: 320px;
     overflow-y: auto;
 }
 
-.order-history {
-    grid-area: order-history;
-}
-
-h3 {
-    margin: 7px 0 8px 0;
-    color: #00FC87;
-    font-size: 1.07rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-}
-
-table {
+.market tr {
+    display: table;
     width: 100%;
-    border-collapse: collapse;
-    background: #21293a;
-    font-size: 0.93rem;
-    margin-bottom: 6px;
+    table-layout: fixed;
 }
 
-th, td {
-    border: 1px solid #2b2d42;
-    padding: 4px 4px;
-    text-align: center;
+input[type="number"] {
+    width: 36px;
+    background: #202539;
+    color: #E7EBF3;
+    border: 1px solid #21e6c1;
+    border-radius: 4px;
+    padding: 2px;
+    font-size: 0.93em;
+    margin-right: 2px;
 }
-
-th {
-    background: #181A20;
-    color: #00FC87;
-    font-weight: bold;
-    font-size: 0.98em;
-}
-
-.price-up { color: #00FC87; font-weight: 700; }
-.price-down { color: #FC0032; font-weight: 700; }
-.price-same { color: #aaa; }
 
 button {
-    padding: 7px 16px;
-    background: linear-gradient(90deg,#00FC87,#0ED2F7);
-    color: #181A20;
+    padding: 3px 14px;
+    background: #21e6c1;
+    color: #202539;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-weight: 700;
-    font-size: 1em;
-    margin: 5px 0;
-    transition: background 0.2s, transform 0.2s;
-    box-shadow: 0 1px 6px #00FC8744;
+    font-size: 0.97em;
+    margin: 0 2px;
+    box-shadow: 0 1px 4px #21e6c122;
+    transition: background 0.15s, transform 0.13s;
 }
 
+button:active,
 button:hover {
-    background: linear-gradient(90deg,#0ED2F7,#00FC87);
-    transform: scale(1.04);
+    background: #16b897;
+    color: #fff;
+    transform: scale(0.96);
+}
+
+#next-day,
+#save-score {
+    width: 100%;
+    padding: 6px 0;
+    font-size: 1em;
+    background: #21e6c1;
+    color: #202539;
+    margin-top: 6px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px #21e6c122;
 }
 
 canvas {
-    width: 98% !important;
-    max-width: 410px;
-    max-height: 115px;
+    width: 100% !important;
+    max-width: 350px;
+    max-height: 160px;
     background: #181A20;
-    border-radius: 7px;
-    margin-top: 7px;
+    border-radius: 6px;
+    margin-top: 4px;
 }
 
-ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+h2, h3 {
+    margin: 3px 0 8px 0;
+    color: #21e6c1;
+    font-size: 1.13em;
+    font-weight: 600;
+    letter-spacing: 0.03em;
 }
 
-@media screen and (max-width: 1000px) {
-    .dashboard {
+@media screen and (max-width: 1050px) {
+    .game-grid {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 54px 1fr 140px;
-        grid-template-areas:
-            "header header"
-            "stock-list chart-panel"
-            "order-history order-history";
+        grid-template-rows: 50% 50%;
+        gap: 6px;
+        height: 100vh;
     }
-    .leaderboard-panel {
-        display: none;
+    .portfolio, .chartbox, .leaderboard {
+        max-width: 220px;
     }
-    .chart-panel canvas {
-        max-width: 260px;
-        max-height: 70px;
+    .market {
+        max-width: 290px;
+    }
+    canvas {
+        max-width: 160px;
+        max-height: 65px;
     }
 }
