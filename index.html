@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Market Tycoon</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Stock Market Tycoon</h1>
+    <p>
+        Welcome! Start with $10,000 virtual cash. Buy and sell stocks, grow your wealth, and see how you compare on the leaderboard!
+    </p>
+
+    <div id="portfolio">
+        <h2>Your Portfolio</h2>
+        <p id="cash"></p>
+        <ul id="stocks"></ul>
+    </div>
+
+    <div id="market">
+        <h2>Stock Market</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stock</th>
+                    <th>Price</th>
+                    <th>Buy</th>
+                    <th>Sell</th>
+                </tr>
+            </thead>
+            <tbody id="market-stocks"></tbody>
+        </table>
+        <button id="next-day">Next Day (Prices Change)</button>
+    </div>
+
+    <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <button id="save-score">Save My Score</button>
+        <ul id="scores"></ul>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
