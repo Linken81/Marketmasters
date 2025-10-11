@@ -9,12 +9,28 @@
 </head>
 <body>
     <div class="dashboard">
-        <div class="header panel">
-            <span class="logo"><span style="color:#21e6c1;">MMtrade</span></span>
-            <span>Cash: <span id="cash">$10000.00</span></span>
+        <div class="header">
+            <div class="logo">MMtrade</div>
+            <div class="cash">Cash: $10000.00</div>
         </div>
-        <div class="stock-list panel">
-            <h3>Stocks</h3>
+        <div class="chart-panel">
+            <div class="chart-title">Portfolio Chart</div>
+            <canvas id="portfolioChart"></canvas>
+        </div>
+        <div class="trade-panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stock</th>
+                        <th>Buy</th>
+                        <th>Sell</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-table"></tbody>
+            </table>
+        </div>
+        <div class="stocks-panel">
+            <div class="stocks-title">Stocks</div>
             <table>
                 <thead>
                     <tr>
@@ -26,28 +42,13 @@
                 <tbody id="stock-table"></tbody>
             </table>
         </div>
-        <div class="chart-panel panel">
-            <h3>Portfolio Chart</h3>
-            <canvas id="portfolioChart"></canvas>
-        </div>
-        <div class="leaderboard-panel panel">
-            <h3>Leaderboard</h3>
+        <div class="leaderboard-panel">
+            <div class="leaderboard-title">Leaderboard</div>
             <ul id="scores"></ul>
-            <button id="save-score">Save My Score</button>
         </div>
-        <div class="trade-panel panel">
-            <h3>Trade</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Stock</th>
-                        <th>Buy</th>
-                        <th>Sell</th>
-                    </tr>
-                </thead>
-                <tbody id="trade-table"></tbody>
-            </table>
+        <div class="buttons-panel">
             <button id="next-day">Next Day</button>
+            <button id="save-score">Save My Score</button>
         </div>
     </div>
     <script src="script.js"></script>
