@@ -182,6 +182,11 @@ tr:hover {
     box-shadow: 0 4px 18px #fc0032cc;
 }
 
+#portfolio-table td:last-child, #portfolio-table th:last-child {
+    min-width: 200px;
+    white-space: nowrap;
+}
+
 .buttons-row {
     display: flex;
     gap: 12px;
