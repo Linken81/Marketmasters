@@ -8,35 +8,46 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="game-grid">
-        <div class="portfolio card">
-            <h2>Portfolio</h2>
-            <div id="cash"></div>
-            <ul id="stocks"></ul>
+    <div class="dashboard">
+        <div class="header panel">
+            <span class="logo"><span style="color:#21e6c1;">MMtrade</span></span>
+            <span>Cash: <span id="cash">$10000.00</span></span>
         </div>
-        <div class="market card">
-            <h2>Market</h2>
+        <div class="stock-list panel">
+            <h3>Stocks</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody id="stock-table"></tbody>
+            </table>
+        </div>
+        <div class="chart-panel panel">
+            <h3>Portfolio Chart</h3>
+            <canvas id="portfolioChart"></canvas>
+        </div>
+        <div class="leaderboard-panel panel">
+            <h3>Leaderboard</h3>
+            <ul id="scores"></ul>
+            <button id="save-score">Save My Score</button>
+        </div>
+        <div class="trade-panel panel">
+            <h3>Trade</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Stock</th>
-                        <th>Price</th>
                         <th>Buy</th>
                         <th>Sell</th>
                     </tr>
                 </thead>
-                <tbody id="market-stocks"></tbody>
+                <tbody id="trade-table"></tbody>
             </table>
             <button id="next-day">Next Day</button>
-        </div>
-        <div class="leaderboard card">
-            <h2>Leaderboard</h2>
-            <button id="save-score">Save My Score</button>
-            <ul id="scores"></ul>
-        </div>
-        <div class="chartbox card">
-            <h3>Portfolio Chart</h3>
-            <canvas id="portfolioChart"></canvas>
         </div>
     </div>
     <script src="script.js"></script>
