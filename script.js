@@ -100,20 +100,19 @@ function updateStockTable() {
     });
 }
 
+// FIXED: Trade panel shows Price between Stock and Buy
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
+            <td>$${price.toFixed(2)}</td>
             <td>
                 <input type="number" min="1" value="1" style="width:40px;" id="buy_${stock.symbol}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
-            </td>
-            <td>
-                <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
-                <button onclick="sellStock('${stock.symbol}')">Sell</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -127,10 +126,11 @@ function updatePortfolioTable() {
         let owned = portfolio.stocks[stock.symbol];
         if (owned > 0) {
             let price = prices[stock.symbol];
-            let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+            let prevPrice = prevPrices[stock.symbol] || price;
             let totalValue = owned * price;
-            let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
-            let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
+            let valueChange = (price - prevPrice) * owned;
+            let changeStr = (valueChange > 0 ? "+" : "") + valueChange.toFixed(2);
+            let className = valueChange > 0 ? "price-up" : valueChange < 0 ? "price-down" : "price-same";
             let tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${stock.symbol}</td>
@@ -138,6 +138,10 @@ function updatePortfolioTable() {
                 <td>$${price.toFixed(2)}</td>
                 <td>$${totalValue.toFixed(2)}</td>
                 <td class="${className}">${changeStr}</td>
+                <td>
+                    <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
+                    <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
+                </td>
             `;
             tbody.appendChild(tr);
         }
@@ -152,7 +156,7 @@ window.buyStock = function(symbol) {
         portfolio.stocks[symbol] += qty;
         updateCash();
         updateLeaderboard();
-        updatePortfolioTable(); // <-- Ensure this is called after every buy
+        updatePortfolioTable();
     }
 };
 window.sellStock = function(symbol) {
@@ -163,7 +167,7 @@ window.sellStock = function(symbol) {
         portfolio.stocks[symbol] -= qty;
         updateCash();
         updateLeaderboard();
-        updatePortfolioTable(); // <-- Ensure this is called after every sell
+        updatePortfolioTable();
     }
 };
 document.getElementById('next-day').onclick = function() {
