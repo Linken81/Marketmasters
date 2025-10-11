@@ -2,53 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Stock Market Tycoon</title>
+    <title>Market Masters</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap">
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
-    <div class="dashboard">
-        <header>
-            <h1>Stock Market Tycoon</h1>
-            <p class="subtitle">Trade fictional stocks and watch your portfolio grow!</p>
-        </header>
-        <main>
-            <section class="portfolio-section card">
-                <h2>Your Portfolio</h2>
-                <div class="portfolio-info">
+    <div class="ticker-bar" id="ticker-bar"></div>
+    <div class="main-grid">
+        <div class="sidebar">
+            <div class="user-card card">
+                <div class="avatar">MM</div>
+                <div>
+                    <h2>Market Masters</h2>
                     <span id="cash"></span>
                 </div>
-                <div class="portfolio-list">
-                    <ul id="stocks"></ul>
-                </div>
-            </section>
-            <section class="chart-section card">
-                <h2>Portfolio Value Over Time</h2>
+            </div>
+            <div class="portfolio-section card">
+                <h3>Portfolio</h3>
+                <ul id="stocks"></ul>
                 <canvas id="portfolioChart"></canvas>
-            </section>
-            <section class="market-section card">
-                <h2>Stock Market</h2>
+            </div>
+            <div class="stats-section card">
+                <h3>Stats</h3>
+                <div id="stats"></div>
+            </div>
+        </div>
+        <div class="content">
+            <div class="tabs">
+                <button class="tab active" data-tab="market">Market</button>
+                <button class="tab" data-tab="leaderboard">Leaderboard</button>
+            </div>
+            <div class="tab-content" id="market">
                 <table>
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Stock</th>
                             <th>Price</th>
+                            <th>Change</th>
                             <th>Buy</th>
                             <th>Sell</th>
                         </tr>
                     </thead>
                     <tbody id="market-stocks"></tbody>
                 </table>
-                <button id="next-day">Next Day (Prices Change)</button>
-            </section>
-            <section class="leaderboard-section card">
-                <h2>Leaderboard</h2>
+                <button id="next-day">Next Day</button>
+            </div>
+            <div class="tab-content hidden" id="leaderboard">
+                <h3>Leaderboard</h3>
                 <button id="save-score">Save My Score</button>
                 <ul id="scores"></ul>
-            </section>
-        </main>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
