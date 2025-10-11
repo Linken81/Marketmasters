@@ -102,9 +102,11 @@ function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
+            <td>$${price.toFixed(2)}</td>
             <td>
                 <input type="number" min="1" value="1" style="width:40px;" id="buy_${stock.symbol}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
