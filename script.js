@@ -1,5 +1,3 @@
-// Dashboard-style compact stock market simulation
-
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies" },
     { symbol: "FRUIQ", name: "FruityQ Foods" },
@@ -25,6 +23,10 @@ const STOCKS = [
 
 let portfolio = { cash: 10000, stocks: {} };
 STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
+
+// Track the number of shares held before the latest buy (for correct change calculation)
+let prevOwned = {};
+STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
 
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
@@ -100,7 +102,6 @@ function updateStockTable() {
     });
 }
 
-// Trade panel now includes Price column/value
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
@@ -119,6 +120,7 @@ function updateTradeTable() {
     });
 }
 
+// FIXED: Change only reflects price movement of shares held before the latest buy
 function updatePortfolioTable() {
     let tbody = document.getElementById('portfolio-table');
     tbody.innerHTML = "";
@@ -128,13 +130,12 @@ function updatePortfolioTable() {
             let price = prices[stock.symbol];
             let prevPrice = prevPrices[stock.symbol];
             let totalValue = owned * price;
-
-            // Only show change if price changed since last day
             let valueChange = 0;
-            if (prevPrice !== undefined && prevPrice !== price) {
-                valueChange = (price - prevPrice) * owned;
+
+            // Only apply change to shares held before the last buy
+            if (prevPrice !== undefined && prevPrice !== price && prevOwned[stock.symbol] > 0) {
+                valueChange = (price - prevPrice) * prevOwned[stock.symbol];
             }
-            // If just bought, or it's the first day, show zero change
             let changeStr = (valueChange > 0 ? "+" : "") + valueChange.toFixed(2);
             let className = valueChange > 0 ? "price-up" : valueChange < 0 ? "price-down" : "price-same";
             let tr = document.createElement('tr');
@@ -160,6 +161,7 @@ window.buyStock = function(symbol) {
     if (qty > 0 && portfolio.cash >= cost) {
         portfolio.cash -= cost;
         portfolio.stocks[symbol] += qty;
+        // Do NOT update prevOwned here (only update before Next Day)
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
@@ -171,12 +173,17 @@ window.sellStock = function(symbol) {
     if (qty > 0 && owned >= qty) {
         portfolio.cash += prices[symbol] * qty;
         portfolio.stocks[symbol] -= qty;
+        // Do NOT update prevOwned here (only update before Next Day)
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
     }
 };
 document.getElementById('next-day').onclick = function() {
+    // Before price changes, update prevOwned to current holdings
+    STOCKS.forEach(stock => {
+        prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
+    });
     setRandomPrices();
     updateStockTable();
     updateTradeTable();
