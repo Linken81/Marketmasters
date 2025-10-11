@@ -107,28 +107,32 @@ function updateTradeTable() {
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
         let price = prices[stock.symbol];
+        const rowId = `buy_${stock.symbol}`;
+        const costId = `buy_cost_${stock.symbol}`;
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
             <td>$${price.toFixed(2)}</td>
             <td>
-                <input type="number" min="1" value="1" class="buy-input" id="buy_${stock.symbol}">
+                <input type="number" min="1" value="1" class="buy-input" id="${rowId}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
-                <span class="buy-cost" id="buy_cost_${stock.symbol}">$${price.toFixed(2)}</span>
+                <span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span>
             </td>
         `;
         tbody.appendChild(tr);
 
-        // Add event listener for cost updating
-        setTimeout(() => { // ensure DOM is ready
-            const qtyInput = document.getElementById(`buy_${stock.symbol}`);
-            const costSpan = document.getElementById(`buy_cost_${stock.symbol}`);
+        // Add input event listener for live cost update
+        setTimeout(() => {
+            const qtyInput = document.getElementById(rowId);
+            const costSpan = document.getElementById(costId);
             if (qtyInput && costSpan) {
-                qtyInput.addEventListener('input', function () {
+                function updateCost() {
                     let qty = parseInt(qtyInput.value) || 0;
                     let cost = qty * price;
                     costSpan.textContent = `$${cost.toFixed(2)}`;
-                });
+                }
+                qtyInput.addEventListener('input', updateCost);
+                updateCost(); // initialize on load
             }
         }, 0);
     });
