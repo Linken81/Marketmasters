@@ -1,4 +1,4 @@
-// Basic stock market simulation
+// Fictional stock market simulation with Chart.js, dark theme, animated transitions
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies" },
     { symbol: "FRUIQ", name: "FruityQ Foods" },
@@ -22,12 +22,16 @@ const STOCKS = [
     { symbol: "TREND", name: "Trendify Retail" }
 ];
 
+// Portfolio setup
 let portfolio = {
     cash: 10000,
-    stocks: { AAPL: 0, GOOG: 0, TSLA: 0, AMZN: 0 }
+    stocks: {}
 };
+STOCKS.forEach(stock => {
+    portfolio.stocks[stock.symbol] = 0;
+});
 
-// Simulate initial prices
+// Initial prices
 let prices = {};
 function randomPrice() {
     return +(Math.random() * 900 + 100).toFixed(2);
@@ -38,6 +42,59 @@ function setRandomPrices() {
     });
 }
 setRandomPrices();
+
+// Portfolio value tracking
+let portfolioHistory = [getPortfolioValue()];
+let day = 1;
+
+// Chart.js setup with animated transitions
+let ctx = document.getElementById('portfolioChart').getContext('2d');
+let chartData = {
+    labels: [day],
+    datasets: [{
+        label: 'Portfolio Value',
+        data: [portfolioHistory[0]],
+        borderColor: '#00FC87',
+        backgroundColor: 'rgba(14,210,247,0.15)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 5,
+        pointBackgroundColor: '#00FC87',
+        pointBorderColor: '#23263A'
+    }]
+};
+let portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+        animation: {
+            duration: 900,
+            easing: 'easeOutCubic'
+        },
+        scales: {
+            x: {
+                title: { display: true, text: 'Day', color: '#00FC87' },
+                grid: { color: '#23263A' },
+                ticks: { color: '#00FC87' }
+            },
+            y: {
+                title: { display: true, text: 'Portfolio Value ($)', color: '#00FC87' },
+                grid: { color: '#23263A' },
+                ticks: { color: '#00FC87' }
+            }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#23263A',
+                titleColor: '#00FC87',
+                bodyColor: '#F5F6FA',
+                borderColor: '#00FC87',
+                borderWidth: 1
+            }
+        }
+    }
+});
 
 function updatePortfolioView() {
     document.getElementById('cash').textContent = `Cash: $${portfolio.cash.toFixed(2)}`;
@@ -82,7 +139,7 @@ window.buyStock = function(symbol) {
         portfolio.stocks[symbol] += qty;
         updatePortfolioView();
     } else {
-        alert("Not enough cash or invalid quantity!");
+        animateButton(`buy_${symbol}`, false);
     }
 };
 
@@ -94,14 +151,41 @@ window.sellStock = function(symbol) {
         portfolio.stocks[symbol] -= qty;
         updatePortfolioView();
     } else {
-        alert("Not enough shares or invalid quantity!");
+        animateButton(`sell_${symbol}`, false);
     }
 };
+
+// Animate input field on error
+function animateButton(inputId, success) {
+    let input = document.getElementById(inputId);
+    input.style.transition = "box-shadow 0.3s";
+    input.style.boxShadow = success ? "0 0 12px #00FC87" : "0 0 14px #FC0032";
+    setTimeout(() => {
+        input.style.boxShadow = "";
+    }, 500);
+}
 
 document.getElementById('next-day').onclick = function() {
     setRandomPrices();
     updateMarketView();
+    day++;
+    let value = getPortfolioValue();
+    portfolioHistory.push(value);
+    portfolioChart.data.labels.push(day);
+    portfolioChart.data.datasets[0].data.push(value);
+    portfolioChart.update();
+    animateCard('.chart-section');
 };
+
+// Animate card highlight
+function animateCard(selector) {
+    let el = document.querySelector(selector);
+    if (!el) return;
+    el.style.boxShadow = "0 0 36px 4px #00fc87";
+    setTimeout(() => {
+        el.style.boxShadow = "";
+    }, 800);
+}
 
 function getPortfolioValue() {
     let value = portfolio.cash;
@@ -133,9 +217,9 @@ function updateLeaderboard() {
     let scores = loadScores();
     let ul = document.getElementById('scores');
     ul.innerHTML = "";
-    scores.forEach(score => {
+    scores.forEach((score, idx) => {
         let li = document.createElement('li');
-        li.textContent = `${score.name}: $${score.value}`;
+        li.innerHTML = `<span style="color:#00FC87;">${idx+1}.</span> ${score.name}: <span style="color:#0ED2F7;">$${score.value}</span>`;
         ul.appendChild(li);
     });
 }
