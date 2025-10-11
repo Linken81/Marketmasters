@@ -1,112 +1,120 @@
-html, body {
-    height: 100%;
+body {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: #181A20;
-    color: #F5F6FA;
-    overflow: hidden; /* Prevent scrolling */
-}
-
-.game-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 80px 1fr 1fr;
-    gap: 8px;
-    height: 100vh;
-    width: 100vw;
-    box-sizing: border-box;
-    padding: 8px;
-}
-
-.card {
-    background: #23263A;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.14);
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: flex-start;
-    min-width: 0;
-    min-height: 0;
-    height: 100%;
-    max-height: 100%;
+    font-family: 'Roboto', Arial, sans-serif;
+    background: linear-gradient(135deg, #181A20 65%, #253A5F 100%);
+    color: #E7EBF3;
     overflow: hidden;
 }
 
-.portfolio {
-    grid-column: 1 / 2;
-    grid-row: 2 / 4;
-    max-width: 350px;
+.dashboard {
+    display: grid;
+    grid-template-columns: 220px 1fr 260px;
+    grid-template-rows: 54px 1fr 140px;
+    grid-template-areas:
+        "header header header"
+        "stock-list chart-panel leaderboard-panel"
+        "order-history order-history order-history";
+    height: 100vh;
+    gap: 10px;
+    padding: 12px;
+    box-sizing: border-box;
 }
 
-.market {
-    grid-column: 2 / 4;
-    grid-row: 2 / 3;
-    max-height: 320px;
+.panel {
+    background: #21293a;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px #0ED2F722;
+    padding: 10px;
+    overflow: hidden;
+    font-size: 0.97rem;
+    min-width: 0;
+    min-height: 0;
 }
 
-.leaderboard {
-    grid-column: 2 / 4;
-    grid-row: 3 / 4;
-    max-height: 300px;
+.header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    color: #00FC87;
+    background: transparent;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+}
+
+.logo-green {
+    color: #00FC87;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.stock-list {
+    grid-area: stock-list;
+}
+
+.chart-panel {
+    grid-area: chart-panel;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.leaderboard-panel {
+    grid-area: leaderboard-panel;
     overflow-y: auto;
 }
 
-.portfolio ul,
-.leaderboard ul {
-    flex: 1;
-    overflow-y: auto;
-    margin: 4px 0;
-    padding: 0;
-    list-style: none;
+.order-history {
+    grid-area: order-history;
 }
 
-.market table {
+h3 {
+    margin: 7px 0 8px 0;
+    color: #00FC87;
+    font-size: 1.07rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+table {
     width: 100%;
     border-collapse: collapse;
-    background: #23263A;
+    background: #21293a;
     font-size: 0.93rem;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
 }
 
-.market th, .market td {
+th, td {
     border: 1px solid #2b2d42;
     padding: 4px 4px;
     text-align: center;
 }
 
-.market th {
+th {
     background: #181A20;
     color: #00FC87;
     font-weight: bold;
+    font-size: 0.98em;
 }
 
-.market tbody {
-    display: block;
-    max-height: 140px;
-    overflow-y: auto;
-}
-
-.market tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-}
+.price-up { color: #00FC87; font-weight: 700; }
+.price-down { color: #FC0032; font-weight: 700; }
+.price-same { color: #aaa; }
 
 button {
-    padding: 5px 10px;
+    padding: 7px 16px;
     background: linear-gradient(90deg,#00FC87,#0ED2F7);
     color: #181A20;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 700;
-    margin-top: 4px;
-    font-size: 0.9em;
+    font-size: 1em;
+    margin: 5px 0;
     transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 1px 6px #00FC8744;
 }
 
 button:hover {
@@ -115,38 +123,34 @@ button:hover {
 }
 
 canvas {
-    width: 100% !important;
-    max-width: 320px;
-    max-height: 120px;
+    width: 98% !important;
+    max-width: 410px;
+    max-height: 115px;
     background: #181A20;
-    border-radius: 6px;
-    margin-top: 6px;
+    border-radius: 7px;
+    margin-top: 7px;
 }
 
-@media screen and (max-width: 900px) {
-    .game-grid {
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+@media screen and (max-width: 1000px) {
+    .dashboard {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 50px 1fr 1fr;
-        gap: 6px;
-        height: 100vh;
+        grid-template-rows: 54px 1fr 140px;
+        grid-template-areas:
+            "header header"
+            "stock-list chart-panel"
+            "order-history order-history";
     }
-    .portfolio {
-        grid-column: 1 / 2;
-        grid-row: 2 / 4;
-        max-width: 220px;
+    .leaderboard-panel {
+        display: none;
     }
-    .market {
-        grid-column: 2 / 3;
-        grid-row: 2 / 3;
-        max-height: 120px;
-    }
-    .leaderboard {
-        grid-column: 2 / 3;
-        grid-row: 3 / 4;
-        max-height: 100px;
-    }
-    canvas {
-        max-width: 180px;
-        max-height: 50px;
+    .chart-panel canvas {
+        max-width: 260px;
+        max-height: 70px;
     }
 }
