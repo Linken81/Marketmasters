@@ -1,157 +1,255 @@
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Roboto', Arial, sans-serif;
-    background: #181A20;
-    color: #F5F6FA;
+// Compact, animated stock market simulation with ticker, badges, and tabs
+
+const STOCKS = [
+    { symbol: "ZOOMX", name: "Zoomix Technologies" },
+    { symbol: "FRUIQ", name: "FruityQ Foods" },
+    { symbol: "SOLARO", name: "Solaro Energy" },
+    { symbol: "ROBIX", name: "Robix Robotics" },
+    { symbol: "DRONZ", name: "Dronz Delivery" },
+    { symbol: "AQUIX", name: "Aquix Water Corp" },
+    { symbol: "GLOBO", name: "Globon Airlines" },
+    { symbol: "NUTRO", name: "Nutro Nutrition" },
+    { symbol: "PIXEL", name: "PixelWave Media" },
+    { symbol: "VOYZA", name: "Voyza Travel" },
+    { symbol: "FLEXI", name: "Flexi Fitness" },
+    { symbol: "MEDIX", name: "Medix Health" },
+    { symbol: "ECOFY", name: "Ecofy Solutions" },
+    { symbol: "ASTRO", name: "Astro Mining" },
+    { symbol: "NEURA", name: "NeuraTech Labs" },
+    { symbol: "BERRY", name: "BerrySoft Drinks" },
+    { symbol: "FASHN", name: "Fashn Apparel" },
+    { symbol: "SPECT", name: "Spectra Security" },
+    { symbol: "INNOV", name: "Innovado Systems" },
+    { symbol: "TREND", name: "Trendify Retail" }
+];
+
+let portfolio = { cash: 10000, stocks: {} };
+STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
+
+let prices = {}, prevPrices = {};
+function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
+function setRandomPrices() {
+    prevPrices = {...prices};
+    STOCKS.forEach(stock => {
+        prices[stock.symbol] = randomPrice();
+    });
 }
+setRandomPrices();
 
-.ticker-bar {
-    background: #23263A;
-    color: #00FC87;
-    font-weight: 700;
-    padding: 8px 0;
-    display: flex;
-    gap: 18px;
-    overflow-x: auto;
-    border-bottom: 2px solid #00FC87;
-}
+let portfolioHistory = [getPortfolioValue()];
+let day = 1;
 
-.main-grid {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 24px;
-    max-width: 1300px;
-    margin: 20px auto;
-}
-
-.sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.card {
-    background: #23263A;
-    border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.20);
-    padding: 20px;
-    margin-bottom: 0;
-}
-
-.user-card {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.avatar {
-    background: linear-gradient(135deg,#00FC87 60%,#0ED2F7 100%);
-    color: #23263A;
-    width: 54px;
-    height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 700;
-    border-radius: 50%;
-    box-shadow: 0 2px 10px #00FC8744;
-}
-
-.tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 18px;
-}
-
-.tab {
-    background: #23263A;
-    border: none;
-    border-radius: 6px 6px 0 0;
-    padding: 10px 22px;
-    color: #F5F6FA;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 1.12rem;
-    transition: background 0.2s;
-}
-
-.tab.active {
-    background: linear-gradient(90deg,#00FC87,#0ED2F7);
-    color: #181A20;
-}
-
-.tab-content {
-    display: block;
-}
-
-.tab-content.hidden {
-    display: none;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #23263A;
-    font-size: 1rem;
-}
-
-th, td {
-    border: 1px solid #2b2d42;
-    padding: 8px 12px;
-    text-align: center;
-}
-
-th {
-    background: #181A20;
-    color: #00FC87;
-}
-
-input[type="number"] {
-    width: 50px;
-    background: #181A20;
-    color: #F5F6FA;
-    border: 1px solid #00FC87;
-    border-radius: 4px;
-    padding: 4px;
-}
-
-.price-up { color: #00FC87; font-weight: 700; }
-.price-down { color: #FC0032; font-weight: 700; }
-.price-same { color: #aaa; }
-.badge { border-radius: 6px; padding: 2px 8px; margin-left: 5px; font-size: 0.98em; }
-.gain { background: #00FC8733; color: #00FC87; }
-.loss { background: #FC003233; color: #FC0032; }
-.best { background: #0ED2F766; color: #0ED2F7; }
-
-button {
-    padding: 8px 16px;
-    background: linear-gradient(90deg,#00FC87,#0ED2F7);
-    color: #181A20;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    margin: 8px 0;
-    box-shadow: 0 2px 8px rgba(0,252,135,0.08);
-    transition: background 0.2s, transform 0.2s;
-}
-
-button:hover {
-    background: linear-gradient(90deg,#0ED2F7,#00FC87);
-    transform: scale(1.04);
-}
-
-@media screen and (max-width: 900px) {
-    .main-grid {
-        grid-template-columns: 1fr;
+// Chart.js setup
+let ctx = document.getElementById('portfolioChart').getContext('2d');
+let chartData = {
+    labels: [day],
+    datasets: [{
+        label: 'Portfolio Value',
+        data: [portfolioHistory[0]],
+        borderColor: '#00FC87',
+        backgroundColor: 'rgba(14,210,247,0.10)',
+        fill: true,
+        tension: 0.28,
+        pointRadius: 4,
+        pointBackgroundColor: '#00FC87',
+        pointBorderColor: '#23263A'
+    }]
+};
+let portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+        animation: { duration: 700, easing: 'easeOutQuad' },
+        scales: {
+            x: { title: { display: true, text: 'Day', color: '#00FC87' }, grid: { color: '#23263A' }, ticks: { color: '#00FC87' } },
+            y: { title: { display: true, text: 'Portfolio Value ($)', color: '#00FC87' }, grid: { color: '#23263A' }, ticks: { color: '#00FC87' } }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#23263A',
+                titleColor: '#00FC87',
+                bodyColor: '#F5F6FA',
+                borderColor: '#00FC87',
+                borderWidth: 1
+            }
+        }
     }
-    .sidebar {
-        flex-direction: row;
-        gap: 12px;
-    }
-    .portfolio-section, .stats-section {
-        min-width: 220px;
-    }
+});
+
+// UI update functions
+function updateCash() {
+    document.getElementById('cash').textContent = `Cash: $${portfolio.cash.toFixed(2)}`;
 }
+function updatePortfolioView() {
+    let ul = document.getElementById('stocks');
+    ul.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let qty = portfolio.stocks[stock.symbol] || 0;
+        if (qty > 0) {
+            let li = document.createElement('li');
+            li.innerHTML = `<span>${stock.name} (${stock.symbol})</span> <span class="badge gain">${qty} shares</span>`;
+            ul.appendChild(li);
+        }
+    });
+}
+function updateStats() {
+    let values = STOCKS.map(stock => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        change: prices[stock.symbol] - (prevPrices[stock.symbol] || prices[stock.symbol]),
+        price: prices[stock.symbol]
+    }));
+    let best = values.reduce((a,b) => Math.abs(b.change) > Math.abs(a.change) ? b : a, values[0]);
+    let gainers = values.filter(v => v.change > 0).length;
+    let losers = values.filter(v => v.change < 0).length;
+    document.getElementById('stats').innerHTML = `
+        <span class="badge best">Best Move: ${best.name} (${best.symbol})</span><br>
+        <span class="badge gain">Gainers: ${gainers}</span>
+        <span class="badge loss">Losers: ${losers}</span>
+        <span class="badge">Day: ${day}</span>
+    `;
+}
+function getPriceChangeClass(symbol) {
+    if (!prevPrices[symbol]) return "price-same";
+    if (prices[symbol] > prevPrices[symbol]) return "price-up";
+    if (prices[symbol] < prevPrices[symbol]) return "price-down";
+    return "price-same";
+}
+function getPriceChangeIcon(symbol) {
+    if (!prevPrices[symbol]) return "";
+    if (prices[symbol] > prevPrices[symbol]) return "<i class='ph-arrow-up'></i>";
+    if (prices[symbol] < prevPrices[symbol]) return "<i class='ph-arrow-down'></i>";
+    return "<i class='ph-minus'></i>";
+}
+function updateTickerBar() {
+    let ticker = document.getElementById('ticker-bar');
+    ticker.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
+        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+        let icon = getPriceChangeIcon(stock.symbol);
+        let className = getPriceChangeClass(stock.symbol);
+        let item = document.createElement('div');
+        item.innerHTML = `<strong>${stock.symbol}</strong> $${price.toFixed(2)} <span class="${className}">${icon} ${changeStr}</span>`;
+        ticker.appendChild(item);
+    });
+}
+function updateMarketView() {
+    let tbody = document.getElementById('market-stocks');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
+        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+        let className = getPriceChangeClass(stock.symbol);
+        let icon = getPriceChangeIcon(stock.symbol);
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><i class="ph-trend-up"></i></td>
+            <td>${stock.name} (${stock.symbol})</td>
+            <td>$${price.toFixed(2)}</td>
+            <td class="${className}">${icon} ${changeStr}</td>
+            <td>
+                <input type="number" min="1" value="1" id="buy_${stock.symbol}">
+                <button onclick="buyStock('${stock.symbol}')">Buy</button>
+            </td>
+            <td>
+                <input type="number" min="1" value="1" id="sell_${stock.symbol}">
+                <button onclick="sellStock('${stock.symbol}')">Sell</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Market actions
+window.buyStock = function(symbol) {
+    let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
+    let cost = prices[symbol] * qty;
+    if (qty > 0 && portfolio.cash >= cost) {
+        portfolio.cash -= cost;
+        portfolio.stocks[symbol] += qty;
+        updateCash();
+        updatePortfolioView();
+    }
+};
+window.sellStock = function(symbol) {
+    let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
+    let owned = portfolio.stocks[symbol];
+    if (qty > 0 && owned >= qty) {
+        portfolio.cash += prices[symbol] * qty;
+        portfolio.stocks[symbol] -= qty;
+        updateCash();
+        updatePortfolioView();
+    }
+};
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tabBtn => {
+    tabBtn.onclick = () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        tabBtn.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+        document.getElementById(tabBtn.dataset.tab).classList.remove('hidden');
+    };
+});
+
+// Next day logic
+document.getElementById('next-day').onclick = function() {
+    setRandomPrices();
+    updateMarketView();
+    updateTickerBar();
+    updateStats();
+    day++;
+    let value = getPortfolioValue();
+    portfolioHistory.push(value);
+    portfolioChart.data.labels.push(day);
+    portfolioChart.data.datasets[0].data.push(value);
+    portfolioChart.update();
+};
+
+// Portfolio value calculation
+function getPortfolioValue() {
+    let value = portfolio.cash;
+    STOCKS.forEach(stock => {
+        value += portfolio.stocks[stock.symbol] * prices[stock.symbol];
+    });
+    return value;
+}
+
+// Leaderboard using localStorage
+function loadScores() {
+    let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
+    return scores.sort((a, b) => b.value - a.value).slice(0, 10);
+}
+function saveScore() {
+    let name = prompt("Enter your name for the leaderboard:");
+    if (!name) return;
+    let value = getPortfolioValue();
+    let scores = loadScores();
+    scores.push({ name, value: +value.toFixed(2) });
+    localStorage.setItem('leaderboard_scores', JSON.stringify(scores));
+    updateLeaderboard();
+}
+document.getElementById('save-score').onclick = saveScore;
+function updateLeaderboard() {
+    let scores = loadScores();
+    let ul = document.getElementById('scores');
+    ul.innerHTML = "";
+    scores.forEach((score, idx) => {
+        let initials = score.name.split(' ').map(w=>w[0]).join('').toUpperCase();
+        let li = document.createElement('li');
+        li.innerHTML = `<span class="avatar">${initials}</span> <strong>${score.name}</strong>: <span class="badge gain">$${score.value}</span>`;
+        ul.appendChild(li);
+    });
+}
+
+// Initial UI setup
+updateCash();
+updatePortfolioView();
+updateMarketView();
+updateTickerBar();
+updateStats();
+updateLeaderboard();
