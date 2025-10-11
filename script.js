@@ -98,7 +98,6 @@ function updateStockTable() {
     });
 }
 
-// Trade panel now includes Price column/value
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
