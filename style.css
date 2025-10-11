@@ -12,25 +12,24 @@ html, body {
 
 .dashboard {
     display: grid;
-    grid-template-columns: 220px 1fr 220px;
-    grid-template-rows: 44px 240px 1fr 90px;
+    grid-template-columns: 240px 1fr 240px;
+    grid-template-rows: 56px 1fr 130px;
     grid-template-areas:
         "header header header"
         "stock-list chart-panel leaderboard-panel"
-        "stock-list chart-panel leaderboard-panel"
         "trade trade trade";
-    gap: 6px;
+    gap: 8px;
     height: 100vh;
     width: 100vw;
     box-sizing: border-box;
-    padding: 5px;
+    padding: 6px;
 }
 
 .panel {
     background: #23263A;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.13);
-    padding: 7px 10px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -43,17 +42,17 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 1.15rem;
+    font-size: 1.20rem;
     color: #21e6c1;
     font-weight: 700;
 }
 
 .stock-list {
     grid-area: stock-list;
-    height: 100%;
     overflow-y: auto;
     font-size: 0.97em;
     min-width: 0;
+    max-height: calc(100vh - 56px - 130px - 22px);
 }
 
 .chart-panel {
@@ -64,11 +63,11 @@ html, body {
     justify-content: flex-start;
     min-width: 0;
     min-height: 0;
-    height: 100%;
+    max-height: calc(100vh - 56px - 130px - 22px);
 }
 
 .chart-panel h3 {
-    margin-top: 6px;
+    margin-top: 7px;
     margin-bottom: 2px;
     color: #21e6c1;
     font-size: 1em;
@@ -81,16 +80,16 @@ html, body {
     font-size: 0.98em;
     overflow-y: auto;
     min-width: 0;
+    max-height: calc(100vh - 56px - 130px - 22px);
 }
 
 .trade-panel {
     grid-area: trade;
     min-height: 0;
-    padding-top: 2px;
     font-size: 0.98em;
     overflow-x: auto;
     overflow-y: auto;
-    height: 90px;
+    height: 130px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -106,10 +105,10 @@ table {
 
 th, td {
     border: 1px solid #2b2d42;
-    padding: 2px 2px;
+    padding: 3px 2px;
     text-align: center;
     min-width: 0;
-    max-width: 75px;
+    max-width: 85px;
     word-break: break-word;
 }
 
@@ -117,7 +116,7 @@ th {
     background: #202539;
     color: #21e6c1;
     font-weight: 600;
-    font-size: 0.93em;
+    font-size: 0.95em;
 }
 
 .price-up { color: #21e6c1; font-weight: 700; }
@@ -125,18 +124,18 @@ th {
 .price-same { color: #aaa; }
 
 input[type="number"] {
-    width: 25px;
+    width: 28px;
     background: #202539;
     color: #E7EBF3;
     border: 1px solid #21e6c1;
     border-radius: 4px;
-    padding: 1px;
+    padding: 2px;
     font-size: 0.93em;
     margin-right: 1px;
 }
 
 button {
-    padding: 2px 8px;
+    padding: 2px 10px;
     background: #21e6c1;
     color: #202539;
     border: none;
@@ -170,8 +169,8 @@ button:hover {
 
 canvas {
     width: 98% !important;
-    max-width: 250px;
-    max-height: 80px;
+    max-width: 220px;
+    max-height: 70px;
     background: #181A20;
     border-radius: 6px;
     margin: 4px auto 0 auto;
