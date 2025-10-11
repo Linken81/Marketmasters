@@ -9,14 +9,15 @@ html, body {
     overflow: hidden;
 }
 
-the dashboard {
+.dashboard {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 56px 1fr 180px;
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-rows: auto auto 1fr auto;
     grid-template-areas:
-        "header header header"
-        "stock-list chart-panel leaderboard-panel"
-        ".        trade-panel   .";
+        "header-panel   stock-list   leaderboard-panel"
+        "chart-panel    stock-list   leaderboard-panel"
+        "trade-panel    stock-list   leaderboard-panel"
+        ".              .            action-buttons";
     gap: 8px;
     height: 100vh;
     width: 100vw;
@@ -28,6 +29,7 @@ the dashboard {
     background: #23263A;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+    border: 1px solid #2b2d42;
     padding: 8px 12px;
     display: flex;
     flex-direction: column;
@@ -36,11 +38,12 @@ the dashboard {
     overflow: hidden;
 }
 
-.header { grid-area: header; }
+.header { grid-area: header-panel; }
 .stock-list { grid-area: stock-list; }
 .chart-panel { grid-area: chart-panel; }
 .leaderboard-panel { grid-area: leaderboard-panel; }
-.trade-panel { grid-area: trade-panel; height: 180px; }
+.trade-panel { grid-area: trade-panel; }
+.action-buttons { grid-area: action-buttons; }
 
 .stock-list {
     overflow-y: auto;
@@ -80,6 +83,14 @@ the dashboard {
     overflow-x: auto;
     overflow-y: auto;
     font-size: 0.98em;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: flex-end;
+    align-items: stretch;
 }
 
 table {
@@ -145,13 +156,25 @@ button:hover {
 #next-day,
 #save-score {
     width: 100%;
-    padding: 3px 0;
-    font-size: 1em;
+    padding: 8px 0;
+    font-size: 1.1em;
+    font-weight: 700;
     background: #21e6c1;
     color: #202539;
-    margin-top: 2px;
-    border-radius: 4px;
-    box-shadow: 0 1px 4px #21e6c122;
+    margin: 0;
+    border: none;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(33, 230, 193, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#next-day:hover,
+#save-score:hover {
+    background: #17b8a3;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(33, 230, 193, 0.4);
 }
 
 canvas {
@@ -173,13 +196,15 @@ ul {
 @media screen and (max-width: 900px) {
     .dashboard {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 44px 1fr 120px;
+        grid-template-rows: auto auto 1fr auto;
         grid-template-areas:
-            "header header"
-            "stock-list chart-panel"
-            ". trade-panel .";
+            "header-panel header-panel"
+            "chart-panel chart-panel"
+            "stock-list stock-list"
+            "action-buttons action-buttons";
     }
-    .leaderboard-panel {
+    .leaderboard-panel,
+    .trade-panel {
         display: none;
     }
     .chart-panel canvas {

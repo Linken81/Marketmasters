@@ -13,27 +13,9 @@
             <span class="logo"><span style="color:#21e6c1;">MMtrade</span></span>
             <span>Cash: <span id="cash">$10000.00</span></span>
         </div>
-        <div class="stock-list panel">
-            <h3>Stocks</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Price</th>
-                        <th>Change</th>
-                    </tr>
-                </thead>
-                <tbody id="stock-table"></tbody>
-            </table>
-        </div>
         <div class="chart-panel panel">
             <h3>Portfolio Chart</h3>
             <canvas id="portfolioChart"></canvas>
-        </div>
-        <div class="leaderboard-panel panel">
-            <h3>Leaderboard</h3>
-            <ul id="scores"></ul>
-            <button id="save-score">Save My Score</button>
         </div>
         <div class="trade-panel panel">
             <h3>Trade</h3>
@@ -47,7 +29,27 @@
                 </thead>
                 <tbody id="trade-table"></tbody>
             </table>
+        </div>
+        <div class="stock-list panel">
+            <h3>Stocks</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody id="stock-table"></tbody>
+            </table>
+        </div>
+        <div class="leaderboard-panel panel">
+            <h3>Leaderboard</h3>
+            <ul id="scores"></ul>
+        </div>
+        <div class="action-buttons">
             <button id="next-day">Next Day</button>
+            <button id="save-score">Save My Score</button>
         </div>
     </div>
     <script src="script.js"></script>
