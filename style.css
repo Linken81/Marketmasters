@@ -76,6 +76,9 @@ html, body {
 }
 
 .leaderboard-panel {
+    min-width: 200px;
+    max-width: 350px;
+    width: 250px; /* For fixed width */
     grid-area: leaderboard-panel;
     font-size: 0.98em;
     overflow-y: auto;
