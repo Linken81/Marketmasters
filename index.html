@@ -2,43 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Market Masters</title>
+    <title>Stock Market Tycoon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Stock Market Tycoon</h1>
-    <p>
-        Welcome! Start with $10,000 virtual cash. Buy and sell stocks, grow your wealth, and see how you compare on the leaderboard!
-    </p>
-
-    <div id="portfolio">
-        <h2>Your Portfolio</h2>
-        <p id="cash"></p>
-        <ul id="stocks"></ul>
+    <div class="dashboard">
+        <header>
+            <h1>Stock Market Tycoon</h1>
+            <p class="subtitle">Trade fictional stocks and watch your portfolio grow!</p>
+        </header>
+        <main>
+            <section class="portfolio-section card">
+                <h2>Your Portfolio</h2>
+                <div class="portfolio-info">
+                    <span id="cash"></span>
+                </div>
+                <div class="portfolio-list">
+                    <ul id="stocks"></ul>
+                </div>
+            </section>
+            <section class="chart-section card">
+                <h2>Portfolio Value Over Time</h2>
+                <canvas id="portfolioChart"></canvas>
+            </section>
+            <section class="market-section card">
+                <h2>Stock Market</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Buy</th>
+                            <th>Sell</th>
+                        </tr>
+                    </thead>
+                    <tbody id="market-stocks"></tbody>
+                </table>
+                <button id="next-day">Next Day (Prices Change)</button>
+            </section>
+            <section class="leaderboard-section card">
+                <h2>Leaderboard</h2>
+                <button id="save-score">Save My Score</button>
+                <ul id="scores"></ul>
+            </section>
+        </main>
     </div>
-
-    <div id="market">
-        <h2>Stock Market</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Stock</th>
-                    <th>Price</th>
-                    <th>Buy</th>
-                    <th>Sell</th>
-                </tr>
-            </thead>
-            <tbody id="market-stocks"></tbody>
-        </table>
-        <button id="next-day">Next Day (Prices Change)</button>
-    </div>
-
-    <div id="leaderboard">
-        <h2>Leaderboard</h2>
-        <button id="save-score">Save My Score</button>
-        <ul id="scores"></ul>
-    </div>
-
     <script src="script.js"></script>
 </body>
 </html>
