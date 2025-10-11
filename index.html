@@ -4,58 +4,36 @@
     <meta charset="UTF-8">
     <title>Market Masters</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
-    <div class="ticker-bar" id="ticker-bar"></div>
-    <div class="main-grid">
-        <div class="sidebar">
-            <div class="user-card card">
-                <div class="avatar">MM</div>
-                <div>
-                    <h2>Market Masters</h2>
-                    <span id="cash"></span>
-                </div>
-            </div>
-            <div class="portfolio-section card">
-                <h3>Portfolio</h3>
-                <ul id="stocks"></ul>
-                <canvas id="portfolioChart"></canvas>
-            </div>
-            <div class="stats-section card">
-                <h3>Stats</h3>
-                <div id="stats"></div>
-            </div>
+    <div class="game-grid">
+        <div class="portfolio card">
+            <h2>Portfolio</h2>
+            <span id="cash"></span>
+            <ul id="stocks"></ul>
+            <canvas id="portfolioChart"></canvas>
         </div>
-        <div class="content">
-            <div class="tabs">
-                <button class="tab active" data-tab="market">Market</button>
-                <button class="tab" data-tab="leaderboard">Leaderboard</button>
-            </div>
-            <div class="tab-content" id="market">
-                <table>
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Stock</th>
-                            <th>Price</th>
-                            <th>Change</th>
-                            <th>Buy</th>
-                            <th>Sell</th>
-                        </tr>
-                    </thead>
-                    <tbody id="market-stocks"></tbody>
-                </table>
-                <button id="next-day">Next Day</button>
-            </div>
-            <div class="tab-content hidden" id="leaderboard">
-                <h3>Leaderboard</h3>
-                <button id="save-score">Save My Score</button>
-                <ul id="scores"></ul>
-            </div>
+        <div class="market card">
+            <h2>Market</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stock</th>
+                        <th>Price</th>
+                        <th>Buy</th>
+                        <th>Sell</th>
+                    </tr>
+                </thead>
+                <tbody id="market-stocks"></tbody>
+            </table>
+            <button id="next-day">Next Day</button>
+        </div>
+        <div class="leaderboard card">
+            <h2>Leaderboard</h2>
+            <button id="save-score">Save My Score</button>
+            <ul id="scores"></ul>
         </div>
     </div>
     <script src="script.js"></script>
