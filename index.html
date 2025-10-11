@@ -9,16 +9,15 @@
 </head>
 <body>
     <div class="dashboard">
-        <div class="header">
-            <div class="logo">MMtrade</div>
-        </div>
+        <div class="header">MMtrade</div>
         <div class="left-panel">
-            <div class="chart-panel">
+            <div class="box chart-panel">
                 <div class="chart-title">Portfolio Chart</div>
                 <canvas id="portfolioChart"></canvas>
                 <div class="cash">Cash: $10000.00</div>
             </div>
-            <div class="trade-panel">
+            <div class="box trade-panel">
+                <div class="trade-title">Trade</div>
                 <table>
                     <thead>
                         <tr>
@@ -31,7 +30,7 @@
                 </table>
             </div>
         </div>
-        <div class="stocks-panel">
+        <div class="box stocks-panel">
             <div class="stocks-title">Stocks</div>
             <table>
                 <thead>
@@ -44,7 +43,7 @@
                 <tbody id="stock-table"></tbody>
             </table>
         </div>
-        <div class="leaderboard-panel">
+        <div class="box leaderboard-panel">
             <div class="leaderboard-title">Leaderboard</div>
             <ul id="scores"></ul>
         </div>
