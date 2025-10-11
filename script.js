@@ -121,7 +121,7 @@ function updateTradeTable() {
         `;
         tbody.appendChild(tr);
 
-        // Add input event listener for live cost update
+        // Live cost update for Buy input
         setTimeout(() => {
             const qtyInput = document.getElementById(rowId);
             const costSpan = document.getElementById(costId);
@@ -132,7 +132,7 @@ function updateTradeTable() {
                     costSpan.textContent = `$${cost.toFixed(2)}`;
                 }
                 qtyInput.addEventListener('input', updateCost);
-                updateCost(); // initialize on load
+                updateCost();
             }
         }, 0);
     });
