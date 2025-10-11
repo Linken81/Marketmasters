@@ -1,6 +1,8 @@
 html, body {
     height: 100%;
     width: 100%;
+    min-width: 0;
+    min-height: 0;
     margin: 0;
     padding: 0;
     font-family: 'Roboto', Arial, sans-serif;
@@ -11,10 +13,11 @@ html, body {
 
 .dashboard {
     display: grid;
-    grid-template-columns: 250px 430px 250px; /* Left, Center, Right */
-    grid-template-rows: 56px 1fr 140px;      /* Header, Main, Trade */
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 56px 320px 1fr 160px;
     grid-template-areas:
         "header header header"
+        "stock-list chart-panel leaderboard-panel"
         "stock-list chart-panel leaderboard-panel"
         "trade trade trade";
     gap: 8px;
@@ -52,7 +55,7 @@ html, body {
     overflow-y: auto;
     font-size: 0.97em;
     min-width: 0;
-    max-height: calc(100vh - 56px - 140px - 22px);
+    max-height: calc(100vh - 56px - 320px - 160px - 24px);
 }
 
 .chart-panel {
@@ -63,7 +66,7 @@ html, body {
     justify-content: flex-start;
     min-width: 0;
     min-height: 0;
-    max-height: 320px; /* Limit height of chart panel */
+    max-height: 320px;   /* Chart panel max height */
 }
 
 .chart-panel h3 {
@@ -80,7 +83,7 @@ html, body {
     font-size: 0.98em;
     overflow-y: auto;
     min-width: 0;
-    max-height: calc(100vh - 56px - 140px - 22px);
+    max-height: calc(100vh - 56px - 160px - 24px);
 }
 
 .trade-panel {
@@ -89,7 +92,7 @@ html, body {
     font-size: 0.98em;
     overflow-x: auto;
     overflow-y: auto;
-    height: 140px;
+    height: 160px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -169,7 +172,7 @@ button:hover {
 
 canvas {
     width: 98% !important;
-    max-width: 200px;
+    max-width: 220px;
     max-height: 60px;
     background: #181A20;
     border-radius: 6px;
