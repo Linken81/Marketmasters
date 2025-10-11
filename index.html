@@ -1,21 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Market Masters Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-    <div class="dashboard">
-        <div class="header">
-            <div class="logo">MMtrade</div>
-            <div class="cash">Cash: $10000.00</div>
-        </div>
+<div class="dashboard">
+    <div class="header">
+        <div class="logo">MMtrade</div>
+    </div>
+    <div class="left-panel">
         <div class="chart-panel">
             <div class="chart-title">Portfolio Chart</div>
             <canvas id="portfolioChart"></canvas>
+            <div class="cash">Cash: $10000.00</div>
         </div>
         <div class="trade-panel">
             <table>
@@ -29,28 +20,26 @@
                 <tbody id="trade-table"></tbody>
             </table>
         </div>
-        <div class="stocks-panel">
-            <div class="stocks-title">Stocks</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Price</th>
-                        <th>Change</th>
-                    </tr>
-                </thead>
-                <tbody id="stock-table"></tbody>
-            </table>
-        </div>
-        <div class="leaderboard-panel">
-            <div class="leaderboard-title">Leaderboard</div>
-            <ul id="scores"></ul>
-        </div>
-        <div class="buttons-panel">
-            <button id="next-day">Next Day</button>
-            <button id="save-score">Save My Score</button>
-        </div>
     </div>
-    <script src="script.js"></script>
-</body>
-</html>
+    <div class="stocks-panel">
+        <div class="stocks-title">Stocks</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Price</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody id="stock-table"></tbody>
+        </table>
+    </div>
+    <div class="leaderboard-panel">
+        <div class="leaderboard-title">Leaderboard</div>
+        <ul id="scores"></ul>
+    </div>
+    <div class="buttons-panel">
+        <button id="next-day">Next Day</button>
+        <button id="save-score">Save My Score</button>
+    </div>
+</div>
