@@ -43,6 +43,7 @@ input[type="number"].buy-input:focus {
     right: 32px;
     bottom: 28px;
     z-index: 10;
+    /* Remove any left: or width: settings that would push it left */
 }
 #next-day {
     padding: 12px 32px;
