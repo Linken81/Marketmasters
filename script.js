@@ -80,6 +80,7 @@ let portfolioChart = new Chart(ctx, {
 function updateCash() {
     document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
 }
+
 function updateStockTable() {
     let tbody = document.getElementById('stock-table');
     tbody.innerHTML = "";
@@ -98,6 +99,7 @@ function updateStockTable() {
         tbody.appendChild(tr);
     });
 }
+
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
@@ -117,6 +119,7 @@ function updateTradeTable() {
         tbody.appendChild(tr);
     });
 }
+
 function updatePortfolioTable() {
     let tbody = document.getElementById('portfolio-table');
     tbody.innerHTML = "";
@@ -140,6 +143,7 @@ function updatePortfolioTable() {
         }
     });
 }
+
 window.buyStock = function(symbol) {
     let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
     let cost = prices[symbol] * qty;
@@ -148,7 +152,7 @@ window.buyStock = function(symbol) {
         portfolio.stocks[symbol] += qty;
         updateCash();
         updateLeaderboard();
-        updatePortfolioTable();
+        updatePortfolioTable(); // <-- Ensure this is called after every buy
     }
 };
 window.sellStock = function(symbol) {
@@ -159,7 +163,7 @@ window.sellStock = function(symbol) {
         portfolio.stocks[symbol] -= qty;
         updateCash();
         updateLeaderboard();
-        updatePortfolioTable();
+        updatePortfolioTable(); // <-- Ensure this is called after every sell
     }
 };
 document.getElementById('next-day').onclick = function() {
