@@ -173,7 +173,10 @@ window.sellStock = function(symbol) {
     if (qty > 0 && owned >= qty) {
         portfolio.cash += prices[symbol] * qty;
         portfolio.stocks[symbol] -= qty;
-        // Do NOT update prevOwned here (only update before Next Day)
+        // FIX: If all shares sold, reset prevOwned for this stock
+        if (portfolio.stocks[symbol] === 0) {
+            prevOwned[symbol] = 0;
+        }
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
