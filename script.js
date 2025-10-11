@@ -101,6 +101,7 @@ function updateStockTable() {
     });
 }
 
+// Trade panel - wider buy input box
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
@@ -111,7 +112,7 @@ function updateTradeTable() {
             <td>${stock.symbol}</td>
             <td>$${price.toFixed(2)}</td>
             <td>
-                <input type="number" min="1" value="1" style="width:40px;" id="buy_${stock.symbol}">
+                <input type="number" min="1" value="1" class="buy-input" id="buy_${stock.symbol}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
             </td>
         `;
