@@ -1,6 +1,6 @@
 /* Make buy input wider and align better in Trade panel */
 input[type="number"].buy-input {
-    width: 70px;
+    width: 105px; /* 50% wider than before */
     border-radius: 5px;
     border: 1px solid #21e6c1;
     background: #202539;
