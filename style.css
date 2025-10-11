@@ -26,7 +26,6 @@ html, body {
 .header {
     grid-area: header;
     display: flex;
-    flex-direction: row;
     align-items: flex-start;
     font-size: 2rem;
     font-weight: bold;
