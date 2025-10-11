@@ -135,7 +135,7 @@ function updatePortfolioTable() {
                 <td class="${className}">${changeStr}</td>
                 <td>
                     <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
-                    <button onclick="sellStock('${stock.symbol}')">Sell</button>
+                    <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
                 </td>
             `;
             tbody.appendChild(tr);
