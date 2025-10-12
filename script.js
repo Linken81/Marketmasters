@@ -33,13 +33,13 @@ STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
-// HARDER GAME: Stock changes mostly negative, only small rare positive changes
+// BALANCED GAME: Stock changes equally up/down, max ±4% per day
 function setRandomPrices() {
     prevPrices = {...prices};
     STOCKS.forEach(stock => {
         let oldPrice = prices[stock.symbol] || randomPrice();
-        // Change between -8% and +2% (much more likely to go down than up)
-        let changePercent = (Math.random() - 0.8) * 0.10; // -8% to +2%
+        // Change between -4% and +4%, balanced up/down
+        let changePercent = (Math.random() - 0.5) * 0.08;
         let newPrice = oldPrice * (1 + changePercent);
         prices[stock.symbol] = Math.max(50, +newPrice.toFixed(2));
     });
