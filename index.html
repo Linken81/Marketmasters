@@ -11,20 +11,40 @@
     <div class="dashboard">
         <!-- Header -->
         <div class="header">
-            <div class="header-flex">
-                <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
-                <div class="header-title">Marketmasters</div>
-            </div>
+            <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
+            <div class="header-title">Marketmasters</div>
         </div>
-        <!-- Left Panel -->
-        <div class="left-panel">
-            <div class="panel">
+        <!-- Main grid: 2 rows, 3 columns -->
+        <div class="main-grid">
+            <div class="panel chart-panel">
                 <div class="panel-title">Portfolio Chart</div>
                 <div class="chart-container">
                     <canvas id="portfolioChart"></canvas>
                 </div>
             </div>
-            <div class="panel">
+            <div class="panel stocks-panel">
+                <div class="panel-title">Stocks</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table"></tbody>
+                </table>
+            </div>
+            <div class="panel leaderboard-panel">
+                <div class="panel-title">Leaderboard</div>
+                <ul class="leaderboard-list" id="scores"></ul>
+                <div class="buttons-row">
+                    <button id="save-score">Save My Score</button>
+                </div>
+            </div>
+            <div class="panel trade-panel">
                 <div class="panel-title">Trade</div>
                 <table>
                     <thead>
@@ -40,25 +60,7 @@
                     <button id="next-day">Next Day</button>
                 </div>
             </div>
-        </div>
-        <!-- Center Panel -->
-        <div class="center-panel">
-            <div class="panel">
-                <div class="panel-title">Stocks</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Type</th>
-                            <th>Price</th>
-                            <th>Change</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stock-table"></tbody>
-                </table>
-            </div>
-            <div class="panel">
+            <div class="panel portfolio-panel">
                 <div class="panel-title">My Portfolio</div>
                 <table>
                     <thead>
@@ -73,16 +75,6 @@
                     </thead>
                     <tbody id="portfolio-table"></tbody>
                 </table>
-            </div>
-        </div>
-        <!-- Right Panel -->
-        <div class="right-panel">
-            <div class="panel">
-                <div class="panel-title">Leaderboard</div>
-                <ul class="leaderboard-list" id="scores"></ul>
-                <div class="buttons-row">
-                    <button id="save-score">Save My Score</button>
-                </div>
             </div>
             <div class="panel news-panel">
                 <div class="panel-title">News</div>
