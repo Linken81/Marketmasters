@@ -206,13 +206,148 @@ function triggerRandomNews() {
     }
 }
 
+// ---- Trade Table ----
+function updateTradeTable() {
+    let tbody = document.getElementById('trade-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
+        const rowId = `buy_${stock.symbol}`;
+        const costId = `buy_cost_${stock.symbol}`;
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${stock.symbol}</td>
+            <td>$${price.toFixed(2)}</td>
+            <td>
+                <input type="number" min="1" value="1" class="buy-input" id="${rowId}">
+                <button onclick="buyStock('${stock.symbol}')">Buy</button>
+                <span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Live cost update for Buy input
+        setTimeout(() => {
+            const qtyInput = document.getElementById(rowId);
+            const costSpan = document.getElementById(costId);
+            if (qtyInput && costSpan) {
+                function updateCost() {
+                    let qty = parseInt(qtyInput.value) || 0;
+                    let cost = qty * price;
+                    costSpan.textContent = `$${cost.toFixed(2)}`;
+                }
+                qtyInput.addEventListener('input', updateCost);
+                updateCost();
+            }
+        }, 0);
+    });
+}
+
+// ---- Stock Table ----
+function updateStockTable() {
+    let tbody = document.getElementById('stock-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
+        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+        let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${stock.symbol}</td>
+            <td>${stock.type}</td>
+            <td>$${price.toFixed(2)}</td>
+            <td class="${className}">${changeStr}</td>
+            <td></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Portfolio table with Sell All button
+function updatePortfolioTable() {
+    let tbody = document.getElementById('portfolio-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let owned = portfolio.stocks[stock.symbol];
+        if (owned > 0) {
+            let price = prices[stock.symbol];
+            let totalValue = owned * price;
+            // Calculate total profit/loss for this stock
+            let profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
+            let changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
+            let className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${stock.symbol}</td>
+                <td>${owned}</td>
+                <td>$${price.toFixed(2)}</td>
+                <td>$${totalValue.toFixed(2)}</td>
+                <td class="${className}">${changeStr}</td>
+                <td style="white-space:nowrap; min-width:200px;">
+                    <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
+                    <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
+                    <button class="sell-all-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    });
+}
+
+window.buyStock = function(symbol) {
+    let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
+    let cost = prices[symbol] * qty;
+    if (qty > 0 && portfolio.cash >= cost) {
+        let prevQty = portfolio.stocks[symbol];
+        let totalQty = prevQty + qty;
+        if (totalQty > 0) {
+            averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + prices[symbol] * qty) / totalQty;
+        } else {
+            averageBuyPrice[symbol] = prices[symbol];
+        }
+        portfolio.cash -= cost;
+        portfolio.stocks[symbol] += qty;
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
+window.sellStock = function(symbol) {
+    let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
+    let owned = portfolio.stocks[symbol];
+    if (qty > 0 && owned >= qty) {
+        portfolio.cash += prices[symbol] * qty;
+        portfolio.stocks[symbol] -= qty;
+        if (portfolio.stocks[symbol] === 0) {
+            prevOwned[symbol] = 0;
+            averageBuyPrice[symbol] = 0;
+        }
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
+window.sellAllStock = function(symbol) {
+    let owned = portfolio.stocks[symbol];
+    if (owned > 0) {
+        portfolio.cash += prices[symbol] * owned;
+        portfolio.stocks[symbol] = 0;
+        prevOwned[symbol] = 0;
+        averageBuyPrice[symbol] = 0;
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
+
 // ---- Next Day Button ----
 document.getElementById('next-day').onclick = function() {
     STOCKS.forEach(stock => {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
     setRandomPrices();
-    triggerRandomNews(); // Show random news and apply price effect
+    triggerRandomNews();
     updateStockTable();
     updateTradeTable();
     day++;
@@ -236,14 +371,12 @@ function getPortfolioValue() {
 // Modified leaderboard logic: Only top 10, and only best score per person
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
-    // Keep only the highest score per name
     let bestScores = {};
     scores.forEach(s => {
         if (!bestScores[s.name] || s.value > bestScores[s.name].value) {
             bestScores[s.name] = s;
         }
     });
-    // Convert to array and sort
     let uniqueScores = Object.values(bestScores);
     uniqueScores.sort((a, b) => b.value - a.value);
     return uniqueScores.slice(0, 10);
@@ -277,7 +410,9 @@ updateTradeTable();
 updateLeaderboard();
 updatePortfolioTable();
 
-// Show an initial news event when page loads
+// Show an initial news event and ensure stocks/trades are visible on page load
 window.addEventListener("DOMContentLoaded", () => {
+    updateStockTable();
+    updateTradeTable();
     triggerRandomNews();
 });
