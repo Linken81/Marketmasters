@@ -23,23 +23,19 @@ const STOCKS = [
 
 let portfolio = { cash: 10000, stocks: {} };
 STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
-
 let prevOwned = {};
 STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
-
 let averageBuyPrice = {};
 STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
 
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
-// GAME: Slightly harder, stocks go up a bit more often, but smaller swing (+5% to -2%)
 function setRandomPrices() {
     prevPrices = {...prices};
     STOCKS.forEach(stock => {
         let oldPrice = prices[stock.symbol] || randomPrice();
-        // Change between -2% and +5%, a bit more positive but less than previous
-        let changePercent = (Math.random() * 0.07) - 0.02; // -2% to +5%
+        let changePercent = (Math.random() * 0.07) - 0.02;
         let newPrice = oldPrice * (1 + changePercent);
         prices[stock.symbol] = Math.max(50, +newPrice.toFixed(2));
     });
@@ -111,7 +107,6 @@ function updateStockTable() {
     });
 }
 
-// Trade panel - wider buy input box, cost display
 function updateTradeTable() {
     let tbody = document.getElementById('trade-table');
     tbody.innerHTML = "";
@@ -130,8 +125,6 @@ function updateTradeTable() {
             </td>
         `;
         tbody.appendChild(tr);
-
-        // Live cost update for Buy input
         setTimeout(() => {
             const qtyInput = document.getElementById(rowId);
             const costSpan = document.getElementById(costId);
@@ -148,7 +141,6 @@ function updateTradeTable() {
     });
 }
 
-// Portfolio table with Sell All button
 function updatePortfolioTable() {
     let tbody = document.getElementById('portfolio-table');
     tbody.innerHTML = "";
@@ -157,7 +149,6 @@ function updatePortfolioTable() {
         if (owned > 0) {
             let price = prices[stock.symbol];
             let totalValue = owned * price;
-            // Calculate total profit/loss for this stock
             let profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
             let changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
             let className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
@@ -183,7 +174,6 @@ window.buyStock = function(symbol) {
     let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
     let cost = prices[symbol] * qty;
     if (qty > 0 && portfolio.cash >= cost) {
-        // Update average buy price
         let prevQty = portfolio.stocks[symbol];
         let totalQty = prevQty + qty;
         if (totalQty > 0) {
@@ -191,7 +181,6 @@ window.buyStock = function(symbol) {
         } else {
             averageBuyPrice[symbol] = prices[symbol];
         }
-
         portfolio.cash -= cost;
         portfolio.stocks[symbol] += qty;
         updateCash();
@@ -220,7 +209,7 @@ window.sellAllStock = function(symbol) {
         portfolio.cash += prices[symbol] * owned;
         portfolio.stocks[symbol] = 0;
         prevOwned[symbol] = 0;
-        averageBuyPrice[symbol] = 0; // Reset after selling all
+        averageBuyPrice[symbol] = 0;
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
@@ -230,38 +219,39 @@ window.sellAllStock = function(symbol) {
 // ----------- RANDOM NEWS SYSTEM -----------
 const NEWS_EVENTS = [
     // Stock-specific events
-    { type: "stock", symbol: "ZOOMX", text: "Zoomix Technologies launches a new gadget! Electronics stocks soar.", effect: 0.07 },
-    { type: "stock", symbol: "FRUIQ", text: "FruityQ Foods recalls a product. Food stocks drop.", effect: -0.05 },
-    { type: "stock", symbol: "SOLARO", text: "Oil prices surge! Solaro Energy benefits.", effect: 0.06 },
-    { type: "stock", symbol: "ROBIX", text: "Robix Robotics unveils new AI robot. AI & Robotics stocks rise.", effect: 0.08 },
+    { type: "stock", symbol: "ZOOMX", text: "Zoomix Technologies launches a new gadget! Electronics stocks soar.", effect: 0.07, typeText: "Electronics stocks go up." },
+    { type: "stock", symbol: "FRUIQ", text: "FruityQ Foods recalls a product. Food stocks drop.", effect: -0.05, typeText: "Food stocks go down." },
+    { type: "stock", symbol: "SOLARO", text: "Oil prices surge! Solaro Energy benefits.", effect: 0.06, typeText: "Oil & Energy stocks go up." },
+    { type: "stock", symbol: "ROBIX", text: "Robix Robotics unveils new AI robot. AI & Robotics stocks rise.", effect: 0.08, typeText: "AI & Robotics stocks go up." },
     // Type-specific events
-    { type: "type", target: "Transport", text: "Major airline strike disrupts transport sector.", effect: -0.06 },
-    { type: "type", target: "Electronics", text: "Tech expo boosts electronics sales!", effect: 0.05 },
-    { type: "type", target: "Food", text: "New health study favors food companies.", effect: 0.04 },
-    { type: "type", target: "AI & Robotics", text: "AI breakthrough stuns the market!", effect: 0.09 },
-    { type: "type", target: "Energy", text: "Green energy gets government incentives.", effect: 0.05 },
-    { type: "type", target: "Fashion", text: "Fashion week flops, hurting apparel sector.", effect: -0.04 },
-    { type: "type", target: "Retail", text: "Holiday shopping season boosts retail.", effect: 0.07 },
-    { type: "type", target: "Mining", text: "Mining accident impacts sector.", effect: -0.05 }
+    { type: "type", target: "Transport", text: "Major airline strike disrupts transport sector.", effect: -0.06, typeText: "Transport stocks go down." },
+    { type: "type", target: "Electronics", text: "Tech expo boosts electronics sales!", effect: 0.05, typeText: "Electronics stocks go up." },
+    { type: "type", target: "Food", text: "New health study favors food companies.", effect: 0.04, typeText: "Food stocks go up." },
+    { type: "type", target: "AI & Robotics", text: "AI breakthrough stuns the market!", effect: 0.09, typeText: "AI & Robotics stocks go up." },
+    { type: "type", target: "Energy", text: "Green energy gets government incentives.", effect: 0.05, typeText: "Energy stocks go up." },
+    { type: "type", target: "Fashion", text: "Fashion week flops, hurting apparel sector.", effect: -0.04, typeText: "Fashion stocks go down." },
+    { type: "type", target: "Retail", text: "Holiday shopping season boosts retail.", effect: 0.07, typeText: "Retail stocks go up." },
+    { type: "type", target: "Mining", text: "Mining accident impacts sector.", effect: -0.05, typeText: "Mining stocks go down." },
+    // Additional random type news for more variety
+    { type: "type", target: "Oil & Energy", text: "Oil crisis! The oil stocks take a hit.", effect: -0.08, typeText: "Oil & Energy stocks go down due to oil crisis." },
+    { type: "type", target: "Water", text: "Water shortages reported globally. Water stocks spike.", effect: 0.06, typeText: "Water stocks go up." },
+    { type: "type", target: "Health", text: "New health regulations impact health sector.", effect: -0.04, typeText: "Health stocks go down." },
+    { type: "type", target: "Travel", text: "Travel restrictions lifted, travel stocks climb.", effect: 0.05, typeText: "Travel stocks go up." },
+    { type: "type", target: "Fitness", text: "Fitness trends grow, fitness stocks increase.", effect: 0.04, typeText: "Fitness stocks go up." }
 ];
 
 let latestNews = null;
 
-// Generate a random event each day
 function triggerRandomNews() {
     latestNews = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
-
-    // Show news in panel
     document.getElementById("news-content").textContent = latestNews.text;
+    document.getElementById("news-effect-text").textContent = latestNews.typeText || "";
 
-    // Apply effect to stock prices
     if (latestNews.type === "stock") {
-        // Affect only one stock
         let symbol = latestNews.symbol;
         let effect = latestNews.effect;
         prices[symbol] = Math.max(50, +(prices[symbol] * (1 + effect)).toFixed(2));
     } else if (latestNews.type === "type") {
-        // Affect all stocks of that type
         STOCKS.forEach(stock => {
             if (stock.type === latestNews.target) {
                 prices[stock.symbol] = Math.max(50, +(prices[stock.symbol] * (1 + latestNews.effect)).toFixed(2));
@@ -276,7 +266,7 @@ document.getElementById('next-day').onclick = function() {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
     setRandomPrices();
-    triggerRandomNews(); // << News event every day!
+    triggerRandomNews();
     updateStockTable();
     updateTradeTable();
     day++;
@@ -297,14 +287,12 @@ window.addEventListener("DOMContentLoaded", () => {
 // Modified leaderboard logic: Only top 10, and only best score per person
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
-    // Keep only the highest score per name
     let bestScores = {};
     scores.forEach(s => {
         if (!bestScores[s.name] || s.value > bestScores[s.name].value) {
             bestScores[s.name] = s;
         }
     });
-    // Convert to array and sort
     let uniqueScores = Object.values(bestScores);
     uniqueScores.sort((a, b) => b.value - a.value);
     return uniqueScores.slice(0, 10);
