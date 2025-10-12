@@ -2,7 +2,7 @@
 .next-day-wrapper {
     position: fixed;
     right: 32px;
-    bottom: 80px; /* Change this value to move the button up. Try 80px or 100px for best results */
+    bottom: 80px; /* Change this value to move the button up */
     z-index: 10;
 }
 #next-day {
