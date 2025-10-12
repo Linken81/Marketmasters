@@ -33,13 +33,11 @@ STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
-// GAME: Slightly harder, stocks go up a bit more often, but smaller swing (+5% to -2%)
 function setRandomPrices() {
     prevPrices = {...prices};
     STOCKS.forEach(stock => {
         let oldPrice = prices[stock.symbol] || randomPrice();
-        // Change between -2% and +5%, a bit more positive but less than previous
-        let changePercent = (Math.random() * 0.07) - 0.02; // -2% to +5%
+        let changePercent = (Math.random() * 0.07) - 0.02;
         let newPrice = oldPrice * (1 + changePercent);
         prices[stock.symbol] = Math.max(50, +newPrice.toFixed(2));
     });
@@ -49,183 +47,122 @@ setRandomPrices();
 let portfolioHistory = [getPortfolioValue()];
 let day = 1;
 
-// Chart.js setup
+// ----------- DETAILED Portfolio Chart -----------
+
+function getGradient(ctx, chartArea) {
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, "rgba(0,252,135,0.28)");
+    gradient.addColorStop(0.7, "rgba(14,210,247,0.10)");
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+    return gradient;
+}
+
 let ctx = document.getElementById('portfolioChart').getContext('2d');
+
 let chartData = {
     labels: [day],
     datasets: [{
         label: 'Portfolio Value',
         data: [portfolioHistory[0]],
         borderColor: '#00FC87',
-        backgroundColor: 'rgba(14,210,247,0.10)',
+        backgroundColor: (context) => {
+            const chart = context.chart;
+            const {ctx, chartArea} = chart;
+            if (!chartArea) return 'rgba(0,252,135,0.12)';
+            return getGradient(ctx, chartArea);
+        },
         fill: true,
-        tension: 0.28,
-        pointRadius: 4,
+        tension: 0.32,
+        pointRadius: 5,
+        pointHoverRadius: 9,
         pointBackgroundColor: '#00FC87',
-        pointBorderColor: '#23263A'
+        pointBorderColor: '#23263A',
+        pointBorderWidth: 2,
+        pointStyle: 'circle',
+        borderWidth: 3,
+        hoverBorderWidth: 5
     }]
 };
+
 let portfolioChart = new Chart(ctx, {
     type: 'line',
     data: chartData,
     options: {
-        animation: { duration: 700, easing: 'easeOutQuad' },
-        scales: {
-            x: { display: false },
-            y: { display: false }
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: { left: 18, right: 18, top: 12, bottom: 10 }
         },
         plugins: {
-            legend: { display: false },
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    color: '#21e6c1',
+                    font: { size: 15, family: 'Inter, Arial' }
+                }
+            },
             tooltip: {
-                backgroundColor: '#23263A',
+                enabled: true,
+                backgroundColor: '#21293a',
                 titleColor: '#00FC87',
                 bodyColor: '#F5F6FA',
                 borderColor: '#00FC87',
-                borderWidth: 1
+                borderWidth: 1,
+                boxPadding: 6,
+                titleFont: { size: 16, family: 'Inter, Arial', weight: 'bold' },
+                bodyFont: { size: 15, family: 'Inter, Arial' },
+                callbacks: {
+                    label: function(context) {
+                        return `Value: $${context.parsed.y.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                    },
+                    title: function(context) {
+                        return `Day ${context[0].label}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                display: true,
+                title: {
+                    display: true,
+                    text: 'Day',
+                    color: '#21e6c1',
+                    font: { size: 15, weight: 'bold' }
+                },
+                grid: {
+                    color: '#2e344d',
+                    lineWidth: 1.5
+                },
+                ticks: {
+                    color: '#21e6c1',
+                    font: { size: 13 }
+                }
+            },
+            y: {
+                display: true,
+                title: {
+                    display: true,
+                    text: 'Portfolio Value (USD)',
+                    color: '#21e6c1',
+                    font: { size: 15, weight: 'bold' }
+                },
+                grid: {
+                    color: '#2e344d',
+                    lineWidth: 1.5
+                },
+                ticks: {
+                    color: '#00FC87',
+                    font: { size: 13 },
+                    callback: function(value) {
+                        return '$' + value.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                    }
+                }
             }
         }
     }
 });
-
-function updateCash() {
-    document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
-}
-
-function updateStockTable() {
-    let tbody = document.getElementById('stock-table');
-    tbody.innerHTML = "";
-    STOCKS.forEach(stock => {
-        let price = prices[stock.symbol];
-        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
-        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
-        let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${stock.symbol}</td>
-            <td>${stock.type}</td>
-            <td>$${price.toFixed(2)}</td>
-            <td class="${className}">${changeStr}</td>
-            <td></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// Trade panel - wider buy input box, cost display
-function updateTradeTable() {
-    let tbody = document.getElementById('trade-table');
-    tbody.innerHTML = "";
-    STOCKS.forEach(stock => {
-        let price = prices[stock.symbol];
-        const rowId = `buy_${stock.symbol}`;
-        const costId = `buy_cost_${stock.symbol}`;
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${stock.symbol}</td>
-            <td>$${price.toFixed(2)}</td>
-            <td>
-                <input type="number" min="1" value="1" class="buy-input" id="${rowId}">
-                <button onclick="buyStock('${stock.symbol}')">Buy</button>
-                <span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span>
-            </td>
-        `;
-        tbody.appendChild(tr);
-
-        // Live cost update for Buy input
-        setTimeout(() => {
-            const qtyInput = document.getElementById(rowId);
-            const costSpan = document.getElementById(costId);
-            if (qtyInput && costSpan) {
-                function updateCost() {
-                    let qty = parseInt(qtyInput.value) || 0;
-                    let cost = qty * price;
-                    costSpan.textContent = `$${cost.toFixed(2)}`;
-                }
-                qtyInput.addEventListener('input', updateCost);
-                updateCost();
-            }
-        }, 0);
-    });
-}
-
-// Portfolio table with Sell All button
-function updatePortfolioTable() {
-    let tbody = document.getElementById('portfolio-table');
-    tbody.innerHTML = "";
-    STOCKS.forEach(stock => {
-        let owned = portfolio.stocks[stock.symbol];
-        if (owned > 0) {
-            let price = prices[stock.symbol];
-            let totalValue = owned * price;
-            // Calculate total profit/loss for this stock
-            let profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
-            let changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
-            let className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
-            let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${stock.symbol}</td>
-                <td>${owned}</td>
-                <td>$${price.toFixed(2)}</td>
-                <td>$${totalValue.toFixed(2)}</td>
-                <td class="${className}">${changeStr}</td>
-                <td style="white-space:nowrap; min-width:200px;">
-                    <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
-                    <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
-                    <button class="sell-all-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        }
-    });
-}
-
-window.buyStock = function(symbol) {
-    let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
-    let cost = prices[symbol] * qty;
-    if (qty > 0 && portfolio.cash >= cost) {
-        // Update average buy price
-        let prevQty = portfolio.stocks[symbol];
-        let totalQty = prevQty + qty;
-        if (totalQty > 0) {
-            averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + prices[symbol] * qty) / totalQty;
-        } else {
-            averageBuyPrice[symbol] = prices[symbol];
-        }
-
-        portfolio.cash -= cost;
-        portfolio.stocks[symbol] += qty;
-        updateCash();
-        updateLeaderboard();
-        updatePortfolioTable();
-    }
-};
-window.sellStock = function(symbol) {
-    let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
-    let owned = portfolio.stocks[symbol];
-    if (qty > 0 && owned >= qty) {
-        portfolio.cash += prices[symbol] * qty;
-        portfolio.stocks[symbol] -= qty;
-        if (portfolio.stocks[symbol] === 0) {
-            prevOwned[symbol] = 0;
-            averageBuyPrice[symbol] = 0;
-        }
-        updateCash();
-        updateLeaderboard();
-        updatePortfolioTable();
-    }
-};
-window.sellAllStock = function(symbol) {
-    let owned = portfolio.stocks[symbol];
-    if (owned > 0) {
-        portfolio.cash += prices[symbol] * owned;
-        portfolio.stocks[symbol] = 0;
-        prevOwned[symbol] = 0;
-        averageBuyPrice[symbol] = 0; // Reset after selling all
-        updateCash();
-        updateLeaderboard();
-        updatePortfolioTable();
-    }
-};
 
 // ---- Random News/Events System ----
 const NEWS_EVENTS = [
