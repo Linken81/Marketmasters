@@ -22,56 +22,6 @@
     color: #fff;
 }
 
-/* ---- HEADER FLEX LAYOUT ---- */
-.header {
-    grid-area: header;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    background: #212433dd;
-    border-radius: 9px;
-    box-shadow: 0 4px 20px #0005;
-    padding: 0 24px;
-    letter-spacing: 0.7px;
-    color: #21e6c1;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    min-height: 56px;
-}
-.header-flex {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    justify-content: flex-start;
-    gap: 42px;
-    position: relative;
-}
-.header-cash {
-    flex: 0 1 auto;
-    color: #21e6c1;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-left: 0;
-    margin-right: 24px;
-}
-.header-cash span {
-    color: #00fc87;
-    font-weight: 700;
-}
-.header-title {
-    flex: 1 1 auto;
-    text-align: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    margin-right: 42px;
-}
-
-/* ---- END HEADER FLEX ---- */
-
 /* Make buy input wider and align better in Trade panel */
 input[type="number"].buy-input {
     width: 105px;
@@ -136,6 +86,53 @@ html, body {
     box-sizing: border-box;
 }
 
+.header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    background: #212433dd;
+    border-radius: 9px;
+    box-shadow: 0 4px 20px #0005;
+    padding: 0 24px;
+    letter-spacing: 0.7px;
+    color: #21e6c1;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    min-height: 56px;
+}
+.header-flex {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 42px;
+    position: relative;
+}
+.header-cash {
+    flex: 0 1 auto;
+    color: #21e6c1;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-left: 0;
+    margin-right: 24px;
+}
+.header-cash span {
+    color: #00fc87;
+    font-weight: 700;
+}
+.header-title {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    margin-right: 42px;
+}
+
 .left-panel, .center-panel, .right-panel {
     display: flex;
     flex-direction: column;
@@ -155,6 +152,7 @@ html, body {
     border: 1.5px solid #212433;
     transition: box-shadow 0.15s;
 }
+
 .panel:hover {
     box-shadow: 0 6px 24px #21e6c11a;
     border-color: #21e6c1;
@@ -170,6 +168,7 @@ html, body {
     gap: 7px;
     position: relative;
 }
+
 .panel-title:after {
     content: "";
     display: block;
@@ -341,6 +340,26 @@ ul {
 ::-webkit-scrollbar-thumb {
     background: #23263a;
     border-radius: 6px;
+}
+
+/* NEWS PANEL (Red square under leaderboard) */
+.news-panel {
+    margin-top: 18px;
+    min-height: 180px;
+    border: 2px solid #fc0032;
+    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px #fc003222;
+    padding: 18px 18px 14px 18px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+#news-content {
+    font-size: 1.08em;
+    color: #e7ebf3;
+    margin-top: 7px;
+    white-space: pre-line;
 }
 
 @media (max-width: 1200px) {
