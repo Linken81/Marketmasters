@@ -226,56 +226,11 @@ window.sellAllStock = function(symbol) {
         updatePortfolioTable();
     }
 };
-
-// ---- Random News/Events System ----
-const NEWS_EVENTS = [
-    // Stock-specific
-    { type: "stock", symbol: "ZOOMX", text: "Zoomix Technologies launches a hit gadget! Electronics up.", effect: 0.07 },
-    { type: "stock", symbol: "FRUIQ", text: "FruityQ recalls a product. Food stocks drop.", effect: -0.05 },
-    { type: "stock", symbol: "SOLARO", text: "Oil prices surge! Solaro Energy benefits.", effect: 0.06 },
-    { type: "stock", symbol: "ROBIX", text: "Robix Robotics unveils new AI robot. AI & Robotics rise.", effect: 0.08 },
-    // Type-specific
-    { type: "type", target: "Transport", text: "Major airline strike disrupts transport sector.", effect: -0.06 },
-    { type: "type", target: "Electronics", text: "Tech expo boosts electronics sales!", effect: 0.05 },
-    { type: "type", target: "Food", text: "New health study favors food companies.", effect: 0.04 },
-    { type: "type", target: "AI & Robotics", text: "AI breakthrough stuns the market!", effect: 0.09 },
-    { type: "type", target: "Energy", text: "Green energy gets government incentives.", effect: 0.05 },
-    { type: "type", target: "Fashion", text: "Fashion week flops, hurting apparel sector.", effect: -0.04 },
-    { type: "type", target: "Retail", text: "Holiday shopping season boosts retail.", effect: 0.07 },
-    { type: "type", target: "Mining", text: "Mining accident impacts sector.", effect: -0.05 },
-    { type: "type", target: "Oil & Energy", text: "Oil crisis! Oil stocks take a hit.", effect: -0.08 },
-    { type: "type", target: "Water", text: "Water shortages reported globally. Water stocks spike.", effect: 0.06 },
-    { type: "type", target: "Health", text: "New health regulations impact health sector.", effect: -0.04 },
-    { type: "type", target: "Travel", text: "Travel restrictions lifted, travel stocks climb.", effect: 0.05 },
-    { type: "type", target: "Fitness", text: "Fitness trends grow, fitness stocks increase.", effect: 0.04 }
-];
-
-// Show a random news event and apply its effect
-function triggerRandomNews() {
-    const news = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
-    document.getElementById("news-content").textContent = news.text;
-
-    // Apply to stock price(s)
-    if (news.type === "stock") {
-        let symbol = news.symbol;
-        let effect = news.effect;
-        prices[symbol] = Math.max(50, +(prices[symbol] * (1 + effect)).toFixed(2));
-    } else if (news.type === "type") {
-        STOCKS.forEach(stock => {
-            if (stock.type === news.target) {
-                prices[stock.symbol] = Math.max(50, +(prices[stock.symbol] * (1 + news.effect)).toFixed(2));
-            }
-        });
-    }
-}
-
-// ---- Next Day Button ----
 document.getElementById('next-day').onclick = function() {
     STOCKS.forEach(stock => {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
     setRandomPrices();
-    triggerRandomNews(); // Show random news and apply price effect
     updateStockTable();
     updateTradeTable();
     day++;
@@ -287,7 +242,6 @@ document.getElementById('next-day').onclick = function() {
     updateLeaderboard();
     updatePortfolioTable();
 };
-
 function getPortfolioValue() {
     let value = portfolio.cash;
     STOCKS.forEach(stock => {
@@ -339,8 +293,3 @@ updateStockTable();
 updateTradeTable();
 updateLeaderboard();
 updatePortfolioTable();
-
-// Show an initial news event when page loads
-window.addEventListener("DOMContentLoaded", () => {
-    triggerRandomNews();
-});
