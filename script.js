@@ -226,11 +226,57 @@ window.sellAllStock = function(symbol) {
         updatePortfolioTable();
     }
 };
+
+// ----------- RANDOM NEWS SYSTEM -----------
+const NEWS_EVENTS = [
+    // Stock-specific events
+    { type: "stock", symbol: "ZOOMX", text: "Zoomix Technologies launches a new gadget! Electronics stocks soar.", effect: 0.07 },
+    { type: "stock", symbol: "FRUIQ", text: "FruityQ Foods recalls a product. Food stocks drop.", effect: -0.05 },
+    { type: "stock", symbol: "SOLARO", text: "Oil prices surge! Solaro Energy benefits.", effect: 0.06 },
+    { type: "stock", symbol: "ROBIX", text: "Robix Robotics unveils new AI robot. AI & Robotics stocks rise.", effect: 0.08 },
+    // Type-specific events
+    { type: "type", target: "Transport", text: "Major airline strike disrupts transport sector.", effect: -0.06 },
+    { type: "type", target: "Electronics", text: "Tech expo boosts electronics sales!", effect: 0.05 },
+    { type: "type", target: "Food", text: "New health study favors food companies.", effect: 0.04 },
+    { type: "type", target: "AI & Robotics", text: "AI breakthrough stuns the market!", effect: 0.09 },
+    { type: "type", target: "Energy", text: "Green energy gets government incentives.", effect: 0.05 },
+    { type: "type", target: "Fashion", text: "Fashion week flops, hurting apparel sector.", effect: -0.04 },
+    { type: "type", target: "Retail", text: "Holiday shopping season boosts retail.", effect: 0.07 },
+    { type: "type", target: "Mining", text: "Mining accident impacts sector.", effect: -0.05 }
+];
+
+let latestNews = null;
+
+// Generate a random event each day
+function triggerRandomNews() {
+    latestNews = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
+
+    // Show news in panel
+    document.getElementById("news-content").textContent = latestNews.text;
+
+    // Apply effect to stock prices
+    if (latestNews.type === "stock") {
+        // Affect only one stock
+        let symbol = latestNews.symbol;
+        let effect = latestNews.effect;
+        prices[symbol] = Math.max(50, +(prices[symbol] * (1 + effect)).toFixed(2));
+    } else if (latestNews.type === "type") {
+        // Affect all stocks of that type
+        STOCKS.forEach(stock => {
+            if (stock.type === latestNews.target) {
+                prices[stock.symbol] = Math.max(50, +(prices[stock.symbol] * (1 + latestNews.effect)).toFixed(2));
+            }
+        });
+    }
+}
+
+// ----------- MODIFIED NEXT DAY BUTTON -----------
 document.getElementById('next-day').onclick = function() {
     STOCKS.forEach(stock => {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
     setRandomPrices();
+    triggerRandomNews(); // << News event every day!
     updateStockTable();
     updateTradeTable();
     day++;
@@ -242,13 +288,11 @@ document.getElementById('next-day').onclick = function() {
     updateLeaderboard();
     updatePortfolioTable();
 };
-function getPortfolioValue() {
-    let value = portfolio.cash;
-    STOCKS.forEach(stock => {
-        value += portfolio.stocks[stock.symbol] * prices[stock.symbol];
-    });
-    return value;
-}
+
+// ----------- INITIAL NEWS -----------
+window.addEventListener("DOMContentLoaded", () => {
+    triggerRandomNews();
+});
 
 // Modified leaderboard logic: Only top 10, and only best score per person
 function loadScores() {
