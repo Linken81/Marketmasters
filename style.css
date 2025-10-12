@@ -1,78 +1,124 @@
-body {
+html, body {
+    height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
-    background: #fff;
+    font-family: 'Inter', 'Roboto', Arial, sans-serif;
+    background: radial-gradient(circle at 45% 25%, #23263a 65%, #181a20 100%);
+    color: #e7ebf3;
 }
 
 .dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 6px;
+    display: grid;
+    grid-template-columns: 1.6fr 2.4fr 1.3fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas:
+        "header header header"
+        "left-panel center-panel right-panel";
+    height: 100vh;
+    width: 100vw;
+    gap: 20px;
+    padding: 18px;
+    box-sizing: border-box;
 }
 
 .header {
+    grid-area: header;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    font-size: 1.18rem;
+    justify-content: center;
+    font-size: 1.35rem;
     font-weight: 700;
-    background: #444857;
-    border-radius: 7px;
-    box-shadow: 0 2px 11px #0003;
-    padding: 0 18px;
+    background: #212433dd;
+    border-radius: 9px;
+    box-shadow: 0 4px 20px #0005;
+    padding: 0 24px;
+    letter-spacing: 0.7px;
     color: #21e6c1;
-    min-height: 32px;
-    margin-bottom: 6px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    min-height: 56px;
+}
+.header-flex {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 42px;
+    position: relative;
 }
 .header-cash {
+    flex: 0 1 auto;
     color: #21e6c1;
-    font-size: 1.05rem;
+    font-size: 1.2rem;
     font-weight: 700;
     margin-left: 0;
+    margin-right: 24px;
 }
 .header-cash span {
     color: #00fc87;
     font-weight: 700;
 }
 .header-title {
-    text-align: right;
-    font-size: 1.1rem;
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 1.35rem;
     font-weight: 700;
     letter-spacing: 0.8px;
-    margin-right: 0;
+    margin-right: 42px;
 }
 
-.panel {
-    background: #23263a;
-    border-radius: 9px;
-    box-shadow: 0 2px 12px #0002;
-    padding: 10px 10px 7px 10px;
+.left-panel, .center-panel, .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.left-panel {
+    grid-area: left-panel;
+}
+.center-panel {
+    grid-area: center-panel;
+}
+.right-panel {
+    grid-area: right-panel;
+}
+
+.panel, .card {
+    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px #0002;
+    padding: 18px 18px 14px 18px;
     min-width: 0;
     min-height: 0;
     position: relative;
     display: flex;
     flex-direction: column;
-    border: none;
-    margin-bottom: 6px;
+    border: 1.5px solid #212433;
+    transition: box-shadow 0.15s;
+}
+
+.panel:hover {
+    box-shadow: 0 6px 24px #21e6c11a;
+    border-color: #21e6c1;
 }
 
 .panel-title {
     color: #21e6c1;
     font-weight: 700;
-    font-size: 1.08rem;
-    margin-bottom: 6px;
+    font-size: 1.15rem;
+    margin-bottom: 9px;
     display: flex;
     align-items: center;
     gap: 7px;
     position: relative;
 }
-
 .panel-title:after {
     content: "";
     display: block;
     height: 2px;
-    width: 23px;
+    width: 26px;
     background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
     border-radius: 2px;
     margin-left: 6px;
@@ -82,10 +128,10 @@ body {
     background: #181a20cc;
     border-radius: 8px;
     box-shadow: 0 1px 7px #21e6c122;
-    padding: 8px 0 8px 0;
-    margin-bottom: 1px;
-    min-height: 120px;
-    max-height: 180px;
+    padding: 10px 0 10px 0;
+    margin-bottom: 6px;
+    min-height: 90px;
+    max-height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -109,7 +155,7 @@ th, td {
 th {
     color: #21e6c1;
     font-weight: 600;
-    background: #23263a;
+    background: #202539;
 }
 
 tr {
@@ -182,7 +228,6 @@ tr:hover {
     justify-content: flex-end;
 }
 
-/* Make buy input wider and align better in Trade panel */
 input[type="number"].buy-input {
     width: 105px;
     border-radius: 5px;
@@ -280,18 +325,18 @@ ul {
     border-radius: 6px;
 }
 
-/* NEWS PANEL (red square at bottom) */
+/* NEWS PANEL (red square under leaderboard) */
 .news-panel {
     min-height: 180px;
     border: 2px solid #fc0032;
     background: #23263a;
-    border-radius: 9px;
+    border-radius: 14px;
     box-shadow: 0 2px 12px #fc003222;
-    padding: 10px 10px 7px 10px;
+    padding: 18px 18px 14px 18px;
     display: flex;
     flex-direction: column;
     position: relative;
-    margin-bottom: 6px;
+    margin-top: 18px;
 }
 #news-content {
     font-size: 1.08em;
@@ -303,4 +348,15 @@ ul {
     font-size: 1em;
     color: #fc0032;
     margin-top: 8px;
+}
+
+@media (max-width: 1200px) {
+    .dashboard {
+        grid-template-columns: 1fr 1.1fr 0.9fr;
+        grid-template-rows: 44px 1fr;
+        gap: 8px;
+        padding: 6px;
+    }
+    .panel, .card { padding: 8px 8px; }
+    .header { font-size: 1.08rem; padding: 0 7px;}
 }
