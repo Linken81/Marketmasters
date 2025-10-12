@@ -1,405 +1,367 @@
-/* Move the Next Day button up from the bottom */
-.next-day-wrapper {
-    position: fixed;
-    right: 32px;
-    bottom: 80px;
-    z-index: 10;
-}
-#next-day {
-    padding: 12px 32px;
-    font-size: 1.15em;
-    font-weight: 700;
-    background: #21e6c1;
-    color: #23263a;
-    border-radius: 8px;
-    box-shadow: 0 4px 24px #21e6c122;
-    border: none;
-    cursor: pointer;
-    transition: background 0.18s, color 0.18s;
-}
-#next-day:hover {
-    background: #FC0032;
-    color: #fff;
+const STOCKS = [
+    { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
+    { symbol: "FRUIQ", name: "FruityQ Foods", type: "Food" },
+    { symbol: "SOLARO", name: "Solaro Energy", type: "Oil & Energy" },
+    { symbol: "ROBIX", name: "Robix Robotics", type: "AI & Robotics" },
+    { symbol: "DRONZ", name: "Dronz Delivery", type: "Transport" },
+    { symbol: "AQUIX", name: "Aquix Water Corp", type: "Water" },
+    { symbol: "GLOBO", name: "Globon Airlines", type: "Transport" },
+    { symbol: "NUTRO", name: "Nutro Nutrition", type: "Food" },
+    { symbol: "PIXEL", name: "PixelWave Media", type: "Electronics" },
+    { symbol: "VOYZA", name: "Voyza Travel", type: "Travel" },
+    { symbol: "FLEXI", name: "Flexi Fitness", type: "Fitness" },
+    { symbol: "MEDIX", name: "Medix Health", type: "Health" },
+    { symbol: "ECOFY", name: "Ecofy Solutions", type: "Energy" },
+    { symbol: "ASTRO", name: "Astro Mining", type: "Mining" },
+    { symbol: "NEURA", name: "NeuraTech Labs", type: "AI & Robotics" },
+    { symbol: "BERRY", name: "BerrySoft Drinks", type: "Food" },
+    { symbol: "FASHN", name: "Fashn Apparel", type: "Fashion" },
+    { symbol: "SPECT", name: "Spectra Security", type: "Electronics" },
+    { symbol: "INNOV", name: "Innovado Systems", type: "AI & Robotics" },
+    { symbol: "TREND", name: "Trendify Retail", type: "Retail" }
+];
+
+let portfolio = { cash: 10000, stocks: {} };
+STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
+
+let prevOwned = {};
+STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
+
+let averageBuyPrice = {};
+STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
+
+let prices = {}, prevPrices = {};
+function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
+
+// --- Realistic Stock Price Simulation ---
+function setRandomPrices() {
+    prevPrices = {...prices};
+    // Market phase: normal, bear, or bull
+    let marketPhase = "normal";
+    let rand = Math.random();
+    if (rand < 0.10) marketPhase = "bear"; // 10% chance of bear market day
+    else if (rand > 0.97) marketPhase = "bull"; // 3% chance of bull market day
+
+    STOCKS.forEach(stock => {
+        let oldPrice = prices[stock.symbol] || randomPrice();
+        let changePercent = 0;
+        // Normal market: -7% to +5% (skewed slightly negative)
+        if (marketPhase === "normal") {
+            changePercent = (Math.random() * 0.12) - 0.07; // -7% to +5%
+            if (Math.random() < 0.25) changePercent -= Math.random() * 0.03; // 25% chance of extra drop
+        }
+        // Bear market: -20% to +3%
+        else if (marketPhase === "bear") {
+            changePercent = (Math.random() * 0.23) - 0.20; // -20% to +3%
+        }
+        // Bull market: +2% to +14%
+        else if (marketPhase === "bull") {
+            changePercent = (Math.random() * 0.12) + 0.02; // +2% to +14%
+        }
+        let newPrice = oldPrice * (1 + changePercent);
+        // Minimum price $10
+        prices[stock.symbol] = Math.max(10, +newPrice.toFixed(2));
+    });
 }
 
-/* ---- HEADER FLEX LAYOUT ---- */
-.header {
-    grid-area: header;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    background: #212433dd;
-    border-radius: 9px;
-    box-shadow: 0 4px 20px #0005;
-    padding: 0 24px;
-    letter-spacing: 0.7px;
-    color: #21e6c1;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    min-height: 56px;
-}
-.header-flex {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    justify-content: flex-start;
-    gap: 42px;
-    position: relative;
-}
-.header-cash {
-    flex: 0 1 auto;
-    color: #21e6c1;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-left: 0;
-    margin-right: 24px;
-}
-.header-cash span {
-    color: #00fc87;
-    font-weight: 700;
-}
-.header-title {
-    flex: 1 1 auto;
-    text-align: center;
-    margin-right: 42px;
-}
+setRandomPrices();
 
-/* --- Modern/Professional "Marketmasters" title --- */
-.mm-pro {
-    display: inline-block;
-    font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: 2px;
-    background: linear-gradient(90deg, #1fc8db 0%, #21e6c1 45%, #00fc87 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-fill-color: transparent;
-    text-shadow: 
-        0 2px 4px rgba(33,230,193,0.15),
-        0 1px 0px #202539,
-        0 0px 14px #00fc8750;
-    transition: text-shadow 0.3s;
-    padding: 4px 0 2px 0;
-    word-spacing: 2px;
-}
-.mm-pro:hover {
-    text-shadow: 
-        0 3px 8px rgba(33,230,193,0.18),
-        0 2px 0px #202539,
-        0 0px 18px #00fc8780;
-}
+let portfolioHistory = [getPortfolioValue()];
+let day = 1;
 
-/* ---- END HEADER FLEX ---- */
-
-/* Make buy input wider and align better in Trade panel */
-input[type="number"].buy-input {
-    width: 105px;
-    border-radius: 5px;
-    border: 1px solid #21e6c1;
-    background: #202539;
-    color: #e7ebf3;
-    font-size: 0.96em;
-    padding: 3px 4px;
-    margin-right: 4px;
-    outline: none;
-    transition: border 0.12s;
-}
-input[type="number"].buy-input:focus {
-    border-color: #FC0032;
-    background: #181a20;
-}
-
-/* Cost box for buy total (red rectangle) */
-.buy-cost {
-    display: inline-block;
-    min-width: 90px;
-    margin-left: 10px;
-    padding: 4px 10px;
-    border: 2px solid #fc0032;
-    border-radius: 5px;
-    background: transparent;
-    color: #fc0032;
-    font-weight: bold;
-    font-size: 1em;
-    text-align: right;
-}
-
-/* Wider Sell/Buy columns in Portfolio for buttons */
-#portfolio-table td:last-child, #portfolio-table th:last-child {
-    min-width: 200px;
-    white-space: nowrap;
-}
-
-/* Ensure the right panel stacks Leaderboard and News vertically */
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* NEWS PANEL (red square under leaderboard) */
-.news-panel {
-    border: 2px solid #fc0032;
-    background: #23263a;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px #fc003222;
-    padding: 18px 18px 14px 18px;
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
-    position: relative;
-}
-#news-content {
-    font-size: 1.08em;
-    color: #e7ebf3;
-    margin-top: 7px;
-    white-space: pre-line;
-}
-
-/* --- existing styles below --- */
-html, body {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', 'Roboto', Arial, sans-serif;
-    background: radial-gradient(circle at 45% 25%, #23263a 65%, #181a20 100%);
-    color: #e7ebf3;
-}
-
-.dashboard {
-    display: grid;
-    grid-template-columns: 1.6fr 2.4fr 1.3fr;
-    grid-template-rows: 56px 1fr;
-    grid-template-areas:
-        "header header header"
-        "left-panel center-panel right-panel";
-    height: 100vh;
-    width: 100vw;
-    gap: 20px;
-    padding: 18px;
-    box-sizing: border-box;
-}
-
-.left-panel, .center-panel, .right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.panel, .card {
-    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
-    border-radius: 14px;
-    box-shadow: 0 4px 16px #0002;
-    padding: 18px 18px 14px 18px;
-    min-width: 0;
-    min-height: 0;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    border: 1.5px solid #212433;
-    transition: box-shadow 0.15s;
-}
-.panel:hover {
-    box-shadow: 0 6px 24px #21e6c11a;
-    border-color: #21e6c1;
-}
-
-.panel-title {
-    color: #21e6c1;
-    font-weight: 700;
-    font-size: 1.15rem;
-    margin-bottom: 9px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    position: relative;
-}
-.panel-title:after {
-    content: "";
-    display: block;
-    height: 2px;
-    width: 26px;
-    background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
-    border-radius: 2px;
-    margin-left: 6px;
-}
-
-.chart-container {
-    background: #181a20cc;
-    border-radius: 8px;
-    box-shadow: 0 1px 7px #21e6c122;
-    padding: 10px 0 10px 0;
-    margin-bottom: 6px;
-    min-height: 90px;
-    max-height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.97em;
-    background: none;
-}
-
-th, td {
-    padding: 6px 10px;
-    text-align: left;
-    font-size: 0.97em;
-    border-bottom: 1px solid #222b;
-    transition: background 0.13s;
-}
-
-th {
-    color: #21e6c1;
-    font-weight: 600;
-    background: #202539;
-}
-
-tr {
-    transition: background 0.13s;
-}
-
-tr:hover {
-    background: #23263a99;
-}
-
-.price-up::before {
-    content: "▲ ";
-    color: #21e6c1;
-    font-weight: bold;
-}
-
-.price-down::before {
-    content: "▼ ";
-    color: #FC0032;
-    font-weight: bold;
-}
-
-.price-up { color: #21e6c1; font-weight: 700; }
-.price-down { color: #FC0032; font-weight: 700; }
-.price-same { color: #aaa; }
-
-.action-btn, #next-day, #save-score, .sell-btn, .sell-all-btn {
-    padding: 7px 20px;
-    background: #21e6c1;
-    color: #23263a;
-    border: none;
-    border-radius: 6px;
-    font-size: 1em;
-    font-weight: 600;
-    margin: 0 2px;
-    box-shadow: 0 2px 8px #21e6c133;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-
-.action-btn:hover, #next-day:hover, #save-score:hover, .sell-btn:hover {
-    background: #FC0032;
-    color: #fff;
-    box-shadow: 0 4px 18px #fc0032cc;
-}
-
-.sell-all-btn {
-    padding: 7px 12px;
-    background: #FC0032;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 1em;
-    font-weight: 600;
-    margin: 0 2px;
-    box-shadow: 0 2px 8px #fc003233;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-.sell-all-btn:hover {
-    background: #b00024;
-    color: #fff;
-    box-shadow: 0 4px 18px #fc0032cc;
-}
-
-.buttons-row {
-    display: flex;
-    gap: 12px;
-    margin-top: 7px;
-    justify-content: flex-end;
-}
-
-input[type="number"] {
-    width: 38px;
-    border-radius: 5px;
-    border: 1px solid #21e6c1;
-    background: #202539;
-    color: #e7ebf3;
-    font-size: 0.96em;
-    padding: 3px 2px;
-    margin-right: 2px;
-    outline: none;
-    transition: border 0.12s;
-}
-
-input[type="number"]:focus {
-    border-color: #FC0032;
-    background: #181a20;
-}
-
-ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.leaderboard-list li {
-    padding: 7px 12px;
-    background: #212433cc;
-    border-radius: 6px;
-    color: #21e6c1;
-    font-weight: 500;
-    font-size: 0.99em;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 1px 6px #21e6c144;
-    border-left: 3px solid #21e6c1;
-    position: relative;
-}
-
-.leaderboard-list li::after {
-    content: "🏆";
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.05em;
-    opacity: 0.7;
-}
-
-::-webkit-scrollbar {
-    width: 8px;
-    background: #181a20;
-}
-::-webkit-scrollbar-thumb {
-    background: #23263a;
-    border-radius: 6px;
-}
-
-@media (max-width: 1200px) {
-    .dashboard {
-        grid-template-columns: 1fr 1.1fr 0.9fr;
-        grid-template-rows: 44px 1fr;
-        gap: 8px;
-        padding: 6px;
+// Chart.js setup (unchanged)
+let ctx = document.getElementById('portfolioChart').getContext('2d');
+let chartData = {
+    labels: [day],
+    datasets: [{
+        label: 'Portfolio Value',
+        data: [portfolioHistory[0]],
+        borderColor: '#00FC87',
+        backgroundColor: 'rgba(14,210,247,0.10)',
+        fill: true,
+        tension: 0.28,
+        pointRadius: 4,
+        pointBackgroundColor: '#00FC87',
+        pointBorderColor: '#23263A'
+    }]
+};
+let portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+        animation: { duration: 700, easing: 'easeOutQuad' },
+        scales: {
+            x: { display: false },
+            y: { display: false }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#23263A',
+                titleColor: '#00FC87',
+                bodyColor: '#F5F6FA',
+                borderColor: '#00FC87',
+                borderWidth: 1
+            }
+        }
     }
-    .panel, .card { padding: 8px 8px; }
-    .header { font-size: 1.08rem; padding: 0 7px;}
+});
+
+function updateCash() {
+    document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
 }
+
+// --- Unchanged table and buy/sell logic below ---
+function updateStockTable() {
+    let tbody = document.getElementById('stock-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
+        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+        let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${stock.symbol}</td>
+            <td>${stock.type}</td>
+            <td>$${price.toFixed(2)}</td>
+            <td class="${className}">${changeStr}</td>
+            <td></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function updateTradeTable() {
+    let tbody = document.getElementById('trade-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let price = prices[stock.symbol];
+        const rowId = `buy_${stock.symbol}`;
+        const costId = `buy_cost_${stock.symbol}`;
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${stock.symbol}</td>
+            <td>$${price.toFixed(2)}</td>
+            <td>
+                <input type="number" min="1" value="1" class="buy-input" id="${rowId}">
+                <button onclick="buyStock('${stock.symbol}')">Buy</button>
+                <span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        setTimeout(() => {
+            const qtyInput = document.getElementById(rowId);
+            const costSpan = document.getElementById(costId);
+            if (qtyInput && costSpan) {
+                function updateCost() {
+                    let qty = parseInt(qtyInput.value) || 0;
+                    let cost = qty * price;
+                    costSpan.textContent = `$${cost.toFixed(2)}`;
+                }
+                qtyInput.addEventListener('input', updateCost);
+                updateCost();
+            }
+        }, 0);
+    });
+}
+
+function updatePortfolioTable() {
+    let tbody = document.getElementById('portfolio-table');
+    tbody.innerHTML = "";
+    STOCKS.forEach(stock => {
+        let owned = portfolio.stocks[stock.symbol];
+        if (owned > 0) {
+            let price = prices[stock.symbol];
+            let totalValue = owned * price;
+            let profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
+            let changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
+            let className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${stock.symbol}</td>
+                <td>${owned}</td>
+                <td>$${price.toFixed(2)}</td>
+                <td>$${totalValue.toFixed(2)}</td>
+                <td class="${className}">${changeStr}</td>
+                <td style="white-space:nowrap; min-width:200px;">
+                    <input type="number" min="1" value="1" style="width:40px;" id="sell_${stock.symbol}">
+                    <button class="sell-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
+                    <button class="sell-all-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    });
+}
+
+window.buyStock = function(symbol) {
+    let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
+    let cost = prices[symbol] * qty;
+    if (qty > 0 && portfolio.cash >= cost) {
+        let prevQty = portfolio.stocks[symbol];
+        let totalQty = prevQty + qty;
+        if (totalQty > 0) {
+            averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + prices[symbol] * qty) / totalQty;
+        } else {
+            averageBuyPrice[symbol] = prices[symbol];
+        }
+        portfolio.cash -= cost;
+        portfolio.stocks[symbol] += qty;
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
+window.sellStock = function(symbol) {
+    let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
+    let owned = portfolio.stocks[symbol];
+    if (qty > 0 && owned >= qty) {
+        portfolio.cash += prices[symbol] * qty;
+        portfolio.stocks[symbol] -= qty;
+        if (portfolio.stocks[symbol] === 0) {
+            prevOwned[symbol] = 0;
+            averageBuyPrice[symbol] = 0;
+        }
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
+window.sellAllStock = function(symbol) {
+    let owned = portfolio.stocks[symbol];
+    if (owned > 0) {
+        portfolio.cash += prices[symbol] * owned;
+        portfolio.stocks[symbol] = 0;
+        prevOwned[symbol] = 0;
+        averageBuyPrice[symbol] = 0;
+        updateCash();
+        updateLeaderboard();
+        updatePortfolioTable();
+    }
+};
+
+// ---- Random News/Events System ----
+const NEWS_EVENTS = [
+    // Stock-specific
+    { type: "stock", symbol: "ZOOMX", text: "Zoomix Technologies launches a hit gadget! Electronics up.", effect: 0.07 },
+    { type: "stock", symbol: "FRUIQ", text: "FruityQ recalls a product. Food stocks drop.", effect: -0.11 },
+    { type: "stock", symbol: "SOLARO", text: "Oil prices surge! Solaro Energy benefits.", effect: 0.06 },
+    { type: "stock", symbol: "ROBIX", text: "Robix Robotics unveils new AI robot. AI & Robotics rise.", effect: 0.10 },
+    // Type-specific
+    { type: "type", target: "Transport", text: "Major airline strike disrupts transport sector.", effect: -0.13 },
+    { type: "type", target: "Electronics", text: "Tech expo boosts electronics sales!", effect: 0.05 },
+    { type: "type", target: "Food", text: "New health study favors food companies.", effect: 0.03 },
+    { type: "type", target: "AI & Robotics", text: "AI breakthrough stuns the market!", effect: 0.09 },
+    { type: "type", target: "Energy", text: "Green energy gets government incentives.", effect: 0.05 },
+    { type: "type", target: "Fashion", text: "Fashion week flops, hurting apparel sector.", effect: -0.06 },
+    { type: "type", target: "Retail", text: "Holiday shopping season boosts retail.", effect: 0.05 },
+    { type: "type", target: "Mining", text: "Mining accident impacts sector.", effect: -0.10 },
+    { type: "type", target: "Oil & Energy", text: "Oil crisis! Oil stocks take a hit.", effect: -0.15 },
+    { type: "type", target: "Water", text: "Water shortages reported globally. Water stocks spike.", effect: 0.04 },
+    { type: "type", target: "Health", text: "New health regulations impact health sector.", effect: -0.07 },
+    { type: "type", target: "Travel", text: "Travel restrictions lifted, travel stocks climb.", effect: 0.05 },
+    { type: "type", target: "Fitness", text: "Fitness trends grow, fitness stocks increase.", effect: 0.03 },
+    // Market crash event
+    { type: "market", text: "Market crash! All stocks down sharply.", effect: -0.18 },
+    { type: "market", text: "Bear market: most stocks drop sharply.", effect: -0.13 }
+];
+
+// Show a random news event and apply its effect
+function triggerRandomNews() {
+    const news = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
+    document.getElementById("news-content").textContent = news.text;
+
+    // Apply to stock price(s)
+    if (news.type === "stock") {
+        let symbol = news.symbol;
+        let effect = news.effect;
+        prices[symbol] = Math.max(10, +(prices[symbol] * (1 + effect)).toFixed(2));
+    } else if (news.type === "type") {
+        STOCKS.forEach(stock => {
+            if (stock.type === news.target) {
+                prices[stock.symbol] = Math.max(10, +(prices[stock.symbol] * (1 + news.effect)).toFixed(2));
+            }
+        });
+    } else if (news.type === "market") {
+        STOCKS.forEach(stock => {
+            prices[stock.symbol] = Math.max(10, +(prices[stock.symbol] * (1 + news.effect)).toFixed(2));
+        });
+    }
+}
+
+// ---- Next Day Button ----
+document.getElementById('next-day').onclick = function() {
+    STOCKS.forEach(stock => {
+        prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
+    });
+    setRandomPrices();
+    triggerRandomNews(); // Show random news and apply price effect
+    updateStockTable();
+    updateTradeTable();
+    day++;
+    let value = getPortfolioValue();
+    portfolioHistory.push(value);
+    portfolioChart.data.labels.push(day);
+    portfolioChart.data.datasets[0].data.push(value);
+    portfolioChart.update();
+    updateLeaderboard();
+    updatePortfolioTable();
+};
+
+function getPortfolioValue() {
+    let value = portfolio.cash;
+    STOCKS.forEach(stock => {
+        value += portfolio.stocks[stock.symbol] * prices[stock.symbol];
+    });
+    return value;
+}
+
+// Modified leaderboard logic: Only top 10, and only best score per person
+function loadScores() {
+    let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
+    // Keep only the highest score per name
+    let bestScores = {};
+    scores.forEach(s => {
+        if (!bestScores[s.name] || s.value > bestScores[s.name].value) {
+            bestScores[s.name] = s;
+        }
+    });
+    let uniqueScores = Object.values(bestScores);
+    uniqueScores.sort((a, b) => b.value - a.value);
+    return uniqueScores.slice(0, 10);
+}
+function saveScore() {
+    let name = prompt("Enter your name for the leaderboard:");
+    if (!name) return;
+    let value = getPortfolioValue();
+    let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
+    scores.push({ name, value: +value.toFixed(2) });
+    localStorage.setItem('leaderboard_scores', JSON.stringify(scores));
+    updateLeaderboard();
+}
+document.getElementById('save-score').onclick = saveScore;
+function updateLeaderboard() {
+    let scores = loadScores();
+    let ul = document.getElementById('scores');
+    ul.innerHTML = "";
+    scores.forEach((score, idx) => {
+        let initials = score.name.split(' ').map(w=>w[0]).join('').toUpperCase();
+        let li = document.createElement('li');
+        li.innerHTML = `<span style="background:#00fc87; color:#21293a; border-radius:50%; padding:2px 8px; margin-right:6px;">${initials}</span> <strong>${score.name}</strong>: <span class="price-up">$${score.value}</span>`;
+        ul.appendChild(li);
+    });
+}
+
+// Initial UI setup
+updateCash();
+updateStockTable();
+updateTradeTable();
+updateLeaderboard();
+updatePortfolioTable();
+
+// Show an initial news event when page loads
+window.addEventListener("DOMContentLoaded", () => {
+    triggerRandomNews();
+});
