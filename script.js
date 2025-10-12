@@ -29,10 +29,16 @@ STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
 
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
+
+// HARDER GAME: Stock changes mostly negative, only small rare positive changes
 function setRandomPrices() {
     prevPrices = {...prices};
     STOCKS.forEach(stock => {
-        prices[stock.symbol] = randomPrice();
+        let oldPrice = prices[stock.symbol] || randomPrice();
+        // Change between -8% and +2% (much more likely to go down than up)
+        let changePercent = (Math.random() - 0.8) * 0.10; // -8% to +2%
+        let newPrice = oldPrice * (1 + changePercent);
+        prices[stock.symbol] = Math.max(50, +newPrice.toFixed(2));
     });
 }
 setRandomPrices();
