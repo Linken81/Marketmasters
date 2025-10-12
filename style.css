@@ -95,7 +95,9 @@
     opacity: 1;
 }
 
-/* --- Panel title and Portfolio Chart improvements remain unchanged --- */
+/* ---- END HEADER FLEX ---- */
+
+/* Panel title and Portfolio Chart improvements remain unchanged */
 .panel-title {
     color: #21e6c1;
     font-weight: 700;
@@ -114,6 +116,83 @@
     background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
     border-radius: 2px;
     margin-left: 6px;
+}
+
+/* Make buy input wider and align better in Trade panel */
+input[type="number"].buy-input {
+    width: 105px;
+    border-radius: 5px;
+    border: 1px solid #21e6c1;
+    background: #202539;
+    color: #e7ebf3;
+    font-size: 0.96em;
+    padding: 3px 4px;
+    margin-right: 4px;
+    outline: none;
+    transition: border 0.12s;
+}
+input[type="number"].buy-input:focus {
+    border-color: #FC0032;
+    background: #181a20;
+}
+
+/* Cost box for buy total (red rectangle) */
+.buy-cost {
+    display: inline-block;
+    min-width: 90px;
+    margin-left: 10px;
+    padding: 4px 10px;
+    border: 2px solid #fc0032;
+    border-radius: 5px;
+    background: transparent;
+    color: #fc0032;
+    font-weight: bold;
+    font-size: 1em;
+    text-align: right;
+}
+
+/* Wider Sell/Buy columns in Portfolio for buttons */
+#portfolio-table td:last-child, #portfolio-table th:last-child {
+    min-width: 200px;
+    white-space: nowrap;
+}
+
+/* --- Do not change grid/flex settings below --- */
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', 'Roboto', Arial, sans-serif;
+    background: radial-gradient(circle at 45% 25%, #23263a 65%, #181a20 100%);
+    color: #e7ebf3;
+}
+
+/* Preserve original grid and columns */
+.dashboard {
+    display: grid;
+    grid-template-columns: 1.6fr 2.4fr 1.3fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas:
+        "header header header"
+        "left-panel center-panel right-panel";
+    height: 100vh;
+    width: 100vw;
+    gap: 20px;
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.left-panel, .center-panel, .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .chart-container {
@@ -153,7 +232,6 @@
     white-space: pre-line;
 }
 
-/* Panel and table styles remain the same */
 .panel, .card {
     background: linear-gradient(115deg, #23263a 89%, #212433 100%);
     border-radius: 14px;
