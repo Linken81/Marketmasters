@@ -27,6 +27,9 @@ STOCKS.forEach(stock => { portfolio.stocks[stock.symbol] = 0; });
 let prevOwned = {};
 STOCKS.forEach(stock => { prevOwned[stock.symbol] = 0; });
 
+let averageBuyPrice = {};
+STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
+
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
@@ -152,15 +155,11 @@ function updatePortfolioTable() {
         let owned = portfolio.stocks[stock.symbol];
         if (owned > 0) {
             let price = prices[stock.symbol];
-            let prevPrice = prevPrices[stock.symbol];
             let totalValue = owned * price;
-            let valueChange = 0;
-
-            if (prevPrice !== undefined && prevPrice !== price && prevOwned[stock.symbol] > 0) {
-                valueChange = (price - prevPrice) * prevOwned[stock.symbol];
-            }
-            let changeStr = (valueChange > 0 ? "+" : "") + valueChange.toFixed(2);
-            let className = valueChange > 0 ? "price-up" : valueChange < 0 ? "price-down" : "price-same";
+            // Calculate total profit/loss for this stock
+            let profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
+            let changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
+            let className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
             let tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${stock.symbol}</td>
@@ -183,6 +182,15 @@ window.buyStock = function(symbol) {
     let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
     let cost = prices[symbol] * qty;
     if (qty > 0 && portfolio.cash >= cost) {
+        // Update average buy price
+        let prevQty = portfolio.stocks[symbol];
+        let totalQty = prevQty + qty;
+        if (totalQty > 0) {
+            averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + prices[symbol] * qty) / totalQty;
+        } else {
+            averageBuyPrice[symbol] = prices[symbol];
+        }
+
         portfolio.cash -= cost;
         portfolio.stocks[symbol] += qty;
         updateCash();
@@ -198,6 +206,7 @@ window.sellStock = function(symbol) {
         portfolio.stocks[symbol] -= qty;
         if (portfolio.stocks[symbol] === 0) {
             prevOwned[symbol] = 0;
+            averageBuyPrice[symbol] = 0;
         }
         updateCash();
         updateLeaderboard();
@@ -210,6 +219,7 @@ window.sellAllStock = function(symbol) {
         portfolio.cash += prices[symbol] * owned;
         portfolio.stocks[symbol] = 0;
         prevOwned[symbol] = 0;
+        averageBuyPrice[symbol] = 0; // Reset after selling all
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
