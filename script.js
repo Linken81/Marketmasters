@@ -403,16 +403,12 @@ function updateLeaderboard() {
     });
 }
 
-// Initial UI setup
-updateCash();
-updateStockTable();
-updateTradeTable();
-updateLeaderboard();
-updatePortfolioTable();
-
-// Show an initial news event and ensure stocks/trades are visible on page load
+// Initial UI setup (moved into DOMContentLoaded to ensure tables are present)
 window.addEventListener("DOMContentLoaded", () => {
+    updateCash();
     updateStockTable();
     updateTradeTable();
+    updateLeaderboard();
+    updatePortfolioTable();
     triggerRandomNews();
 });
