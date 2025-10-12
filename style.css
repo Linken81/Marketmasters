@@ -111,32 +111,6 @@ input[type="number"].buy-input:focus {
     white-space: nowrap;
 }
 
-/* Ensure the right panel stacks Leaderboard and News vertically */
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* NEWS PANEL (red square under leaderboard) */
-.news-panel {
-    border: 2px solid #fc0032;
-    background: #23263a;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px #fc003222;
-    padding: 18px 18px 14px 18px;
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
-    position: relative;
-}
-#news-content {
-    font-size: 1.08em;
-    color: #e7ebf3;
-    margin-top: 7px;
-    white-space: pre-line;
-}
-
 /* --- existing styles below --- */
 html, body {
     height: 100%;
@@ -168,6 +142,52 @@ html, body {
     gap: 16px;
 }
 
+/* Ensure the right panel stacks Leaderboard and News vertically */
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- Portfolio Chart improvements --- */
+.chart-container {
+    background: #181a20cc;
+    border-radius: 8px;
+    box-shadow: 0 1px 7px #21e6c122;
+    padding: 16px 8px 18px 8px;
+    margin-bottom: 6px;
+    min-height: 220px;
+    max-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#portfolioChart {
+    width: 100% !important;
+    height: 190px !important;
+    max-height: 260px;
+}
+
+/* NEWS PANEL (red square under leaderboard) */
+.news-panel {
+    border: 2px solid #fc0032;
+    background: #23263a;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px #fc003222;
+    padding: 18px 18px 14px 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+    position: relative;
+}
+#news-content {
+    font-size: 1.08em;
+    color: #e7ebf3;
+    margin-top: 7px;
+    white-space: pre-line;
+}
+
+/* Panel and table styles remain the same */
 .panel, .card {
     background: linear-gradient(115deg, #23263a 89%, #212433 100%);
     border-radius: 14px;
@@ -185,7 +205,6 @@ html, body {
     box-shadow: 0 6px 24px #21e6c11a;
     border-color: #21e6c1;
 }
-
 .panel-title {
     color: #21e6c1;
     font-weight: 700;
@@ -205,27 +224,12 @@ html, body {
     border-radius: 2px;
     margin-left: 6px;
 }
-
-.chart-container {
-    background: #181a20cc;
-    border-radius: 8px;
-    box-shadow: 0 1px 7px #21e6c122;
-    padding: 10px 0 10px 0;
-    margin-bottom: 6px;
-    min-height: 90px;
-    max-height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.97em;
     background: none;
 }
-
 th, td {
     padding: 6px 10px;
     text-align: left;
@@ -233,37 +237,30 @@ th, td {
     border-bottom: 1px solid #222b;
     transition: background 0.13s;
 }
-
 th {
     color: #21e6c1;
     font-weight: 600;
     background: #202539;
 }
-
 tr {
     transition: background 0.13s;
 }
-
 tr:hover {
     background: #23263a99;
 }
-
 .price-up::before {
     content: "▲ ";
     color: #21e6c1;
     font-weight: bold;
 }
-
 .price-down::before {
     content: "▼ ";
     color: #FC0032;
     font-weight: bold;
 }
-
 .price-up { color: #21e6c1; font-weight: 700; }
 .price-down { color: #FC0032; font-weight: 700; }
 .price-same { color: #aaa; }
-
 .action-btn, #next-day, #save-score, .sell-btn, .sell-all-btn {
     padding: 7px 20px;
     background: #21e6c1;
@@ -277,13 +274,11 @@ tr:hover {
     cursor: pointer;
     transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
-
 .action-btn:hover, #next-day:hover, #save-score:hover, .sell-btn:hover {
     background: #FC0032;
     color: #fff;
     box-shadow: 0 4px 18px #fc0032cc;
 }
-
 .sell-all-btn {
     padding: 7px 12px;
     background: #FC0032;
@@ -302,14 +297,12 @@ tr:hover {
     color: #fff;
     box-shadow: 0 4px 18px #fc0032cc;
 }
-
 .buttons-row {
     display: flex;
     gap: 12px;
     margin-top: 7px;
     justify-content: flex-end;
 }
-
 input[type="number"] {
     width: 38px;
     border-radius: 5px;
@@ -322,18 +315,15 @@ input[type="number"] {
     outline: none;
     transition: border 0.12s;
 }
-
 input[type="number"]:focus {
     border-color: #FC0032;
     background: #181a20;
 }
-
 ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
-
 .leaderboard-list li {
     padding: 7px 12px;
     background: #212433cc;
@@ -349,7 +339,6 @@ ul {
     border-left: 3px solid #21e6c1;
     position: relative;
 }
-
 .leaderboard-list li::after {
     content: "🏆";
     position: absolute;
@@ -359,7 +348,6 @@ ul {
     font-size: 1.05em;
     opacity: 0.7;
 }
-
 ::-webkit-scrollbar {
     width: 8px;
     background: #181a20;
