@@ -280,7 +280,7 @@ ul {
     border-radius: 6px;
 }
 
-/* NEWS PANEL (Red square under leaderboard) */
+/* NEWS PANEL (red square at bottom) */
 .news-panel {
     min-height: 180px;
     border: 2px solid #fc0032;
@@ -303,14 +303,4 @@ ul {
     font-size: 1em;
     color: #fc0032;
     margin-top: 8px;
-}
-
-@media (max-width: 1200px) {
-    .dashboard {
-        flex-direction: column;
-        gap: 8px;
-        padding: 6px;
-    }
-    .panel, .card { padding: 8px 8px; }
-    .header { font-size: 1.08rem; padding: 0 7px;}
 }
