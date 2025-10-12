@@ -33,34 +33,22 @@ STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
-// --- Realistic Stock Price Simulation ---
-function setRandomPrices() {
+function setRandomPrices(newsEffectMap = {}) {
     prevPrices = {...prices};
-    // Market phase: normal, bear, or bull
-    let marketPhase = "normal";
-    let rand = Math.random();
-    if (rand < 0.10) marketPhase = "bear"; // 10% chance of bear market day
-    else if (rand > 0.97) marketPhase = "bull"; // 3% chance of bull market day
 
+    // Each stock moves independently, but with a random walk centered on 0, slight volatility
     STOCKS.forEach(stock => {
         let oldPrice = prices[stock.symbol] || randomPrice();
-        let changePercent = 0;
-        // Normal market: -7% to +5% (skewed slightly negative)
-        if (marketPhase === "normal") {
-            changePercent = (Math.random() * 0.12) - 0.07; // -7% to +5%
-            if (Math.random() < 0.25) changePercent -= Math.random() * 0.03; // 25% chance of extra drop
+        let changePercent = (Math.random() * 0.08) - 0.04; // -4% to +4%, centered around 0
+
+        // Apply news effect if present (from previous news)
+        if (newsEffectMap[stock.symbol]) {
+            changePercent += newsEffectMap[stock.symbol];
         }
-        // Bear market: -20% to +3%
-        else if (marketPhase === "bear") {
-            changePercent = (Math.random() * 0.23) - 0.20; // -20% to +3%
-        }
-        // Bull market: +2% to +14%
-        else if (marketPhase === "bull") {
-            changePercent = (Math.random() * 0.12) + 0.02; // +2% to +14%
-        }
-        let newPrice = oldPrice * (1 + changePercent);
+
         // Minimum price $10
-        prices[stock.symbol] = Math.max(10, +newPrice.toFixed(2));
+        let newPrice = Math.max(10, +(oldPrice * (1 + changePercent)).toFixed(2));
+        prices[stock.symbol] = newPrice;
     });
 }
 
@@ -69,7 +57,7 @@ setRandomPrices();
 let portfolioHistory = [getPortfolioValue()];
 let day = 1;
 
-// Chart.js setup (unchanged)
+// Chart.js setup
 let ctx = document.getElementById('portfolioChart').getContext('2d');
 let chartData = {
     labels: [day],
@@ -111,7 +99,6 @@ function updateCash() {
     document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
 }
 
-// --- Unchanged table and buy/sell logic below ---
 function updateStockTable() {
     let tbody = document.getElementById('stock-table');
     tbody.innerHTML = "";
@@ -242,53 +229,49 @@ window.sellAllStock = function(symbol) {
     }
 };
 
-// ---- Random News/Events System ----
+// ---- Realistic News/Events System ----
 const NEWS_EVENTS = [
-    // Stock-specific
-    { type: "stock", symbol: "ZOOMX", text: "Zoomix Technologies launches a hit gadget! Electronics up.", effect: 0.07 },
-    { type: "stock", symbol: "FRUIQ", text: "FruityQ recalls a product. Food stocks drop.", effect: -0.11 },
-    { type: "stock", symbol: "SOLARO", text: "Oil prices surge! Solaro Energy benefits.", effect: 0.06 },
-    { type: "stock", symbol: "ROBIX", text: "Robix Robotics unveils new AI robot. AI & Robotics rise.", effect: 0.10 },
-    // Type-specific
-    { type: "type", target: "Transport", text: "Major airline strike disrupts transport sector.", effect: -0.13 },
-    { type: "type", target: "Electronics", text: "Tech expo boosts electronics sales!", effect: 0.05 },
-    { type: "type", target: "Food", text: "New health study favors food companies.", effect: 0.03 },
-    { type: "type", target: "AI & Robotics", text: "AI breakthrough stuns the market!", effect: 0.09 },
-    { type: "type", target: "Energy", text: "Green energy gets government incentives.", effect: 0.05 },
-    { type: "type", target: "Fashion", text: "Fashion week flops, hurting apparel sector.", effect: -0.06 },
-    { type: "type", target: "Retail", text: "Holiday shopping season boosts retail.", effect: 0.05 },
-    { type: "type", target: "Mining", text: "Mining accident impacts sector.", effect: -0.10 },
-    { type: "type", target: "Oil & Energy", text: "Oil crisis! Oil stocks take a hit.", effect: -0.15 },
-    { type: "type", target: "Water", text: "Water shortages reported globally. Water stocks spike.", effect: 0.04 },
-    { type: "type", target: "Health", text: "New health regulations impact health sector.", effect: -0.07 },
-    { type: "type", target: "Travel", text: "Travel restrictions lifted, travel stocks climb.", effect: 0.05 },
-    { type: "type", target: "Fitness", text: "Fitness trends grow, fitness stocks increase.", effect: 0.03 },
-    // Market crash event
-    { type: "market", text: "Market crash! All stocks down sharply.", effect: -0.18 },
-    { type: "market", text: "Bear market: most stocks drop sharply.", effect: -0.13 }
+    // Good news, medium, big, mild
+    { type: "stock", symbol: "ZOOMX", text: "BREAKING: Zoomix Technologies launches revolutionary AI chip! Electronics soar.", effect: 0.22, mood: "good" },
+    { type: "stock", symbol: "FRUIQ", text: "FruityQ Foods releases a popular new snack. Food stocks rise.", effect: 0.09, mood: "good" },
+    { type: "stock", symbol: "SOLARO", text: "Solaro Energy secures a major government contract!", effect: 0.15, mood: "good" },
+    { type: "type", target: "Transport", text: "Transport sector sees strong passenger growth.", effect: 0.07, mood: "good" },
+    { type: "market", text: "Market rally: most stocks surge.", effect: 0.13, mood: "good" },
+    // Bad news, mild, big, crash
+    { type: "stock", symbol: "ROBIX", text: "Robix Robotics faces software bug scandal. Stock tanks.", effect: -0.20, mood: "bad" },
+    { type: "stock", symbol: "AQUIX", text: "Aquix Water Corp fined for pollution. Water stocks drop.", effect: -0.08, mood: "bad" },
+    { type: "type", target: "Electronics", text: "Electronics sector hit by chip shortage.", effect: -0.11, mood: "bad" },
+    { type: "market", text: "Market crash: panic selling hits all stocks!", effect: -0.18, mood: "bad" },
+    // Neutral/minor events
+    { type: "stock", symbol: "VOYZA", text: "Voyza Travel launches new routes, but response is lukewarm.", effect: 0.02, mood: "neutral" },
+    { type: "type", target: "Food", text: "Food sector stable as prices remain unchanged.", effect: 0.0, mood: "neutral" },
+    { type: "type", target: "Retail", text: "Retail sector sees mixed results.", effect: -0.01, mood: "neutral" },
+    // More variety
+    { type: "stock", symbol: "MEDIX", text: "Medix Health receives glowing review. Health stocks up.", effect: 0.06, mood: "good" },
+    { type: "stock", symbol: "ASTRO", text: "Astro Mining suffers safety incident. Mining stocks fall.", effect: -0.13, mood: "bad" },
+    { type: "type", target: "AI & Robotics", text: "AI & Robotics sector gets new funding.", effect: 0.10, mood: "good" },
 ];
 
-// Show a random news event and apply its effect
 function triggerRandomNews() {
     const news = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
     document.getElementById("news-content").textContent = news.text;
 
-    // Apply to stock price(s)
+    // Map of news effect per symbol for setRandomPrices
+    let newsEffectMap = {};
     if (news.type === "stock") {
-        let symbol = news.symbol;
-        let effect = news.effect;
-        prices[symbol] = Math.max(10, +(prices[symbol] * (1 + effect)).toFixed(2));
+        newsEffectMap[news.symbol] = news.effect;
     } else if (news.type === "type") {
         STOCKS.forEach(stock => {
             if (stock.type === news.target) {
-                prices[stock.symbol] = Math.max(10, +(prices[stock.symbol] * (1 + news.effect)).toFixed(2));
+                newsEffectMap[stock.symbol] = news.effect;
             }
         });
     } else if (news.type === "market") {
         STOCKS.forEach(stock => {
-            prices[stock.symbol] = Math.max(10, +(prices[stock.symbol] * (1 + news.effect)).toFixed(2));
+            newsEffectMap[stock.symbol] = news.effect;
         });
     }
+    return newsEffectMap;
 }
 
 // ---- Next Day Button ----
@@ -296,8 +279,9 @@ document.getElementById('next-day').onclick = function() {
     STOCKS.forEach(stock => {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
-    setRandomPrices();
-    triggerRandomNews(); // Show random news and apply price effect
+    // News effect map returned from news event
+    let newsEffectMap = triggerRandomNews();
+    setRandomPrices(newsEffectMap); // Pass news effect to stock price change
     updateStockTable();
     updateTradeTable();
     day++;
@@ -321,7 +305,6 @@ function getPortfolioValue() {
 // Modified leaderboard logic: Only top 10, and only best score per person
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
-    // Keep only the highest score per name
     let bestScores = {};
     scores.forEach(s => {
         if (!bestScores[s.name] || s.value > bestScores[s.name].value) {
@@ -363,5 +346,11 @@ updatePortfolioTable();
 
 // Show an initial news event when page loads
 window.addEventListener("DOMContentLoaded", () => {
-    triggerRandomNews();
+    updateCash();
+    updateStockTable();
+    updateTradeTable();
+    updateLeaderboard();
+    updatePortfolioTable();
+    // Initial news (no real effect on first prices)
+    document.getElementById("news-content").textContent = "Welcome to Marketmasters! Click Next Day for fresh market news.";
 });
