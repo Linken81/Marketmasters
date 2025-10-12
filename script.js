@@ -1,24 +1,24 @@
 const STOCKS = [
-    { symbol: "ZOOMX", name: "Zoomix Technologies" },
-    { symbol: "FRUIQ", name: "FruityQ Foods" },
-    { symbol: "SOLARO", name: "Solaro Energy" },
-    { symbol: "ROBIX", name: "Robix Robotics" },
-    { symbol: "DRONZ", name: "Dronz Delivery" },
-    { symbol: "AQUIX", name: "Aquix Water Corp" },
-    { symbol: "GLOBO", name: "Globon Airlines" },
-    { symbol: "NUTRO", name: "Nutro Nutrition" },
-    { symbol: "PIXEL", name: "PixelWave Media" },
-    { symbol: "VOYZA", name: "Voyza Travel" },
-    { symbol: "FLEXI", name: "Flexi Fitness" },
-    { symbol: "MEDIX", name: "Medix Health" },
-    { symbol: "ECOFY", name: "Ecofy Solutions" },
-    { symbol: "ASTRO", name: "Astro Mining" },
-    { symbol: "NEURA", name: "NeuraTech Labs" },
-    { symbol: "BERRY", name: "BerrySoft Drinks" },
-    { symbol: "FASHN", name: "Fashn Apparel" },
-    { symbol: "SPECT", name: "Spectra Security" },
-    { symbol: "INNOV", name: "Innovado Systems" },
-    { symbol: "TREND", name: "Trendify Retail" }
+    { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
+    { symbol: "FRUIQ", name: "FruityQ Foods", type: "Food" },
+    { symbol: "SOLARO", name: "Solaro Energy", type: "Oil & Energy" },
+    { symbol: "ROBIX", name: "Robix Robotics", type: "AI & Robotics" },
+    { symbol: "DRONZ", name: "Dronz Delivery", type: "Transport" },
+    { symbol: "AQUIX", name: "Aquix Water Corp", type: "Water" },
+    { symbol: "GLOBO", name: "Globon Airlines", type: "Transport" },
+    { symbol: "NUTRO", name: "Nutro Nutrition", type: "Food" },
+    { symbol: "PIXEL", name: "PixelWave Media", type: "Electronics" },
+    { symbol: "VOYZA", name: "Voyza Travel", type: "Travel" },
+    { symbol: "FLEXI", name: "Flexi Fitness", type: "Fitness" },
+    { symbol: "MEDIX", name: "Medix Health", type: "Health" },
+    { symbol: "ECOFY", name: "Ecofy Solutions", type: "Energy" },
+    { symbol: "ASTRO", name: "Astro Mining", type: "Mining" },
+    { symbol: "NEURA", name: "NeuraTech Labs", type: "AI & Robotics" },
+    { symbol: "BERRY", name: "BerrySoft Drinks", type: "Food" },
+    { symbol: "FASHN", name: "Fashn Apparel", type: "Fashion" },
+    { symbol: "SPECT", name: "Spectra Security", type: "Electronics" },
+    { symbol: "INNOV", name: "Innovado Systems", type: "AI & Robotics" },
+    { symbol: "TREND", name: "Trendify Retail", type: "Retail" }
 ];
 
 let portfolio = { cash: 10000, stocks: {} };
@@ -33,13 +33,13 @@ STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
-// FUN GAME: Stocks go up more often, smaller losses, bigger gains!
+// GAME: Slightly harder, stocks go up a bit more often, but smaller swing (+5% to -2%)
 function setRandomPrices() {
     prevPrices = {...prices};
     STOCKS.forEach(stock => {
         let oldPrice = prices[stock.symbol] || randomPrice();
-        // Change between -1% and +7%, mostly positive!
-        let changePercent = (Math.random() * 0.08) - 0.01; // -1% to +7%
+        // Change between -2% and +5%, a bit more positive but less than previous
+        let changePercent = (Math.random() * 0.07) - 0.02; // -2% to +5%
         let newPrice = oldPrice * (1 + changePercent);
         prices[stock.symbol] = Math.max(50, +newPrice.toFixed(2));
     });
@@ -102,6 +102,7 @@ function updateStockTable() {
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
+            <td>${stock.type}</td>
             <td>$${price.toFixed(2)}</td>
             <td class="${className}">${changeStr}</td>
             <td></td>
