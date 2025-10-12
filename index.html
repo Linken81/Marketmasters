@@ -9,88 +9,85 @@
 </head>
 <body>
     <div class="dashboard">
-        <!-- Header row -->
+        <!-- Header -->
         <div class="header">
             <div class="header-flex">
                 <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
                 <div class="header-title">Marketmasters</div>
             </div>
         </div>
-        <!-- Main content, three columns -->
-        <div class="main-columns">
-            <!-- Left column: chart + trade -->
-            <div class="main-left">
-                <div class="panel">
-                    <div class="panel-title">Portfolio Chart</div>
-                    <div class="chart-container">
-                        <canvas id="portfolioChart"></canvas>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-title">Trade</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Stock</th>
-                                <th>Price</th>
-                                <th>Buy</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trade-table"></tbody>
-                    </table>
-                    <div class="buttons-row">
-                        <button id="next-day">Next Day</button>
-                    </div>
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="panel">
+                <div class="panel-title">Portfolio Chart</div>
+                <div class="chart-container">
+                    <canvas id="portfolioChart"></canvas>
                 </div>
             </div>
-            <!-- Center column: stocks + portfolio -->
-            <div class="main-center">
-                <div class="panel">
-                    <div class="panel-title">Stocks</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Symbol</th>
-                                <th>Type</th>
-                                <th>Price</th>
-                                <th>Change</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stock-table"></tbody>
-                    </table>
-                </div>
-                <div class="panel">
-                    <div class="panel-title">My Portfolio</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Symbol</th>
-                                <th>Owned</th>
-                                <th>Price</th>
-                                <th>Total Value</th>
-                                <th>Change</th>
-                                <th>Sell</th>
-                            </tr>
-                        </thead>
-                        <tbody id="portfolio-table"></tbody>
-                    </table>
+            <div class="panel">
+                <div class="panel-title">Trade</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Buy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table"></tbody>
+                </table>
+                <div class="buttons-row">
+                    <button id="next-day">Next Day</button>
                 </div>
             </div>
-            <!-- Right column: leaderboard + news -->
-            <div class="main-right">
-                <div class="panel">
-                    <div class="panel-title">Leaderboard</div>
-                    <ul class="leaderboard-list" id="scores"></ul>
-                    <div class="buttons-row">
-                        <button id="save-score">Save My Score</button>
-                    </div>
+        </div>
+        <!-- Center Panel -->
+        <div class="center-panel">
+            <div class="panel">
+                <div class="panel-title">Stocks</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table"></tbody>
+                </table>
+            </div>
+            <div class="panel">
+                <div class="panel-title">My Portfolio</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Owned</th>
+                            <th>Price</th>
+                            <th>Total Value</th>
+                            <th>Change</th>
+                            <th>Sell</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-table"></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="panel">
+                <div class="panel-title">Leaderboard</div>
+                <ul class="leaderboard-list" id="scores"></ul>
+                <div class="buttons-row">
+                    <button id="save-score">Save My Score</button>
                 </div>
-                <div class="panel news-panel">
-                    <div class="panel-title">News</div>
-                    <div id="news-content"></div>
-                    <div id="news-effect-text" style="margin-top:8px; font-size:1em; color:#fc0032;"></div>
-                </div>
+            </div>
+            <div class="panel news-panel">
+                <div class="panel-title">News</div>
+                <div id="news-content"></div>
+                <div id="news-effect-text" style="margin-top:8px; font-size:1em; color:#fc0032;"></div>
             </div>
         </div>
     </div>
