@@ -9,21 +9,16 @@ html, body {
 }
 
 .dashboard {
-    display: grid;
-    grid-template-columns: 1.6fr 2.4fr 1.3fr;
-    grid-template-rows: 56px 1fr;
-    grid-template-areas:
-        "header header header"
-        "left-panel center-panel right-panel";
+    display: flex;
+    flex-direction: column;
     height: 100vh;
     width: 100vw;
-    gap: 20px;
-    padding: 18px;
     box-sizing: border-box;
+    padding: 10px;
+    gap: 10px;
 }
 
 .header {
-    grid-area: header;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -69,21 +64,28 @@ html, body {
     margin-right: 42px;
 }
 
-.left-panel, .center-panel, .right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+/* Main columns area, three columns */
+.main-columns {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 1.25fr 2.3fr 1.1fr;
+    grid-template-rows: 1fr;
+    gap: 18px;
+    height: 100%;
+    width: 100%;
 }
 
-.left-panel {
-    grid-area: left-panel;
+.main-left, .main-center, .main-right {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    height: 100%;
 }
-.center-panel {
-    grid-area: center-panel;
-}
-.right-panel {
-    grid-area: right-panel;
-}
+
+/* Each column fills its grid cell */
+.main-left { }
+.main-center { }
+.main-right { }
 
 .panel, .card {
     background: linear-gradient(115deg, #23263a 89%, #212433 100%);
@@ -98,7 +100,6 @@ html, body {
     border: 1.5px solid #212433;
     transition: box-shadow 0.15s;
 }
-
 .panel:hover {
     box-shadow: 0 6px 24px #21e6c11a;
     border-color: #21e6c1;
@@ -130,8 +131,8 @@ html, body {
     box-shadow: 0 1px 7px #21e6c122;
     padding: 10px 0 10px 0;
     margin-bottom: 6px;
-    min-height: 90px;
-    max-height: 160px;
+    min-height: 120px;
+    max-height: 180px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -260,7 +261,6 @@ input[type="number"].buy-input:focus {
     text-align: right;
 }
 
-/* Wider Sell/Buy columns in Portfolio for buttons */
 #portfolio-table td:last-child, #portfolio-table th:last-child {
     min-width: 200px;
     white-space: nowrap;
@@ -325,7 +325,7 @@ ul {
     border-radius: 6px;
 }
 
-/* NEWS PANEL (red square under leaderboard) */
+/* NEWS PANEL */
 .news-panel {
     min-height: 180px;
     border: 2px solid #fc0032;
@@ -336,7 +336,7 @@ ul {
     display: flex;
     flex-direction: column;
     position: relative;
-    margin-top: 18px;
+    margin-top: auto;
 }
 #news-content {
     font-size: 1.08em;
@@ -348,15 +348,4 @@ ul {
     font-size: 1em;
     color: #fc0032;
     margin-top: 8px;
-}
-
-@media (max-width: 1200px) {
-    .dashboard {
-        grid-template-columns: 1fr 1.1fr 0.9fr;
-        grid-template-rows: 44px 1fr;
-        gap: 8px;
-        padding: 6px;
-    }
-    .panel, .card { padding: 8px 8px; }
-    .header { font-size: 1.08rem; padding: 0 7px;}
 }
