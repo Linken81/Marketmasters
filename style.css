@@ -45,8 +45,21 @@
     display: flex;
     align-items: center;
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 42px;
+    position: relative;
+}
+.header-cash {
+    flex: 0 1 auto;
+    color: #21e6c1;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-left: 0;
+    margin-right: 24px;
+}
+.header-cash span {
+    color: #00fc87;
+    font-weight: 700;
 }
 .header-title {
     flex: 1 1 auto;
@@ -54,17 +67,7 @@
     font-size: 1.35rem;
     font-weight: 700;
     letter-spacing: 0.8px;
-}
-.header-cash {
-    flex: 0 1 auto;
-    color: #21e6c1;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin: 0 12px;
-}
-.header-cash span {
-    color: #00fc87;
-    font-weight: 700;
+    margin-right: 42px;
 }
 
 /* ---- END HEADER FLEX ---- */
