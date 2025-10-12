@@ -1,3 +1,27 @@
+/* Move the Next Day button up from the bottom */
+.next-day-wrapper {
+    position: fixed;
+    right: 32px;
+    bottom: 80px; /* Raised from 28px to move the button up */
+    z-index: 10;
+}
+#next-day {
+    padding: 12px 32px;
+    font-size: 1.15em;
+    font-weight: 700;
+    background: #21e6c1;
+    color: #23263a;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px #21e6c122;
+    border: none;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+#next-day:hover {
+    background: #FC0032;
+    color: #fff;
+}
+
 /* Make buy input wider and align better in Trade panel */
 input[type="number"].buy-input {
     width: 105px; /* 50% wider than before */
