@@ -249,15 +249,27 @@ function getPortfolioValue() {
     });
     return value;
 }
+
+// Modified leaderboard logic: Only top 10, and only best score per person
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
-    return scores.sort((a, b) => b.value - a.value).slice(0, 10);
+    // Keep only the highest score per name
+    let bestScores = {};
+    scores.forEach(s => {
+        if (!bestScores[s.name] || s.value > bestScores[s.name].value) {
+            bestScores[s.name] = s;
+        }
+    });
+    // Convert to array and sort
+    let uniqueScores = Object.values(bestScores);
+    uniqueScores.sort((a, b) => b.value - a.value);
+    return uniqueScores.slice(0, 10);
 }
 function saveScore() {
     let name = prompt("Enter your name for the leaderboard:");
     if (!name) return;
     let value = getPortfolioValue();
-    let scores = loadScores();
+    let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
     scores.push({ name, value: +value.toFixed(2) });
     localStorage.setItem('leaderboard_scores', JSON.stringify(scores));
     updateLeaderboard();
