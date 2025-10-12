@@ -111,6 +111,32 @@ input[type="number"].buy-input:focus {
     white-space: nowrap;
 }
 
+/* Ensure the right panel stacks Leaderboard and News vertically */
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* NEWS PANEL (red square under leaderboard) */
+.news-panel {
+    border: 2px solid #fc0032;
+    background: #23263a;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px #fc003222;
+    padding: 18px 18px 14px 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+    position: relative;
+}
+#news-content {
+    font-size: 1.08em;
+    color: #e7ebf3;
+    margin-top: 7px;
+    white-space: pre-line;
+}
+
 /* --- existing styles below --- */
 html, body {
     height: 100%;
@@ -140,32 +166,6 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 16px;
-}
-
-/* Ensure the right panel stacks Leaderboard and News vertically */
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* NEWS PANEL (red square under leaderboard) */
-.news-panel {
-    border: 2px solid #fc0032;
-    background: #23263a;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px #fc003222;
-    padding: 18px 18px 14px 18px;
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
-    position: relative;
-}
-#news-content {
-    font-size: 1.08em;
-    color: #e7ebf3;
-    margin-top: 7px;
-    white-space: pre-line;
 }
 
 .panel, .card {
