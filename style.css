@@ -1,107 +1,67 @@
-/* Move the Next Day button up from the bottom */
-.next-day-wrapper {
-    position: fixed;
-    right: 32px;
-    bottom: 80px;
-    z-index: 10;
-}
-#next-day {
-    padding: 12px 32px;
-    font-size: 1.15em;
-    font-weight: 700;
-    background: #21e6c1;
-    color: #23263a;
-    border-radius: 8px;
-    box-shadow: 0 4px 24px #21e6c122;
-    border: none;
-    cursor: pointer;
-    transition: background 0.18s, color 0.18s;
-}
-#next-day:hover {
-    background: #FC0032;
-    color: #fff;
+body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
 }
 
-/* ---- HEADER FLEX LAYOUT ---- */
-.header {
-    grid-area: header;
+.dashboard {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    background: #212433dd;
-    border-radius: 9px;
-    box-shadow: 0 4px 20px #0005;
-    padding: 0 24px;
-    letter-spacing: 0.7px;
-    color: #21e6c1;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    min-height: 56px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px;
 }
-.header-flex {
+
+.header {
     display: flex;
     align-items: center;
-    width: 100%;
-    justify-content: flex-start;
-    gap: 42px;
-    position: relative;
+    justify-content: space-between;
+    font-size: 1.18rem;
+    font-weight: 700;
+    background: #444857;
+    border-radius: 7px;
+    box-shadow: 0 2px 11px #0003;
+    padding: 0 18px;
+    color: #21e6c1;
+    min-height: 32px;
+    margin-bottom: 6px;
 }
 .header-cash {
-    flex: 0 1 auto;
     color: #21e6c1;
-    font-size: 1.2rem;
+    font-size: 1.05rem;
     font-weight: 700;
     margin-left: 0;
-    margin-right: 24px;
 }
 .header-cash span {
     color: #00fc87;
     font-weight: 700;
 }
 .header-title {
-    flex: 1 1 auto;
-    text-align: center;
-    font-size: 1.35rem;
+    text-align: right;
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.8px;
-    margin-right: 42px;
+    margin-right: 0;
 }
 
-/* ---- END HEADER FLEX ---- */
-
-.left-panel, .center-panel, .right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.panel, .card {
-    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
-    border-radius: 14px;
-    box-shadow: 0 4px 16px #0002;
-    padding: 18px 18px 14px 18px;
+.panel {
+    background: #23263a;
+    border-radius: 9px;
+    box-shadow: 0 2px 12px #0002;
+    padding: 10px 10px 7px 10px;
     min-width: 0;
     min-height: 0;
     position: relative;
     display: flex;
     flex-direction: column;
-    border: 1.5px solid #212433;
-    transition: box-shadow 0.15s;
-}
-
-.panel:hover {
-    box-shadow: 0 6px 24px #21e6c11a;
-    border-color: #21e6c1;
+    border: none;
+    margin-bottom: 6px;
 }
 
 .panel-title {
     color: #21e6c1;
     font-weight: 700;
-    font-size: 1.15rem;
-    margin-bottom: 9px;
+    font-size: 1.08rem;
+    margin-bottom: 6px;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -112,7 +72,7 @@
     content: "";
     display: block;
     height: 2px;
-    width: 26px;
+    width: 23px;
     background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
     border-radius: 2px;
     margin-left: 6px;
@@ -122,10 +82,10 @@
     background: #181a20cc;
     border-radius: 8px;
     box-shadow: 0 1px 7px #21e6c122;
-    padding: 10px 0 10px 0;
-    margin-bottom: 6px;
-    min-height: 90px;
-    max-height: 160px;
+    padding: 8px 0 8px 0;
+    margin-bottom: 1px;
+    min-height: 120px;
+    max-height: 180px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -149,7 +109,7 @@ th, td {
 th {
     color: #21e6c1;
     font-weight: 600;
-    background: #202539;
+    background: #23263a;
 }
 
 tr {
@@ -322,16 +282,16 @@ ul {
 
 /* NEWS PANEL (Red square under leaderboard) */
 .news-panel {
-    margin-top: 18px;
     min-height: 180px;
     border: 2px solid #fc0032;
-    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
-    border-radius: 14px;
-    box-shadow: 0 4px 16px #fc003222;
-    padding: 18px 18px 14px 18px;
+    background: #23263a;
+    border-radius: 9px;
+    box-shadow: 0 2px 12px #fc003222;
+    padding: 10px 10px 7px 10px;
     display: flex;
     flex-direction: column;
     position: relative;
+    margin-bottom: 6px;
 }
 #news-content {
     font-size: 1.08em;
@@ -347,8 +307,7 @@ ul {
 
 @media (max-width: 1200px) {
     .dashboard {
-        grid-template-columns: 1fr 1.1fr 0.9fr;
-        grid-template-rows: 44px 1fr;
+        flex-direction: column;
         gap: 8px;
         padding: 6px;
     }
