@@ -1,27 +1,3 @@
-/* Move the Next Day button up from the bottom */
-.next-day-wrapper {
-    position: fixed;
-    right: 32px;
-    bottom: 80px;
-    z-index: 10;
-}
-#next-day {
-    padding: 12px 32px;
-    font-size: 1.15em;
-    font-weight: 700;
-    background: #21e6c1;
-    color: #23263a;
-    border-radius: 8px;
-    box-shadow: 0 4px 24px #21e6c122;
-    border: none;
-    cursor: pointer;
-    transition: background 0.18s, color 0.18s;
-}
-#next-day:hover {
-    background: #FC0032;
-    color: #fff;
-}
-
 /* ---- HEADER FLEX LAYOUT ---- */
 .header {
     grid-area: header;
@@ -48,16 +24,16 @@
     position: relative;
 }
 
-/* --- Cash styling for better visibility --- */
+/* --- Cash styling for better visibility and less neon --- */
 .header-cash {
     display: flex;
     align-items: center;
     gap: 12px;
     background: #23263a;
     border-radius: 12px;
-    padding: 10px 30px 10px 20px;
-    box-shadow: 0 2px 18px #00fc87aa;
-    font-size: 1.25rem;
+    padding: 8px 24px 8px 14px;
+    box-shadow: 0 2px 8px #00fc8740;
+    font-size: 1.18rem;
     font-weight: 700;
     color: #21e6c1;
     letter-spacing: 0.5px;
@@ -66,55 +42,60 @@
     margin-right: 24px;
 }
 .cash-label {
-    font-size: 1.15em;
+    font-size: 1.09em;
     font-weight: 700;
     color: #21e6c1;
     margin-right: 6px;
 }
 .cash-amount {
-    font-size: 1.45em;
+    font-size: 1.25em;
     font-family: 'Consolas', 'Roboto Mono', 'Menlo', monospace;
     color: #00fc87;
-    font-weight: 900;
-    letter-spacing: 1.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
     background: linear-gradient(90deg, #00fc87 30%, #21e6c1 100%);
     border-radius: 7px;
     padding: 2px 12px;
-    box-shadow: 0 1px 10px #00fc8722;
+    box-shadow: 0 1px 6px #00fc8733;
+    opacity: 0.82;
+    transition: opacity 0.2s;
 }
 
-/* --- Marketmasters title effect --- */
+/* --- Marketmasters title effect: less neon, more readable --- */
 .header-title {
     flex: 1 1 auto;
     text-align: center;
     margin-right: 42px;
 }
 .mm-pop {
-    font-size: 2.05rem;
-    font-weight: 950;
-    letter-spacing: 2.5px;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: 1.7px;
     color: #21e6c1;
     text-shadow:
-        0 0 16px #21e6c1cc,
-        0 2px 8px #00fc87a8,
+        0 0 6px #21e6c1cc,
+        0 1px 4px #00fc8722,
         1px 1px 0px #23263a;
-    filter: drop-shadow(0 0 8px #21e6c1bb);
+    filter: drop-shadow(0 0 3px #21e6c199);
     background: linear-gradient(90deg, #00fc87 20%, #21e6c1 90%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-fill-color: transparent;
-    padding: 6px 0;
+    padding: 4px 0;
     transition: text-shadow 0.3s, filter 0.3s;
+    opacity: 0.88;
 }
 .mm-pop:hover {
     text-shadow:
-        0 0 30px #21e6c1,
-        0 5px 18px #00fc87,
+        0 0 14px #21e6c1,
+        0 2px 8px #00fc87,
         2px 2px 0px #23263a;
-    filter: drop-shadow(0 0 24px #00fc87bb);
+    filter: drop-shadow(0 0 8px #00fc87bb);
+    opacity: 1;
 }
 
+/* --- Panel title and Portfolio Chart improvements remain unchanged --- */
 .panel-title {
     color: #21e6c1;
     font-weight: 700;
@@ -125,7 +106,6 @@
     gap: 7px;
     position: relative;
 }
-
 .panel-title:after {
     content: "";
     display: block;
@@ -136,84 +116,6 @@
     margin-left: 6px;
 }
 
-/* Make buy input wider and align better in Trade panel */
-input[type="number"].buy-input {
-    width: 105px;
-    border-radius: 5px;
-    border: 1px solid #21e6c1;
-    background: #202539;
-    color: #e7ebf3;
-    font-size: 0.96em;
-    padding: 3px 4px;
-    margin-right: 4px;
-    outline: none;
-    transition: border 0.12s;
-}
-input[type="number"].buy-input:focus {
-    border-color: #FC0032;
-    background: #181a20;
-}
-
-/* Cost box for buy total (red rectangle) */
-.buy-cost {
-    display: inline-block;
-    min-width: 90px;
-    margin-left: 10px;
-    padding: 4px 10px;
-    border: 2px solid #fc0032;
-    border-radius: 5px;
-    background: transparent;
-    color: #fc0032;
-    font-weight: bold;
-    font-size: 1em;
-    text-align: right;
-}
-
-/* Wider Sell/Buy columns in Portfolio for buttons */
-#portfolio-table td:last-child, #portfolio-table th:last-child {
-    min-width: 200px;
-    white-space: nowrap;
-}
-
-/* --- existing styles below --- */
-html, body {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', 'Roboto', Arial, sans-serif;
-    background: radial-gradient(circle at 45% 25%, #23263a 65%, #181a20 100%);
-    color: #e7ebf3;
-}
-
-.dashboard {
-    display: grid;
-    grid-template-columns: 1.6fr 2.4fr 1.3fr;
-    grid-template-rows: 56px 1fr;
-    grid-template-areas:
-        "header header header"
-        "left-panel center-panel right-panel";
-    height: 100vh;
-    width: 100vw;
-    gap: 20px;
-    padding: 18px;
-    box-sizing: border-box;
-}
-
-.left-panel, .center-panel, .right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* Ensure the right panel stacks Leaderboard and News vertically */
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* --- Portfolio Chart improvements --- */
 .chart-container {
     background: #181a20cc;
     border-radius: 8px;
