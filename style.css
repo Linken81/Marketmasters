@@ -28,8 +28,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
-    font-weight: 700;
     background: #212433dd;
     border-radius: 9px;
     box-shadow: 0 4px 20px #0005;
@@ -49,28 +47,94 @@
     gap: 42px;
     position: relative;
 }
+
+/* --- Cash styling for better visibility --- */
 .header-cash {
-    flex: 0 1 auto;
-    color: #21e6c1;
-    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #23263a;
+    border-radius: 12px;
+    padding: 10px 30px 10px 20px;
+    box-shadow: 0 2px 18px #00fc87aa;
+    font-size: 1.25rem;
     font-weight: 700;
+    color: #21e6c1;
+    letter-spacing: 0.5px;
+    border: 2px solid #23263a;
     margin-left: 0;
     margin-right: 24px;
 }
-.header-cash span {
-    color: #00fc87;
+.cash-label {
+    font-size: 1.15em;
     font-weight: 700;
+    color: #21e6c1;
+    margin-right: 6px;
 }
+.cash-amount {
+    font-size: 1.45em;
+    font-family: 'Consolas', 'Roboto Mono', 'Menlo', monospace;
+    color: #00fc87;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    background: linear-gradient(90deg, #00fc87 30%, #21e6c1 100%);
+    border-radius: 7px;
+    padding: 2px 12px;
+    box-shadow: 0 1px 10px #00fc8722;
+}
+
+/* --- Marketmasters title effect --- */
 .header-title {
     flex: 1 1 auto;
     text-align: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    letter-spacing: 0.8px;
     margin-right: 42px;
 }
+.mm-pop {
+    font-size: 2.05rem;
+    font-weight: 950;
+    letter-spacing: 2.5px;
+    color: #21e6c1;
+    text-shadow:
+        0 0 16px #21e6c1cc,
+        0 2px 8px #00fc87a8,
+        1px 1px 0px #23263a;
+    filter: drop-shadow(0 0 8px #21e6c1bb);
+    background: linear-gradient(90deg, #00fc87 20%, #21e6c1 90%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    padding: 6px 0;
+    transition: text-shadow 0.3s, filter 0.3s;
+}
+.mm-pop:hover {
+    text-shadow:
+        0 0 30px #21e6c1,
+        0 5px 18px #00fc87,
+        2px 2px 0px #23263a;
+    filter: drop-shadow(0 0 24px #00fc87bb);
+}
 
-/* ---- END HEADER FLEX ---- */
+.panel-title {
+    color: #21e6c1;
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin-bottom: 9px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    position: relative;
+}
+
+.panel-title:after {
+    content: "";
+    display: block;
+    height: 2px;
+    width: 26px;
+    background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
+    border-radius: 2px;
+    margin-left: 6px;
+}
 
 /* Make buy input wider and align better in Trade panel */
 input[type="number"].buy-input {
@@ -204,25 +268,6 @@ html, body {
 .panel:hover {
     box-shadow: 0 6px 24px #21e6c11a;
     border-color: #21e6c1;
-}
-.panel-title {
-    color: #21e6c1;
-    font-weight: 700;
-    font-size: 1.15rem;
-    margin-bottom: 9px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    position: relative;
-}
-.panel-title:after {
-    content: "";
-    display: block;
-    height: 2px;
-    width: 26px;
-    background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
-    border-radius: 2px;
-    margin-left: 6px;
 }
 table {
     width: 100%;
