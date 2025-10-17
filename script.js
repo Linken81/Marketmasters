@@ -1,3 +1,6 @@
+// Realistic auto-update script: stocks tick every 3s; news updates every 3 minutes.
+// Keep panel layout/sizes unchanged. Only behaviour updates.
+
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
     { symbol: "FRUIQ", name: "FruityQ Foods", type: "Food" },
@@ -33,31 +36,44 @@ STOCKS.forEach(stock => { averageBuyPrice[stock.symbol] = 0; });
 let prices = {}, prevPrices = {};
 function randomPrice() { return +(Math.random() * 900 + 100).toFixed(2); }
 
+// set initial random prices if not set
+function initPricesIfNeeded() {
+    STOCKS.forEach(s => {
+        if (!prices[s.symbol]) prices[s.symbol] = randomPrice();
+    });
+}
+initPricesIfNeeded();
+
 function setRandomPrices(newsEffectMap = {}) {
     prevPrices = {...prices};
 
-    // Each stock moves independently, but with a random walk centered on 0, slight volatility
     STOCKS.forEach(stock => {
         let oldPrice = prices[stock.symbol] || randomPrice();
-        let changePercent = (Math.random() * 0.08) - 0.04; // -4% to +4%, centered around 0
 
-        // Apply news effect if present (from previous news)
-        if (newsEffectMap[stock.symbol]) {
-            changePercent += newsEffectMap[stock.symbol];
-        }
+        // base random walk: -3.5% .. +3.5%
+        let changePercent = (Math.random() * 0.07) - 0.035;
 
-        // Minimum price $10
-        let newPrice = Math.max(10, +(oldPrice * (1 + changePercent)).toFixed(2));
-        prices[stock.symbol] = newPrice;
+        // small occasional extra move
+        if (Math.random() < 0.10) changePercent += (Math.random() * 0.06 - 0.03);
+
+        // apply news effect (if provided for this symbol)
+        if (newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol];
+
+        // clamp extremes a bit (avoid > ±50% in a single tick)
+        changePercent = Math.max(-0.5, Math.min(0.5, changePercent));
+
+        let newPrice = oldPrice * (1 + changePercent);
+
+        // ensure minimum and reasonable rounding
+        prices[stock.symbol] = Math.max(5, +newPrice.toFixed(2));
     });
 }
 
-setRandomPrices();
-
+// portfolio history + day count
 let portfolioHistory = [getPortfolioValue()];
 let day = 1;
 
-// Chart.js setup
+// Chart.js setup (single point for current day; Next Day still pushes a new day)
 let ctx = document.getElementById('portfolioChart').getContext('2d');
 let chartData = {
     labels: [day],
@@ -77,7 +93,7 @@ let portfolioChart = new Chart(ctx, {
     type: 'line',
     data: chartData,
     options: {
-        animation: { duration: 700, easing: 'easeOutQuad' },
+        animation: { duration: 400, easing: 'easeOutQuad' },
         scales: {
             x: { display: false },
             y: { display: false }
@@ -100,14 +116,15 @@ function updateCash() {
 }
 
 function updateStockTable() {
-    let tbody = document.getElementById('stock-table');
+    const tbody = document.getElementById('stock-table');
+    if (!tbody) return;
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
         let price = prices[stock.symbol];
-        let change = prices[stock.symbol] - (prevPrices[stock.symbol] || price);
+        let change = +(price - (prevPrices[stock.symbol] || price));
         let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
         let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
-        let tr = document.createElement('tr');
+        const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
             <td>${stock.type}</td>
@@ -120,7 +137,8 @@ function updateStockTable() {
 }
 
 function updateTradeTable() {
-    let tbody = document.getElementById('trade-table');
+    const tbody = document.getElementById('trade-table');
+    if (!tbody) return;
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
         let price = prices[stock.symbol];
@@ -155,17 +173,18 @@ function updateTradeTable() {
 }
 
 function updatePortfolioTable() {
-    let tbody = document.getElementById('portfolio-table');
+    const tbody = document.getElementById('portfolio-table');
+    if (!tbody) return;
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
-        let owned = portfolio.stocks[stock.symbol];
+        const owned = portfolio.stocks[stock.symbol];
         if (owned > 0) {
-            let price = prices[stock.symbol];
-            let totalValue = owned * price;
-            let profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
-            let changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
-            let className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
-            let tr = document.createElement('tr');
+            const price = prices[stock.symbol];
+            const totalValue = owned * price;
+            const profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
+            const changeStr = (profitLoss > 0 ? "+" : "") + profitLoss.toFixed(2);
+            const className = profitLoss > 0 ? "price-up" : profitLoss < 0 ? "price-down" : "price-same";
+            const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${stock.symbol}</td>
                 <td>${owned}</td>
@@ -184,7 +203,9 @@ function updatePortfolioTable() {
 }
 
 window.buyStock = function(symbol) {
-    let qty = parseInt(document.getElementById(`buy_${symbol}`).value);
+    const input = document.getElementById(`buy_${symbol}`);
+    let qty = input ? parseInt(input.value) : 1;
+    qty = Math.max(1, qty || 1);
     let cost = prices[symbol] * qty;
     if (qty > 0 && portfolio.cash >= cost) {
         let prevQty = portfolio.stocks[symbol];
@@ -199,10 +220,14 @@ window.buyStock = function(symbol) {
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
+    } else {
+        // optionally show a message or flash - kept simple
     }
 };
 window.sellStock = function(symbol) {
-    let qty = parseInt(document.getElementById(`sell_${symbol}`).value);
+    const input = document.getElementById(`sell_${symbol}`);
+    let qty = input ? parseInt(input.value) : 1;
+    qty = Math.max(1, qty || 1);
     let owned = portfolio.stocks[symbol];
     if (qty > 0 && owned >= qty) {
         portfolio.cash += prices[symbol] * qty;
@@ -229,67 +254,121 @@ window.sellAllStock = function(symbol) {
     }
 };
 
-// ---- Realistic News/Events System ----
+// ---- Realistic News/Events System (good/bad/neutral) ----
 const NEWS_EVENTS = [
-    // Good news, medium, big, mild
-    { type: "stock", symbol: "ZOOMX", text: "BREAKING: Zoomix Technologies launches revolutionary AI chip! Electronics soar.", effect: 0.22, mood: "good" },
-    { type: "stock", symbol: "FRUIQ", text: "FruityQ Foods releases a popular new snack. Food stocks rise.", effect: 0.09, mood: "good" },
-    { type: "stock", symbol: "SOLARO", text: "Solaro Energy secures a major government contract!", effect: 0.15, mood: "good" },
-    { type: "type", target: "Transport", text: "Transport sector sees strong passenger growth.", effect: 0.07, mood: "good" },
-    { type: "market", text: "Market rally: most stocks surge.", effect: 0.13, mood: "good" },
-    // Bad news, mild, big, crash
-    { type: "stock", symbol: "ROBIX", text: "Robix Robotics faces software bug scandal. Stock tanks.", effect: -0.20, mood: "bad" },
-    { type: "stock", symbol: "AQUIX", text: "Aquix Water Corp fined for pollution. Water stocks drop.", effect: -0.08, mood: "bad" },
-    { type: "type", target: "Electronics", text: "Electronics sector hit by chip shortage.", effect: -0.11, mood: "bad" },
-    { type: "market", text: "Market crash: panic selling hits all stocks!", effect: -0.18, mood: "bad" },
-    // Neutral/minor events
-    { type: "stock", symbol: "VOYZA", text: "Voyza Travel launches new routes, but response is lukewarm.", effect: 0.02, mood: "neutral" },
-    { type: "type", target: "Food", text: "Food sector stable as prices remain unchanged.", effect: 0.0, mood: "neutral" },
-    { type: "type", target: "Retail", text: "Retail sector sees mixed results.", effect: -0.01, mood: "neutral" },
-    // More variety
-    { type: "stock", symbol: "MEDIX", text: "Medix Health receives glowing review. Health stocks up.", effect: 0.06, mood: "good" },
-    { type: "stock", symbol: "ASTRO", text: "Astro Mining suffers safety incident. Mining stocks fall.", effect: -0.13, mood: "bad" },
-    { type: "type", target: "AI & Robotics", text: "AI & Robotics sector gets new funding.", effect: 0.10, mood: "good" },
+    { type: "stock", symbol: "ZOOMX", text: "Zoomix launches revolutionary AI chip — major upside expected.", effect: 0.22, mood: "good" },
+    { type: "stock", symbol: "FRUIQ", text: "FruityQ releases popular new snack — sales strong.", effect: 0.09, mood: "good" },
+    { type: "stock", symbol: "SOLARO", text: "Solaro wins government contract — energy boost.", effect: 0.14, mood: "good" },
+    { type: "stock", symbol: "ROBIX", text: "Robix reports software bug scandal — stock falls.", effect: -0.20, mood: "bad" },
+    { type: "stock", symbol: "AQUIX", text: "Aquix fined for pollution — negative impact.", effect: -0.09, mood: "bad" },
+    { type: "type", target: "Electronics", text: "Chip shortage hits electronics sector.", effect: -0.11, mood: "bad" },
+    { type: "type", target: "Transport", text: "Transport sector sees travel uptick.", effect: 0.07, mood: "good" },
+    { type: "market", text: "Market rally: broad gains.", effect: 0.10, mood: "good" },
+    { type: "market", text: "Market sell-off: volatility spikes.", effect: -0.14, mood: "bad" },
+    { type: "type", target: "Food", text: "Food sector steady; small movement.", effect: 0.02, mood: "neutral" },
+    { type: "stock", symbol: "MEDIX", text: "Medix posts positive trial results.", effect: 0.08, mood: "good" },
+    { type: "stock", symbol: "ASTRO", text: "Mining incident affects Astro.", effect: -0.12, mood: "bad" },
+    { type: "type", target: "AI & Robotics", text: "AI funding increases sector optimism.", effect: 0.09, mood: "good" }
 ];
 
 function triggerRandomNews() {
     const news = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
-    document.getElementById("news-content").textContent = news.text;
+    const el = document.getElementById("news-content");
+    if (el) el.textContent = news.text;
 
-    // Map of news effect per symbol for setRandomPrices
-    let newsEffectMap = {};
+    // build newsEffectMap for setRandomPrices
+    const newsEffectMap = {};
     if (news.type === "stock") {
         newsEffectMap[news.symbol] = news.effect;
     } else if (news.type === "type") {
-        STOCKS.forEach(stock => {
-            if (stock.type === news.target) {
-                newsEffectMap[stock.symbol] = news.effect;
-            }
+        STOCKS.forEach(s => {
+            if (s.type === news.target) newsEffectMap[s.symbol] = news.effect;
         });
     } else if (news.type === "market") {
-        STOCKS.forEach(stock => {
-            newsEffectMap[stock.symbol] = news.effect;
-        });
+        STOCKS.forEach(s => { newsEffectMap[s.symbol] = news.effect; });
     }
     return newsEffectMap;
 }
 
-// ---- Next Day Button ----
+// helper: update chart with current portfolio value (without adding new day)
+function updateChartCurrentValue() {
+    const value = getPortfolioValue();
+    const ds = portfolioChart.data.datasets[0].data;
+    ds[ds.length - 1] = +value.toFixed(2);
+    portfolioChart.update();
+}
+
+// ---- Auto update loops ----
+let priceInterval = null;
+let newsInterval = null;
+
+// single tick: update prices (no day advance), refresh UI and chart current point
+function tickPrices() {
+    // No news effect on regular tick
+    setRandomPrices({});
+    updateStockTable();
+    updateTradeTable();
+    updatePortfolioTable();
+    updateChartCurrentValue();
+    // Optionally update leaderboard less frequently; keep it light to avoid localStorage churn
+}
+
+// news update: choose news, apply its effect immediately, refresh UI
+function newsTick() {
+    const newsMap = triggerRandomNews();
+    // apply news effect immediately
+    setRandomPrices(newsMap);
+    updateStockTable();
+    updateTradeTable();
+    updatePortfolioTable();
+    updateChartCurrentValue();
+    updateLeaderboard();
+}
+
+// start auto-updates after DOM ready
+window.addEventListener("DOMContentLoaded", () => {
+    // initial UI population
+    updateCash();
+    updateStockTable();
+    updateTradeTable();
+    updateLeaderboard();
+    updatePortfolioTable();
+
+    // ensure chart point matches current portfolio
+    updateChartCurrentValue();
+
+    // start price tick every 3 seconds
+    if (priceInterval) clearInterval(priceInterval);
+    priceInterval = setInterval(tickPrices, 3000);
+
+    // start news tick every 3 minutes (180000 ms)
+    if (newsInterval) clearInterval(newsInterval);
+    newsInterval = setInterval(newsTick, 180000);
+
+    // show an initial news message (no large effect)
+    document.getElementById("news-content").textContent = "Welcome to Marketmasters — market updates every 3s, news every 3 minutes.";
+});
+
+// ---- Next Day button still available: advances day, triggers news and records history ----
 document.getElementById('next-day').onclick = function() {
     STOCKS.forEach(stock => {
         prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
     });
-    // News effect map returned from news event
-    let newsEffectMap = triggerRandomNews();
-    setRandomPrices(newsEffectMap); // Pass news effect to stock price change
+    // trigger news and apply its effect for Next Day
+    const newsMap = triggerRandomNews();
+    setRandomPrices(newsMap);
+
     updateStockTable();
     updateTradeTable();
+
+    // advance day: record portfolio value as a new data point in the chart
     day++;
     let value = getPortfolioValue();
     portfolioHistory.push(value);
     portfolioChart.data.labels.push(day);
-    portfolioChart.data.datasets[0].data.push(value);
+    portfolioChart.data.datasets[0].data.push(+value.toFixed(2));
     portfolioChart.update();
+
     updateLeaderboard();
     updatePortfolioTable();
 };
@@ -297,12 +376,12 @@ document.getElementById('next-day').onclick = function() {
 function getPortfolioValue() {
     let value = portfolio.cash;
     STOCKS.forEach(stock => {
-        value += portfolio.stocks[stock.symbol] * prices[stock.symbol];
+        value += (portfolio.stocks[stock.symbol] || 0) * (prices[stock.symbol] || 0);
     });
     return value;
 }
 
-// Modified leaderboard logic: Only top 10, and only best score per person
+// Leaderboard (unchanged)
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
     let bestScores = {};
@@ -328,29 +407,12 @@ document.getElementById('save-score').onclick = saveScore;
 function updateLeaderboard() {
     let scores = loadScores();
     let ul = document.getElementById('scores');
+    if (!ul) return;
     ul.innerHTML = "";
-    scores.forEach((score, idx) => {
+    scores.forEach((score) => {
         let initials = score.name.split(' ').map(w=>w[0]).join('').toUpperCase();
         let li = document.createElement('li');
         li.innerHTML = `<span style="background:#00fc87; color:#21293a; border-radius:50%; padding:2px 8px; margin-right:6px;">${initials}</span> <strong>${score.name}</strong>: <span class="price-up">$${score.value}</span>`;
         ul.appendChild(li);
     });
 }
-
-// Initial UI setup
-updateCash();
-updateStockTable();
-updateTradeTable();
-updateLeaderboard();
-updatePortfolioTable();
-
-// Show an initial news event when page loads
-window.addEventListener("DOMContentLoaded", () => {
-    updateCash();
-    updateStockTable();
-    updateTradeTable();
-    updateLeaderboard();
-    updatePortfolioTable();
-    // Initial news (no real effect on first prices)
-    document.getElementById("news-content").textContent = "Welcome to Marketmasters! Click Next Day for fresh market news.";
-});
