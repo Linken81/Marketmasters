@@ -2,8 +2,7 @@
 // Chart appends a new data point every 10s to build an intra-day time-series.
 // Next Day button removed; all panel sizes/layout preserved.
 
-// (Script content based on last working version, with updateTradeTable enhanced to include "Type".)
-
+// Stock list and initial state
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
     { symbol: "FRUIQ", name: "FruityQ Foods", type: "Food" },
@@ -124,7 +123,7 @@ function updateCash() {
 
 function updateStockTable() {
     const tbody = document.getElementById('stock-table');
-    if (!tbody) return;
+    if (!tbody) return; // stocks panel removed; guard so no errors
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
         let price = prices[stock.symbol];
@@ -369,7 +368,7 @@ window.addEventListener("DOMContentLoaded", () => {
     portfolioChart.data.datasets[0].data[0] = +initialValue.toFixed(2);
     portfolioChart.update();
 
-    // start price tick every 10 seconds (was 3s)
+    // start price tick every 10 seconds
     if (priceInterval) clearInterval(priceInterval);
     priceInterval = setInterval(tickPrices, 10000);
 
