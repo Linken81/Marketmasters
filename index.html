@@ -35,7 +35,7 @@
             </div>
         </div>
 
-        <!-- Left Panel (Portfolio Chart + My Portfolio) -->
+        <!-- Left Panel (Portfolio Chart + Trade) - RESTORED to original positions -->
         <div class="left-panel">
             <div class="panel">
                 <div class="panel-title">Portfolio Chart</div>
@@ -44,27 +44,6 @@
                 </div>
             </div>
 
-            <!-- MY PORTFOLIO panel -->
-            <div class="panel">
-                <div class="panel-title">My Portfolio</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Owned</th>
-                            <th>Price</th>
-                            <th>Total Value</th>
-                            <th>Change</th>
-                            <th>Sell</th>
-                        </tr>
-                    </thead>
-                    <tbody id="portfolio-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Center Panel (Trade + Missions slot) -->
-        <div class="center-panel">
             <div class="panel">
                 <div class="panel-title">Trade</div>
                 <table>
@@ -80,13 +59,41 @@
                     <tbody id="trade-table"></tbody>
                 </table>
             </div>
+        </div>
 
-            <div class="panel" id="missions-panel">
-                <div class="panel-title">Daily Missions</div>
-                <div id="missions-list" style="display:block;"></div>
-                <div style="margin-top:10px;">
-                    <button id="refresh-missions" class="action-btn">Refresh (free once/day)</button>
-                </div>
+        <!-- Center Panel (Stocks + My Portfolio) - RESTORED to original positions -->
+        <div class="center-panel">
+            <div class="panel">
+                <div class="panel-title">Stocks</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table"></tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">My Portfolio</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Owned</th>
+                            <th>Price</th>
+                            <th>Total Value</th>
+                            <th>Change</th>
+                            <th>Sell</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-table"></tbody>
+                </table>
             </div>
         </div>
 
@@ -111,6 +118,17 @@
         </div>
     </div>
 
+    <!-- Missions panel (reserved slot moved into modal but keep the reserved panel if needed) -->
+    <div id="modal-missions" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Daily Missions</h3>
+            <div id="missions-modal-list"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-missions" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Shop Modal -->
     <div id="modal-shop" class="modal" role="dialog" aria-hidden="true">
         <div class="modal-content">
@@ -129,17 +147,6 @@
             <div id="achievements-list"></div>
             <div style="margin-top:12px; text-align:right;">
                 <button id="close-achievements" class="action-btn">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Missions Modal -->
-    <div id="modal-missions" class="modal" role="dialog" aria-hidden="true">
-        <div class="modal-content">
-            <h3>Daily Missions</h3>
-            <div id="missions-modal-list"></div>
-            <div style="margin-top:12px; text-align:right;">
-                <button id="close-missions" class="action-btn">Close</button>
             </div>
         </div>
     </div>
