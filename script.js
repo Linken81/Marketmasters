@@ -36,8 +36,8 @@ function randomPrice(){ return +(Math.random()*900+100).toFixed(2); }
 function initPricesIfNeeded(){ STOCKS.forEach(s => { if (!prices[s.symbol]) prices[s.symbol] = randomPrice(); }); }
 initPricesIfNeeded();
 
-// ------------------ Progression & Persistence ------------------
-const STORAGE_KEY = "marketmasters_v2_state_v1";
+// ------------------ Persistence & Game State ------------------
+const STORAGE_KEY = "marketmasters_full_v1";
 let state = {
     xp: 0,
     level: 1,
@@ -48,14 +48,16 @@ let state = {
     shopOwned: {},
     prestige: { count: 0, legacyPoints: 0 },
     seasonId: getSeasonId(),
-    leaderboard: JSON.parse(localStorage.getItem('leaderboard_scores') || "[]")
+    leaderboard: JSON.parse(localStorage.getItem('leaderboard_scores') || "[]"),
+    // active temporary boosters
+    activeBoosts: {}
 };
 
 function loadState(){
     try{
         const raw = localStorage.getItem(STORAGE_KEY);
         if(raw) Object.assign(state, JSON.parse(raw));
-    }catch(e){ console.warn(e); }
+    }catch(e){ console.warn('loadState', e); }
 }
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 loadState();
@@ -70,13 +72,14 @@ function toast(text, timeout=3000){
     toasts.appendChild(el);
     setTimeout(()=> el.remove(), timeout);
 }
-
 function formatCurrency(v){ return `$${(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
 
 // ------------------ XP / Leveling ------------------
 function xpForLevel(l){ return Math.floor(100 * Math.pow(l,1.35)); }
 function addXP(amount){
     if(amount<=0) return;
+    // check boosts
+    if(state.activeBoosts.xpMultiplier) amount = Math.round(amount * state.activeBoosts.xpMultiplier);
     state.xp += Math.floor(amount);
     checkLevelUp();
     saveState();
@@ -88,12 +91,9 @@ function checkLevelUp(){
         state.xp -= xpForLevel(state.level);
         state.level++;
         gained=true;
-        // rewards on level
         const rewardCoins = 50 + state.level*5;
         state.coins += rewardCoins;
         toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
-        // small permanent upgrade on certain levels (implemented as shop unlockables)
-        // Unlock achievement
         unlockAchievement('level_up', `Reached level ${state.level}`);
     }
     if(gained) saveState();
@@ -129,8 +129,7 @@ function unlockAchievement(id, note=''){
     } else {
         toast(`Achievement unlocked: ${id}`);
     }
-    saveState();
-    renderAchievements();
+    saveState(); renderAchievements();
 }
 function renderAchievements(){
     const el = document.getElementById('achievements-list');
@@ -142,10 +141,10 @@ function renderAchievements(){
         div.className = 'shop-item';
         div.innerHTML = `<div><strong>${a.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${a.desc}</div></div>
             <div>${unlocked ? 'Unlocked' : `<button class="action-btn">Claim ${a.coins}c</button>`}</div>`;
+        el.appendChild(div);
         if(!unlocked){
             div.querySelector('button').onclick = ()=> { unlockAchievement(a.id); };
         }
-        el.appendChild(div);
     });
 }
 
@@ -155,49 +154,29 @@ function generateDailyMissions(){
     const today = getTodayStr();
     if(state.missionsDate === today && state.missions && state.missions.length) return;
     const candidates = [
-        { id:'buy_3', text:'Buy 3 different stocks', check: (p)=> p.buyDifferent >=3, reward:{coins:60,xp:20} },
-        { id:'profit_500', text:'Make $500 profit (day)', check: (p)=> p.dayProfit>=500, reward:{coins:120,xp:40} },
-        { id:'hold_10', text:'Hold a stock for 10 ticks', check: (p)=> p.holdTicks>=10, reward:{coins:80,xp:30} },
-        { id:'trade_10', text:'Execute 10 trades', check: (p)=> p.trades>=10, reward:{coins:70,xp:25} },
-        { id:'buy_food', text:'Buy a Food stock', check: (p)=> p.typesBought && p.typesBought.includes('Food'), reward:{coins:40,xp:12} }
+        { id:'buy_3', text:'Buy 3 different stocks', checkKey:'buyDifferent', reward:{coins:60,xp:20} },
+        { id:'profit_500', text:'Make $500 profit (day)', checkKey:'dayProfit', reward:{coins:120,xp:40} },
+        { id:'hold_10', text:'Hold a stock for 10 ticks', checkKey:'holdTicks', reward:{coins:80,xp:30} },
+        { id:'trade_10', text:'Execute 10 trades', checkKey:'trades', reward:{coins:70,xp:25} },
+        { id:'buy_food', text:'Buy a Food stock', checkKey:'typesBought', reward:{coins:40,xp:12} }
     ];
-    // pick 3 random
     const shuffled = candidates.sort(()=> Math.random()-0.5).slice(0,3);
     state.missions = shuffled.map(m => ({...m, progress:0, done:false}));
     state.missionsDate = today;
     saveState();
 }
-function renderMissions(){
-    const wrap = document.getElementById('missions-list');
-    if(!wrap) return;
-    wrap.innerHTML = '';
+function renderMissionsModal(){
+    const modalList = document.getElementById('missions-modal-list');
+    if(!modalList) return;
+    modalList.innerHTML = '';
     state.missions.forEach((m, idx)=>{
         const div = document.createElement('div');
-        div.className = 'mission';
+        div.className='mission';
         div.innerHTML = `<div><strong>${m.text}</strong><div class="meta">${m.done ? 'Completed' : 'In progress'}</div></div>
             <div>${m.done ? `<button class="action-btn" data-claim="${idx}">Claim</button>` : ''}</div>`;
-        wrap.appendChild(div);
-        if(m.done){
-            div.querySelector('button').onclick = ()=> {
-                claimMission(idx);
-            };
-        }
+        modalList.appendChild(div);
+        if(m.done) div.querySelector('button').onclick = ()=> claimMission(idx);
     });
-    // modal list
-    const modalList = document.getElementById('missions-modal-list');
-    if(modalList){
-        modalList.innerHTML = '';
-        state.missions.forEach((m, idx)=>{
-            const div = document.createElement('div');
-            div.className='mission';
-            div.innerHTML = `<div><strong>${m.text}</strong><div class="meta">${m.done ? 'Completed' : 'In progress'}</div></div>
-                <div>${m.done ? `<button class="action-btn" data-claim="${idx}">Claim</button>` : ''}</div>`;
-            modalList.appendChild(div);
-            if(m.done){
-                div.querySelector('button').onclick = ()=> claimMission(idx);
-            }
-        });
-    }
 }
 function claimMission(idx){
     const m = state.missions[idx];
@@ -205,26 +184,18 @@ function claimMission(idx){
     state.coins += (m.reward.coins || 0);
     addXP(m.reward.xp || 0);
     toast(`Mission claimed: +${m.reward.coins} coins, +${m.reward.xp} XP`);
-    // mark removed
     state.missions.splice(idx,1);
     saveState();
-    renderMissions();
+    renderMissionsModal();
 }
-function progressMission(key, value){
-    // key: metric name; update missions where applicable
-    state.missions.forEach(m=>{
-        if(m.done) return;
-        // simple check: call their check with an aggregated progress object
-        // We'll maintain a simple progress tracker in ephemeral object
-    });
-}
-// simple day-progress tracker (in-memory and persisted lightly)
+
+// quick in-memory day progress
 let dayProgress = { buyDifferent:0, dayProfit:0, holdTicks:0, trades:0, typesBought:[] };
 
 // ------------------ Shop & Upgrades ------------------
 const SHOP_ITEMS = [
     { id:'xp_boost_1', name:'XP Booster (1h)', desc:'+50% XP for 1 hour', price:300, effect:{xpMultiplier:1.5, durationMs:3600000} },
-    { id:'auto_rebuy', name:'Auto Rebuy (permanent)', desc:'Automatically re-buy small positions (quality of life)', price:1200, effect:{autoRebuy:true} },
+    { id:'auto_rebuy', name:'Auto Rebuy (permanent)', desc:'Automatically re-buy small positions', price:1200, effect:{autoRebuy:true} },
     { id:'chart_skin_neon', name:'Chart Skin - Neon', desc:'Cosmetic chart theme', price:200, effect:{cosmetic:'neon'} }
 ];
 function renderShop(){
@@ -258,6 +229,10 @@ function renderShop(){
 function applyShopEffect(item){
     if(item.effect.autoRebuy) state.autoRebuy = true;
     if(item.effect.cosmetic) state.cosmetic = item.effect.cosmetic;
+    if(item.effect.xpMultiplier){
+        state.activeBoosts.xpMultiplier = item.effect.xpMultiplier;
+        setTimeout(()=> { delete state.activeBoosts.xpMultiplier; toast('XP booster expired'); saveState(); }, item.effect.durationMs);
+    }
     saveState();
 }
 
@@ -268,23 +243,13 @@ function doPrestige(){
     const legacyGain = Math.floor(state.level / 5);
     state.prestige.count += 1;
     state.prestige.legacyPoints += legacyGain;
-    // reset progression but keep legacy and shopOwned maybe
-    state.xp = 0; state.level = 1;
-    state.coins = 0;
-    state.achievements = {};
-    state.missions = [];
-    state.missionsDate = null;
-    state.shopOwned = state.shopOwned || {};
+    state.xp = 0; state.level = 1; state.coins = 0; state.achievements = {}; state.missions = []; state.missionsDate = null;
     toast(`Prestiged! +${legacyGain} legacy points`);
-    saveState();
-    updateHUD();
-    renderMissions();
-    renderAchievements();
+    saveState(); updateHUD();
 }
 
 // ------------------ Leaderboard (Seasonal, local) ------------------
 function getSeasonId(){
-    // simple weekly season based on ISO week number
     const d = new Date();
     const onejan = new Date(d.getFullYear(),0,1);
     const days = Math.floor((d - onejan) / (24*60*60*1000));
@@ -294,7 +259,6 @@ function getSeasonId(){
 function updateSeasonTimer(){
     const el = document.getElementById('season-timer');
     if(!el) return;
-    // end of week (Sunday midnight) countdown
     const now = new Date();
     const day = now.getDay();
     const daysLeft = (7 - day) % 7;
@@ -305,9 +269,8 @@ function updateSeasonTimer(){
     const secs = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
     el.textContent = `${hrs}:${mins}:${secs}`;
 }
-function saveLeaderboard(){
-    // add current snapshot to leaderboard
-    const entry = { name: `Player`, value: +getPortfolioValue().toFixed(2), ts: new Date().toISOString(), season: state.seasonId };
+function saveLeaderboardEntry(name='Player'){
+    const entry = { name, value: +getPortfolioValue().toFixed(2), ts: new Date().toISOString(), season: state.seasonId };
     state.leaderboard = state.leaderboard || [];
     state.leaderboard.push(entry);
     localStorage.setItem('leaderboard_scores', JSON.stringify(state.leaderboard));
@@ -337,24 +300,20 @@ function triggerRandomNews(){
     const news = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
     const el = document.getElementById("news-content");
     if(el) el.textContent = news.text;
-    // build effect map
     const newsEffectMap = {};
     if(news.type === 'stock') newsEffectMap[news.symbol] = news.effect;
     else if(news.type === 'type') STOCKS.forEach(s => { if(s.type===news.target) newsEffectMap[s.symbol] = news.effect; });
     else if(news.type === 'market') STOCKS.forEach(s => newsEffectMap[s.symbol] = news.effect);
-    // reward/punish: big events give XP changes
     if(news.mood === 'good') addXP(5 + Math.round(Math.abs(news.effect)*100));
-    if(news.mood === 'bad') addXP(2); // consolation XP
+    if(news.mood === 'bad') addXP(2);
     return newsEffectMap;
 }
 
 // ------------------ Price Simulation and Chart ------------------
-let prevPricesSnapshot = {};
 function setRandomPrices(newsEffectMap = {}){
     prevPrices = {...prices};
     STOCKS.forEach(stock=>{
         let oldPrice = prices[stock.symbol] || randomPrice();
-        // base random walk -3.5%..+3.5%
         let changePercent = (Math.random()*0.07) - 0.035;
         if(Math.random()<0.10) changePercent += (Math.random()*0.06 - 0.03);
         if(newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol];
@@ -372,7 +331,6 @@ let initialTime = new Date().toLocaleTimeString();
 portfolioHistory.push(getPortfolioValue());
 let chartData = { labels:[initialTime], datasets:[{ label:'Portfolio Value', data:[portfolioHistory[0]], borderColor:'#00FC87', backgroundColor:'rgba(14,210,247,0.10)', fill:true, tension:0.28 }] };
 let portfolioChart = new Chart(ctx, { type:'line', data:chartData, options:{ animation:{duration:300}, scales:{ x:{ display:false }, y:{ display:false }}, plugins:{ legend:{display:false}} } });
-
 function pushChartSample(value){
     const nowLabel = new Date().toLocaleTimeString();
     chartData.labels.push(nowLabel);
@@ -383,7 +341,19 @@ function pushChartSample(value){
 }
 
 // ------------------ UI Table Updates ------------------
-function updateStockTable(){ /* Stocks panel removed - guarded */ const tbody = document.getElementById('stock-table'); if(!tbody) return; tbody.innerHTML=''; /* no-op */ }
+function updateStockTable(){
+    const tbody = document.getElementById('stock-table'); if(!tbody) return;
+    tbody.innerHTML = '';
+    STOCKS.forEach(stock=>{
+        const price = prices[stock.symbol];
+        const change = +(price - (prevPrices[stock.symbol] || price));
+        const changeStr = (change>0?'+':'') + change.toFixed(2);
+        const className = change>0 ? 'price-up' : change<0 ? 'price-down' : 'price-same';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${stock.symbol}</td><td>${stock.type}</td><td>$${price.toFixed(2)}</td><td class="${className}">${changeStr}</td><td></td>`;
+        tbody.appendChild(tr);
+    });
+}
 function updateTradeTable(){
     const tbody = document.getElementById('trade-table'); if(!tbody) return;
     tbody.innerHTML = '';
@@ -442,16 +412,14 @@ window.buyStock = function(symbol){
         averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + prices[symbol] * qty) / Math.max(1,totalQty);
         portfolio.cash -= cost;
         portfolio.stocks[symbol] = totalQty;
-        // progression metrics
         dayProgress.trades = (dayProgress.trades||0)+1;
         if(!dayProgress.typesBought) dayProgress.typesBought = [];
         const type = STOCKS.find(s=>s.symbol===symbol).type;
         if(!dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
-        // grant small XP and coins for trading activity
         addXP(Math.max(1, Math.round(cost/200)));
         state.coins += Math.max(0, Math.round(cost/1000));
         toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
-        saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable();
+        saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
     } else {
         toast('Not enough cash');
     }
@@ -465,7 +433,6 @@ window.sellStock = function(symbol){
     portfolio.cash += revenue;
     portfolio.stocks[symbol] = owned - qty;
     if(portfolio.stocks[symbol]===0){ averageBuyPrice[symbol]=0; prevOwned[symbol]=0; }
-    // profit calc for XP/achievements
     const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
     if(profit>0){
         addXP(Math.round(profit/10));
@@ -473,7 +440,7 @@ window.sellStock = function(symbol){
         dayProgress.dayProfit = (dayProgress.dayProfit||0) + profit;
     }
     toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
-    saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable();
+    saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
 };
 window.sellAllStock = function(symbol){
     const owned = portfolio.stocks[symbol] || 0;
@@ -483,114 +450,70 @@ window.sellAllStock = function(symbol){
 // ------------------ Auto Ticks & Intervals ------------------
 let priceInterval = null, newsInterval = null;
 function tickPrices(){
-    const newsMap = {}; // no news by default
+    const newsMap = {};
     setRandomPrices(newsMap);
-    updateTradeTable();
-    updatePortfolioTable();
-    // append chart sample
-    const val = getPortfolioValue();
-    pushChartSample(val);
+    updateTradeTable(); updateStockTable(); updatePortfolioTable();
+    const val = getPortfolioValue(); pushChartSample(val);
     tickCount++;
-    // mission tracking: update hold ticks for all owned
     STOCKS.forEach(s => { if(portfolio.stocks[s.symbol]>0) dayProgress.holdTicks = (dayProgress.holdTicks||0)+1; });
-    // mission check
-    checkMissions();
-    updateHUD();
+    checkMissions(); updateHUD();
 }
 function newsTick(){
     const newsMap = triggerRandomNews();
     setRandomPrices(newsMap);
-    updateTradeTable();
-    updatePortfolioTable();
-    const val = getPortfolioValue();
-    pushChartSample(val);
-    updateLeaderboard();
+    updateTradeTable(); updateStockTable(); updatePortfolioTable();
+    const val = getPortfolioValue(); pushChartSample(val);
+    renderLeaderboard();
     saveState();
 }
 window.addEventListener('DOMContentLoaded', ()=>{
-    generateDailyMissions();
-    renderMissions();
-    renderShop();
-    renderAchievements();
-    renderLeaderboard();
-    updateHUD();
+    generateDailyMissions(); renderMissionsModal(); renderShop(); renderAchievements(); renderLeaderboard(); updateHUD();
     updateStockTable(); updateTradeTable(); updatePortfolioTable();
-    // initial chart value set
-    portfolioChart.data.datasets[0].data[0] = +getPortfolioValue().toFixed(2);
-    portfolioChart.update();
-    // intervals
-    if(priceInterval) clearInterval(priceInterval);
-    priceInterval = setInterval(tickPrices, 10000); // every 10s
-    if(newsInterval) clearInterval(newsInterval);
-    newsInterval = setInterval(newsTick, 180000); // every 3 minutes
-    // UI hooks
+    portfolioChart.data.datasets[0].data[0] = +getPortfolioValue().toFixed(2); portfolioChart.update();
+    if(priceInterval) clearInterval(priceInterval); priceInterval = setInterval(tickPrices, 10000);
+    if(newsInterval) clearInterval(newsInterval); newsInterval = setInterval(newsTick, 180000);
     document.getElementById('btn-shop').onclick = ()=> openModal('modal-shop');
     document.getElementById('close-shop').onclick = ()=> closeModal('modal-shop');
     document.getElementById('btn-achievements').onclick = ()=> openModal('modal-achievements');
     document.getElementById('close-achievements').onclick = ()=> closeModal('modal-achievements');
     document.getElementById('btn-missions').onclick = ()=> openModal('modal-missions');
     document.getElementById('close-missions').onclick = ()=> closeModal('modal-missions');
-    document.getElementById('refresh-missions').onclick = ()=> { generateDailyMissions(); renderMissions(); };
-    document.getElementById('save-score').onclick = ()=> { saveLeaderboard(); toast('Score saved to local leaderboard'); };
+    document.getElementById('save-score').onclick = ()=> { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
     document.getElementById('btn-share').onclick = shareSnapshot;
     document.getElementById('btn-prestige').onclick = ()=> { if(confirm('Prestige will reset progression for legacy points. Continue?')) doPrestige(); };
-    // season timer
     setInterval(updateSeasonTimer,1000);
 });
 
 // ------------------ Missions / Achievement Checks ------------------
 function checkMissions(){
-    // update derived progress
     dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length;
     dayProgress.trades = dayProgress.trades || 0;
     dayProgress.typesBought = dayProgress.typesBought || [];
-    // check mission completion
     state.missions.forEach(m=>{
         if(m.done) return;
-        // simple checks as per id
-        if(m.id === 'buy_3'){ if(dayProgress.buyDifferent >= 3) m.done = true; }
-        if(m.id === 'profit_500'){ if((dayProgress.dayProfit||0) >= 500) m.done = true; }
-        if(m.id === 'hold_10'){ if((dayProgress.holdTicks||0) >= 10) m.done = true; }
-        if(m.id === 'trade_10'){ if((dayProgress.trades||0) >= 10) m.done = true; }
-        if(m.id === 'buy_food'){ if((dayProgress.typesBought||[]).includes('Food')) m.done = true; }
+        if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true;
+        if(m.id==='profit_500' && (dayProgress.dayProfit||0) >=500) m.done=true;
+        if(m.id==='hold_10' && (dayProgress.holdTicks||0) >=10) m.done=true;
+        if(m.id==='trade_10' && (dayProgress.trades||0) >=10) m.done=true;
+        if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true;
     });
-    renderMissions();
+    renderMissionsModal();
 }
 
 // ------------------ Share Snapshot (Social) ------------------
 function shareSnapshot(){
-    const snapshot = {
-        time: new Date().toISOString(),
-        portfolioValue: getPortfolioValue(),
-        cash: portfolio.cash,
-        coins: state.coins,
-        level: state.level
-    };
+    const snapshot = { time: new Date().toISOString(), portfolioValue: getPortfolioValue(), cash: portfolio.cash, coins: state.coins, level: state.level };
     const txt = `Marketmasters snapshot: ${JSON.stringify(snapshot)}`;
     navigator.clipboard && navigator.clipboard.writeText(txt).then(()=> toast('Snapshot copied to clipboard!'), ()=> toast('Copy failed'));
 }
 
-// ------------------ Utilities ------------------
+// ------------------ Modals ------------------
 function openModal(id){ const m = document.getElementById(id); if(m) m.setAttribute('aria-hidden','false'); }
 function closeModal(id){ const m = document.getElementById(id); if(m) m.setAttribute('aria-hidden','true'); }
 
-// ------------------ Leaderboard UI ------------------
-function updateLeaderboard(){
-    // re-render
-    renderLeaderboard();
-}
+// ------------------ Utilities & End ------------------
+function getPortfolioValue(){ let v = portfolio.cash; STOCKS.forEach(s=> v += (portfolio.stocks[s.symbol]||0) * (prices[s.symbol]||0)); return +v; }
+function getSeasonId(){ const d=new Date(); const onejan=new Date(d.getFullYear(),0,1); const days=Math.floor((d-onejan)/(24*60*60*1000)); const week=Math.ceil((days+onejan.getDay()+1)/7); return `${d.getFullYear()}-W${week}`; }
 
-// ------------------ Initial render calls to ensure UI consistency ------------------
-updateHUD();
-renderMissions();
-renderShop();
-renderAchievements();
-renderLeaderboard();
+// initial persistence save
 saveState();
-
-// ------------------ Helper getPortfolioValue ------------------
-function getPortfolioValue(){
-    let value = portfolio.cash;
-    STOCKS.forEach(s => { value += (portfolio.stocks[s.symbol]||0) * (prices[s.symbol]||0); });
-    return +value;
-}
