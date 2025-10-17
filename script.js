@@ -1,5 +1,6 @@
 // Realistic auto-update script: stocks tick every 10s; news updates every 3 minutes.
-// Next Day button removed. Chart updates current value every 10s to match ticks.
+// Chart appends a new data point every 10s to build an intra-day time-series.
+// Next Day button removed; all panel sizes/layout preserved.
 
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
@@ -69,14 +70,17 @@ function setRandomPrices(newsEffectMap = {}) {
     });
 }
 
-// portfolio history + day count
-let portfolioHistory = [getPortfolioValue()];
-let day = 1;
+// portfolio history as samples and tick counter
+let portfolioHistory = [];
+let tickCount = 0;
 
-// Chart.js setup (single point for current day; day progression removed from UI flow)
+// Chart.js setup
 let ctx = document.getElementById('portfolioChart').getContext('2d');
+let initialTime = new Date().toLocaleTimeString();
+portfolioHistory.push(getPortfolioValue());
+
 let chartData = {
-    labels: [day],
+    labels: [initialTime],
     datasets: [{
         label: 'Portfolio Value',
         data: [portfolioHistory[0]],
@@ -112,7 +116,8 @@ let portfolioChart = new Chart(ctx, {
 });
 
 function updateCash() {
-    document.getElementById('cash').textContent = `$${portfolio.cash.toFixed(2)}`;
+    const el = document.getElementById('cash');
+    if (el) el.textContent = `$${portfolio.cash.toFixed(2)}`;
 }
 
 function updateStockTable() {
@@ -288,11 +293,22 @@ function triggerRandomNews() {
     return newsEffectMap;
 }
 
-// helper: update chart with current portfolio value (without adding new day)
-function updateChartCurrentValue() {
-    const value = getPortfolioValue();
-    const ds = portfolioChart.data.datasets[0].data;
-    ds[ds.length - 1] = +value.toFixed(2);
+// helper: push a new chart data point (timestamp label + current portfolio value)
+function pushChartSample(value) {
+    const nowLabel = new Date().toLocaleTimeString();
+    const labels = portfolioChart.data.labels;
+    const data = portfolioChart.data.datasets[0].data;
+
+    labels.push(nowLabel);
+    data.push(+value.toFixed(2));
+
+    // keep series reasonably sized (trim to last 300 samples)
+    const maxSamples = 300;
+    while (labels.length > maxSamples) {
+        labels.shift();
+        data.shift();
+    }
+
     portfolioChart.update();
 }
 
@@ -300,26 +316,33 @@ function updateChartCurrentValue() {
 let priceInterval = null;
 let newsInterval = null;
 
-// single tick: update prices (no day advance), refresh UI and chart current point
+// single tick: update prices and append a chart sample
 function tickPrices() {
-    // No news effect on regular tick
+    // regular tick: no news effect
     setRandomPrices({});
     updateStockTable();
     updateTradeTable();
     updatePortfolioTable();
-    updateChartCurrentValue();
+
+    // append current portfolio sample to chart
+    const value = getPortfolioValue();
+    pushChartSample(value);
+    tickCount++;
 }
 
-// news update: choose news, apply its effect immediately, refresh UI
+// news update: choose news, apply its effect immediately, append a chart sample
 function newsTick() {
     const newsMap = triggerRandomNews();
-    // apply news effect immediately
+    // apply news effect immediately to prices
     setRandomPrices(newsMap);
     updateStockTable();
     updateTradeTable();
     updatePortfolioTable();
-    updateChartCurrentValue();
     updateLeaderboard();
+
+    // append immediate sample so chart shows the news impact right away
+    const value = getPortfolioValue();
+    pushChartSample(value);
 }
 
 // start auto-updates after DOM ready
@@ -332,17 +355,19 @@ window.addEventListener("DOMContentLoaded", () => {
     updatePortfolioTable();
 
     // ensure chart point matches current portfolio
-    updateChartCurrentValue();
+    const initialValue = getPortfolioValue();
+    portfolioChart.data.datasets[0].data[0] = +initialValue.toFixed(2);
+    portfolioChart.update();
 
     // start price tick every 10 seconds (was 3s)
     if (priceInterval) clearInterval(priceInterval);
     priceInterval = setInterval(tickPrices, 10000);
 
-    // start news tick every 3 minutes (180000 ms) — unchanged
+    // start news tick every 3 minutes (180000 ms)
     if (newsInterval) clearInterval(newsInterval);
     newsInterval = setInterval(newsTick, 180000);
 
-    // show an initial news message (no large effect)
+    // show an initial news message
     const el = document.getElementById("news-content");
     if (el) el.textContent = "Welcome to Marketmasters — prices update every 10s, news every 3 minutes.";
 });
