@@ -2,7 +2,7 @@
 // Chart appends a new data point every 10s to build an intra-day time-series.
 // Next Day button removed; all panel sizes/layout preserved.
 
-// (Script content based on last working version, with updateTradeTable enhanced to show Change.)
+// (Script content based on last working version, with updateTradeTable enhanced to include "Type".)
 
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
@@ -159,6 +159,7 @@ function updateTradeTable() {
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
+            <td>${stock.type}</td>
             <td>$${price.toFixed(2)}</td>
             <td class="${className}">${changeStr}</td>
             <td>
