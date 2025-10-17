@@ -78,6 +78,52 @@
 
 /* ---- END HEADER FLEX ---- */
 
+/* XP progress bar */
+#xp-bar-wrap {
+    width: 100%;
+    height: 10px;
+    background:#202539;
+    border-radius:8px;
+    border:1px solid #23263a;
+    overflow:hidden;
+    margin-top:6px;
+}
+#xp-bar {
+    height:100%;
+    width:0%;
+    background: linear-gradient(90deg,#00fc87,#21e6c1);
+    transition:width 400ms ease;
+}
+
+/* Confetti */
+.confetti {
+    position:fixed;
+    width:10px;
+    height:14px;
+    z-index:9999;
+    pointer-events:none;
+    opacity:0.95;
+    transform-origin:center;
+    will-change: transform, opacity;
+    animation-name: confetti-fall, confetti-rotate, confetti-fade;
+    animation-timing-function: linear, ease-in-out, linear;
+}
+@keyframes confetti-fall {
+    from { transform: translateY(-10vh); }
+    to { transform: translateY(110vh); }
+}
+@keyframes confetti-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(720deg); }
+}
+@keyframes confetti-fade {
+    0% { opacity: 0.95; }
+    80% { opacity: 0.95; }
+    100% { opacity: 0; }
+}
+
+/* ---- Other styles unchanged below ---- */
+
 /* Make buy input wider and align better in Trade panel */
 input[type="number"].buy-input {
     width: 105px;
