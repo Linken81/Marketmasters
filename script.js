@@ -1,5 +1,5 @@
-// Realistic auto-update script: stocks tick every 3s; news updates every 3 minutes.
-// Keep panel layout/sizes unchanged. Only behaviour updates.
+// Realistic auto-update script: stocks tick every 10s; news updates every 3 minutes.
+// Next Day button removed. Chart updates current value every 10s to match ticks.
 
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
@@ -73,7 +73,7 @@ function setRandomPrices(newsEffectMap = {}) {
 let portfolioHistory = [getPortfolioValue()];
 let day = 1;
 
-// Chart.js setup (single point for current day; Next Day still pushes a new day)
+// Chart.js setup (single point for current day; day progression removed from UI flow)
 let ctx = document.getElementById('portfolioChart').getContext('2d');
 let chartData = {
     labels: [day],
@@ -220,8 +220,6 @@ window.buyStock = function(symbol) {
         updateCash();
         updateLeaderboard();
         updatePortfolioTable();
-    } else {
-        // optionally show a message or flash - kept simple
     }
 };
 window.sellStock = function(symbol) {
@@ -310,7 +308,6 @@ function tickPrices() {
     updateTradeTable();
     updatePortfolioTable();
     updateChartCurrentValue();
-    // Optionally update leaderboard less frequently; keep it light to avoid localStorage churn
 }
 
 // news update: choose news, apply its effect immediately, refresh UI
@@ -337,51 +334,20 @@ window.addEventListener("DOMContentLoaded", () => {
     // ensure chart point matches current portfolio
     updateChartCurrentValue();
 
-    // start price tick every 3 seconds
+    // start price tick every 10 seconds (was 3s)
     if (priceInterval) clearInterval(priceInterval);
-    priceInterval = setInterval(tickPrices, 3000);
+    priceInterval = setInterval(tickPrices, 10000);
 
-    // start news tick every 3 minutes (180000 ms)
+    // start news tick every 3 minutes (180000 ms) — unchanged
     if (newsInterval) clearInterval(newsInterval);
     newsInterval = setInterval(newsTick, 180000);
 
     // show an initial news message (no large effect)
-    document.getElementById("news-content").textContent = "Welcome to Marketmasters — market updates every 3s, news every 3 minutes.";
+    const el = document.getElementById("news-content");
+    if (el) el.textContent = "Welcome to Marketmasters — prices update every 10s, news every 3 minutes.";
 });
 
-// ---- Next Day button still available: advances day, triggers news and records history ----
-document.getElementById('next-day').onclick = function() {
-    STOCKS.forEach(stock => {
-        prevOwned[stock.symbol] = portfolio.stocks[stock.symbol];
-    });
-    // trigger news and apply its effect for Next Day
-    const newsMap = triggerRandomNews();
-    setRandomPrices(newsMap);
-
-    updateStockTable();
-    updateTradeTable();
-
-    // advance day: record portfolio value as a new data point in the chart
-    day++;
-    let value = getPortfolioValue();
-    portfolioHistory.push(value);
-    portfolioChart.data.labels.push(day);
-    portfolioChart.data.datasets[0].data.push(+value.toFixed(2));
-    portfolioChart.update();
-
-    updateLeaderboard();
-    updatePortfolioTable();
-};
-
-function getPortfolioValue() {
-    let value = portfolio.cash;
-    STOCKS.forEach(stock => {
-        value += (portfolio.stocks[stock.symbol] || 0) * (prices[stock.symbol] || 0);
-    });
-    return value;
-}
-
-// Leaderboard (unchanged)
+// Leaderboard and save score (unchanged)
 function loadScores() {
     let scores = JSON.parse(localStorage.getItem('leaderboard_scores') || "[]");
     let bestScores = {};
@@ -415,4 +381,12 @@ function updateLeaderboard() {
         li.innerHTML = `<span style="background:#00fc87; color:#21293a; border-radius:50%; padding:2px 8px; margin-right:6px;">${initials}</span> <strong>${score.name}</strong>: <span class="price-up">$${score.value}</span>`;
         ul.appendChild(li);
     });
+}
+
+function getPortfolioValue() {
+    let value = portfolio.cash;
+    STOCKS.forEach(stock => {
+        value += (portfolio.stocks[stock.symbol] || 0) * (prices[stock.symbol] || 0);
+    });
+    return value;
 }
