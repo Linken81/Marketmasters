@@ -2,6 +2,8 @@
 // Chart appends a new data point every 10s to build an intra-day time-series.
 // Next Day button removed; all panel sizes/layout preserved.
 
+// (Script content is unchanged from the last working version — kept here in full for convenience.)
+
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
     { symbol: "FRUIQ", name: "FruityQ Foods", type: "Food" },
