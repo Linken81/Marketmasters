@@ -63,7 +63,7 @@
                 </table>
             </div>
 
-            <!-- Reserved slot: now contains Missions / Achievements quick panel (keeps original place/size) -->
+            <!-- Reserved slot: Missions / Progress (unchanged position & size) -->
             <div class="panel" id="engage-panel">
                 <div class="panel-title">Missions & Progress</div>
                 <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
@@ -77,6 +77,15 @@
                         <button class="action-btn" id="open-shop">Shop</button>
                     </div>
                 </div>
+
+                <!-- XP progress bar (new) -->
+                <div id="xp-bar-wrap" title="XP progress" style="margin-top:10px;">
+                    <div id="xp-bar"></div>
+                </div>
+
+                <!-- Next achievement (new) -->
+                <div id="next-achievement" style="margin-top:8px; color:#9aa7b2; font-size:0.95em;"></div>
+
                 <div id="missions-brief" style="margin-top:10px; font-size:0.95em; color:#e7ebf3;"></div>
             </div>
         </div>
@@ -91,7 +100,7 @@
                 </div>
             </div>
 
-            <!-- New Events / Watchlist panel added here (keeps layout width/height consistent) -->
+            <!-- Events / Watchlist panel (keeps space, new features added here) -->
             <div class="panel" id="events-panel">
                 <div class="panel-title">Events & Watchlist</div>
                 <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
@@ -114,7 +123,7 @@
     <!-- Modals: Missions, Achievements, Shop, Prestige -->
     <div id="modal-missions" class="modal" aria-hidden="true">
         <div class="modal-content">
-            <h3>Daily Missions</h3>
+            <h3>Daily Missions (3 active)</h3>
             <div id="missions-list"></div>
             <div style="margin-top:12px; text-align:right;">
                 <button id="close-missions" class="action-btn">Close</button>
