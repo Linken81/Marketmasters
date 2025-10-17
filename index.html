@@ -9,11 +9,29 @@
 </head>
 <body>
     <div class="dashboard">
-        <!-- Header: Cash on the left, Marketmasters centered -->
+        <!-- Header: Cash, Coins, Level, Marketmasters centered -->
         <div class="header">
             <div class="header-flex">
                 <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
+                <div class="header-hud">
+                    <div class="hud-left">
+                        <div class="coins">Coins: <span id="coins">0</span></div>
+                        <div class="level">Level: <span id="level">1</span></div>
+                    </div>
+                    <div class="hud-xp">
+                        <div id="xp-bar-wrap" title="XP progress">
+                            <div id="xp-bar"></div>
+                        </div>
+                        <div id="next-level-info"></div>
+                    </div>
+                </div>
                 <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
+                <div class="header-actions">
+                    <button id="btn-missions" class="action-btn">Missions</button>
+                    <button id="btn-shop" class="action-btn">Shop</button>
+                    <button id="btn-achievements" class="action-btn">Achievements</button>
+                    <button id="btn-prestige" class="action-btn">Prestige</button>
+                </div>
             </div>
         </div>
 
@@ -45,7 +63,7 @@
             </div>
         </div>
 
-        <!-- Center Panel (Trade only) -->
+        <!-- Center Panel (Trade + Missions slot) -->
         <div class="center-panel">
             <div class="panel">
                 <div class="panel-title">Trade</div>
@@ -63,9 +81,12 @@
                 </table>
             </div>
 
-            <div class="panel">
-                <div class="panel-title">(reserved)</div>
-                <div style="color: #9aa7b2; padding: 8px 0;">This slot is available for another panel.</div>
+            <div class="panel" id="missions-panel">
+                <div class="panel-title">Daily Missions</div>
+                <div id="missions-list" style="display:block;"></div>
+                <div style="margin-top:10px;">
+                    <button id="refresh-missions" class="action-btn">Refresh (free once/day)</button>
+                </div>
             </div>
         </div>
 
@@ -75,16 +96,57 @@
                 <div class="panel-title">Leaderboard</div>
                 <ul class="leaderboard-list" id="scores"></ul>
                 <div class="buttons-row">
-                    <button id="save-score">Save My Score</button>
+                    <button id="save-score" class="action-btn">Save My Score</button>
+                    <button id="btn-share" class="action-btn">Share Snapshot</button>
+                </div>
+                <div style="font-size:0.85em; color:#9aa7b2; margin-top:8px;">
+                    Season ends in: <span id="season-timer">--:--:--</span>
                 </div>
             </div>
-            <!-- News panel in the red square -->
+            <!-- News panel -->
             <div class="panel news-panel">
                 <div class="panel-title">News</div>
                 <div id="news-content"></div>
             </div>
         </div>
     </div>
+
+    <!-- Shop Modal -->
+    <div id="modal-shop" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Shop</h3>
+            <div id="shop-items"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-shop" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievements Modal -->
+    <div id="modal-achievements" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Achievements</h3>
+            <div id="achievements-list"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-achievements" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Missions Modal -->
+    <div id="modal-missions" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Daily Missions</h3>
+            <div id="missions-modal-list"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-missions" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toasts" class="toasts"></div>
+
     <script src="script.js"></script>
 </body>
 </html>
