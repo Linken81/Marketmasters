@@ -1,5 +1,8 @@
-// Full game script with progression, missions, achievements, shop, prestige, events, leaderboards.
-// Stocks tick every 10s; news every 3 minutes; chart appends a sample every tick.
+// I added confetti animations, XP progress bar, reset level to 1 on refresh,
+// show next achievement, and missions behavior where completed missions are replaced.
+// This script preserves the original market behavior: 10s ticks, news every 3 minutes,
+// and chart samples every tick. It integrates with the existing HTML/CSS panels.
+
 
 // ------------------ Data and Initial State ------------------
 const STOCKS = [
@@ -49,7 +52,6 @@ let state = {
     prestige: { count: 0, legacyPoints: 0 },
     seasonId: getSeasonId(),
     leaderboard: JSON.parse(localStorage.getItem('leaderboard_scores') || "[]"),
-    // active temporary boosters
     activeBoosts: {}
 };
 
@@ -61,6 +63,11 @@ function loadState(){
 }
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 loadState();
+
+// IMPORTANT: reset level to 1 on page refresh per user's request
+state.level = 1;
+state.xp = 0;
+saveState(); // persist so subsequent reloads still start at level 1
 
 // ------------------ UI Helpers ------------------
 function toast(text, timeout=3000){
@@ -74,11 +81,28 @@ function toast(text, timeout=3000){
 }
 function formatCurrency(v){ return `$${(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
 
+// ------------------ Confetti ------------------
+function launchConfetti(amount = 40){
+    const colors = ['#FF3CAC','#784BA0','#21e6c1','#00fc87','#FFD166','#FF6B6B'];
+    for(let i=0;i<amount;i++){
+        const el = document.createElement('div');
+        el.className = 'confetti';
+        el.style.left = Math.random()*100 + 'vw';
+        el.style.background = colors[Math.floor(Math.random()*colors.length)];
+        const size = 6 + Math.random()*12;
+        el.style.width = size + 'px';
+        el.style.height = Math.round(size*1.35) + 'px';
+        const duration = 2000 + Math.random()*2500;
+        el.style.animationDuration = `${duration}ms, ${800+Math.random()*1500}ms, ${duration}ms`;
+        document.body.appendChild(el);
+        el.addEventListener('animationend', ()=> el.remove());
+    }
+}
+
 // ------------------ XP / Leveling ------------------
 function xpForLevel(l){ return Math.floor(100 * Math.pow(l,1.35)); }
 function addXP(amount){
     if(amount<=0) return;
-    // check boosts
     if(state.activeBoosts.xpMultiplier) amount = Math.round(amount * state.activeBoosts.xpMultiplier);
     state.xp += Math.floor(amount);
     checkLevelUp();
@@ -94,22 +118,24 @@ function checkLevelUp(){
         const rewardCoins = 50 + state.level*5;
         state.coins += rewardCoins;
         toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
+        launchConfetti(60);
         unlockAchievement('level_up', `Reached level ${state.level}`);
     }
     if(gained) saveState();
 }
 function updateHUD(){
+    const elXp = document.getElementById('xp');
     const elLevel = document.getElementById('level');
-    const elCoins = document.getElementById('coins');
+    if(elXp) elXp.textContent = state.xp;
     if(elLevel) elLevel.textContent = state.level;
-    if(elCoins) elCoins.textContent = state.coins;
+    // progress bar
     const bar = document.getElementById('xp-bar');
     if(bar) {
-        const pct = Math.min(100, Math.round( (state.xp / xpForLevel(state.level)) * 100 ));
+        const pct = Math.min(100, Math.round((state.xp / xpForLevel(state.level)) * 100));
         bar.style.width = pct + '%';
     }
-    const info = document.getElementById('next-level-info');
-    if(info) info.textContent = `XP ${state.xp}/${xpForLevel(state.level)} (+${Math.ceil(xpForLevel(state.level)-state.xp)} to next)`;
+    // next achievement preview
+    renderNextAchievement();
 }
 
 // ------------------ Achievements ------------------
@@ -126,10 +152,12 @@ function unlockAchievement(id, note=''){
     if(spec) {
         state.coins += spec.coins;
         toast(`Achievement unlocked: ${spec.name} (+${spec.coins} coins)`);
+        launchConfetti(80);
     } else {
         toast(`Achievement unlocked: ${id}`);
+        launchConfetti(40);
     }
-    saveState(); renderAchievements();
+    saveState(); renderAchievements(); updateHUD();
 }
 function renderAchievements(){
     const el = document.getElementById('achievements-list');
@@ -147,46 +175,75 @@ function renderAchievements(){
         }
     });
 }
+function renderNextAchievement(){
+    const el = document.getElementById('next-achievement');
+    if(!el) return;
+    const next = ACHIEVEMENT_LIST.find(a => !state.achievements[a.id]);
+    el.textContent = next ? `Next achievement: ${next.name} — ${next.desc}` : 'All achievements unlocked!';
+}
 
 // ------------------ Daily Missions ------------------
 function getTodayStr(){ return new Date().toISOString().slice(0,10); }
+const MISSION_CANDIDATES = [
+    { id:'buy_3', text:'Buy 3 different stocks', check: (p)=> p.buyDifferent >=3, reward:{coins:60,xp:20} },
+    { id:'profit_500', text:'Make $500 profit (day)', check: (p)=> p.dayProfit>=500, reward:{coins:120,xp:40} },
+    { id:'hold_10', text:'Hold a stock for 10 ticks', check: (p)=> p.holdTicks>=10, reward:{coins:80,xp:30} },
+    { id:'trade_10', text:'Execute 10 trades', check: (p)=> p.trades>=10, reward:{coins:70,xp:25} },
+    { id:'buy_food', text:'Buy a Food stock', check: (p)=> p.typesBought && p.typesBought.includes('Food'), reward:{coins:40,xp:12} }
+];
+
 function generateDailyMissions(){
     const today = getTodayStr();
-    if(state.missionsDate === today && state.missions && state.missions.length) return;
-    const candidates = [
-        { id:'buy_3', text:'Buy 3 different stocks', checkKey:'buyDifferent', reward:{coins:60,xp:20} },
-        { id:'profit_500', text:'Make $500 profit (day)', checkKey:'dayProfit', reward:{coins:120,xp:40} },
-        { id:'hold_10', text:'Hold a stock for 10 ticks', checkKey:'holdTicks', reward:{coins:80,xp:30} },
-        { id:'trade_10', text:'Execute 10 trades', checkKey:'trades', reward:{coins:70,xp:25} },
-        { id:'buy_food', text:'Buy a Food stock', checkKey:'typesBought', reward:{coins:40,xp:12} }
-    ];
-    const shuffled = candidates.sort(()=> Math.random()-0.5).slice(0,3);
-    state.missions = shuffled.map(m => ({...m, progress:0, done:false}));
+    if(state.missionsDate === today && state.missions && state.missions.length===3) return;
+    const shuffled = MISSION_CANDIDATES.sort(()=> Math.random()-0.5).slice(0,3);
+    state.missions = shuffled.map(m => ({...m, done:false}));
     state.missionsDate = today;
     saveState();
 }
+function generateSingleMission(){
+    const activeIds = new Set((state.missions||[]).map(m=>m.id));
+    const pool = MISSION_CANDIDATES.filter(c=>!activeIds.has(c.id));
+    if(pool.length===0) return null;
+    return {...pool[Math.floor(Math.random()*pool.length)], done:false};
+}
 function renderMissionsModal(){
-    const modalList = document.getElementById('missions-modal-list');
+    const modalList = document.getElementById('missions-list');
     if(!modalList) return;
     modalList.innerHTML = '';
     state.missions.forEach((m, idx)=>{
         const div = document.createElement('div');
         div.className='mission';
+        div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center';
         div.innerHTML = `<div><strong>${m.text}</strong><div class="meta">${m.done ? 'Completed' : 'In progress'}</div></div>
             <div>${m.done ? `<button class="action-btn" data-claim="${idx}">Claim</button>` : ''}</div>`;
         modalList.appendChild(div);
-        if(m.done) div.querySelector('button').onclick = ()=> claimMission(idx);
+        if(m.done){
+            div.querySelector('button').onclick = ()=> {
+                // reward and replace with a new mission
+                const reward = m.reward || {coins:50, xp:15};
+                state.coins += reward.coins || 0;
+                addXP(reward.xp || 0);
+                toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
+                // replace
+                const newM = generateSingleMission();
+                if(newM) state.missions[idx] = newM;
+                else state.missions.splice(idx,1);
+                saveState();
+                renderMissionsModal();
+                renderMissionsBrief();
+            };
+        }
     });
 }
-function claimMission(idx){
-    const m = state.missions[idx];
-    if(!m || m.done===false) return;
-    state.coins += (m.reward.coins || 0);
-    addXP(m.reward.xp || 0);
-    toast(`Mission claimed: +${m.reward.coins} coins, +${m.reward.xp} XP`);
-    state.missions.splice(idx,1);
-    saveState();
-    renderMissionsModal();
+function renderMissionsBrief(){
+    const el = document.getElementById('missions-brief');
+    if(!el) return;
+    el.innerHTML = '';
+    (state.missions||[]).slice(0,3).forEach(m=>{
+        const txt = `${m.text}${m.done ? ' ✅' : ''}`;
+        const div = document.createElement('div'); div.textContent = txt;
+        el.appendChild(div);
+    });
 }
 
 // quick in-memory day progress
@@ -245,17 +302,11 @@ function doPrestige(){
     state.prestige.legacyPoints += legacyGain;
     state.xp = 0; state.level = 1; state.coins = 0; state.achievements = {}; state.missions = []; state.missionsDate = null;
     toast(`Prestiged! +${legacyGain} legacy points`);
+    launchConfetti(80);
     saveState(); updateHUD();
 }
 
 // ------------------ Leaderboard (Seasonal, local) ------------------
-function getSeasonId(){
-    const d = new Date();
-    const onejan = new Date(d.getFullYear(),0,1);
-    const days = Math.floor((d - onejan) / (24*60*60*1000));
-    const week = Math.ceil((days + onejan.getDay()+1)/7);
-    return `${d.getFullYear()}-W${week}`;
-}
 function updateSeasonTimer(){
     const el = document.getElementById('season-timer');
     if(!el) return;
@@ -306,7 +357,16 @@ function triggerRandomNews(){
     else if(news.type === 'market') STOCKS.forEach(s => newsEffectMap[s.symbol] = news.effect);
     if(news.mood === 'good') addXP(5 + Math.round(Math.abs(news.effect)*100));
     if(news.mood === 'bad') addXP(2);
+    addEventToList(news.text);
     return newsEffectMap;
+}
+function addEventToList(text){
+    const ul = document.getElementById('events-list');
+    if(!ul) return;
+    const li = document.createElement('li');
+    li.textContent = `${new Date().toLocaleTimeString()} — ${text}`;
+    ul.insertBefore(li, ul.firstChild);
+    while(ul.children.length > 8) ul.removeChild(ul.lastChild);
 }
 
 // ------------------ Price Simulation and Chart ------------------
@@ -338,6 +398,31 @@ function pushChartSample(value){
     const maxSamples = 300;
     while(chartData.labels.length > maxSamples){ chartData.labels.shift(); chartData.datasets[0].data.shift(); }
     portfolioChart.update();
+}
+
+// ------------------ Watchlist ------------------
+let watchlist = [];
+function renderWatchlist(){
+    const wrap = document.getElementById('watchlist');
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    watchlist.forEach(sym=>{
+        const div = document.createElement('div');
+        div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center';
+        div.style.marginBottom='6px';
+        const price = prices[sym] ? `$${prices[sym].toFixed(2)}` : '—';
+        div.innerHTML = `<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`;
+        wrap.appendChild(div);
+        const btn = div.querySelector('button');
+        btn.onclick = ()=> { watchlist = watchlist.filter(s=>s!==sym); renderWatchlist(); };
+    });
+}
+
+// ------------------ Order History ------------------
+let orderHistory = []; // {type:'buy'|'sell', symbol, qty, price, ts}
+function recordOrder(type, symbol, qty, price){
+    orderHistory.unshift({ type, symbol, qty, price, ts: new Date().toISOString() });
+    if(orderHistory.length>200) orderHistory.pop();
 }
 
 // ------------------ UI Table Updates ------------------
@@ -418,8 +503,10 @@ window.buyStock = function(symbol){
         if(!dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
         addXP(Math.max(1, Math.round(cost/200)));
         state.coins += Math.max(0, Math.round(cost/1000));
+        recordOrder('buy', symbol, qty, prices[symbol]);
         toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
         saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
+        renderWatchlist();
     } else {
         toast('Not enough cash');
     }
@@ -439,6 +526,7 @@ window.sellStock = function(symbol){
         state.coins += Math.round(profit/50);
         dayProgress.dayProfit = (dayProgress.dayProfit||0) + profit;
     }
+    recordOrder('sell', symbol, qty, prices[symbol]);
     toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
     saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
 };
@@ -466,21 +554,46 @@ function newsTick(){
     renderLeaderboard();
     saveState();
 }
+
+// ------------------ UI Wiring (watchlist etc) ------------------
+document.addEventListener('click', (e)=>{
+    if(e.target && e.target.id === 'add-watch'){
+        const inp = document.getElementById('watch-input');
+        const sym = (inp && inp.value || '').trim().toUpperCase();
+        if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){
+            watchlist.push(sym);
+            renderWatchlist();
+            inp.value='';
+            toast(`${sym} added to watchlist`);
+        } else {
+            toast('Invalid symbol or already watched');
+        }
+    }
+});
+
+// ------------------ Auto-start and UI wiring ------------------
 window.addEventListener('DOMContentLoaded', ()=>{
     generateDailyMissions(); renderMissionsModal(); renderShop(); renderAchievements(); renderLeaderboard(); updateHUD();
     updateStockTable(); updateTradeTable(); updatePortfolioTable();
     portfolioChart.data.datasets[0].data[0] = +getPortfolioValue().toFixed(2); portfolioChart.update();
     if(priceInterval) clearInterval(priceInterval); priceInterval = setInterval(tickPrices, 10000);
     if(newsInterval) clearInterval(newsInterval); newsInterval = setInterval(newsTick, 180000);
-    document.getElementById('btn-shop').onclick = ()=> openModal('modal-shop');
-    document.getElementById('close-shop').onclick = ()=> closeModal('modal-shop');
-    document.getElementById('btn-achievements').onclick = ()=> openModal('modal-achievements');
-    document.getElementById('close-achievements').onclick = ()=> closeModal('modal-achievements');
-    document.getElementById('btn-missions').onclick = ()=> openModal('modal-missions');
+    document.getElementById('open-missions').onclick = ()=> openModal('modal-missions');
     document.getElementById('close-missions').onclick = ()=> closeModal('modal-missions');
+    document.getElementById('open-achievements').onclick = ()=> openModal('modal-achievements');
+    document.getElementById('close-achievements').onclick = ()=> closeModal('modal-achievements');
+    document.getElementById('open-shop').onclick = ()=> openModal('modal-shop');
+    document.getElementById('close-shop').onclick = ()=> closeModal('modal-shop');
     document.getElementById('save-score').onclick = ()=> { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
-    document.getElementById('btn-share').onclick = shareSnapshot;
-    document.getElementById('btn-prestige').onclick = ()=> { if(confirm('Prestige will reset progression for legacy points. Continue?')) doPrestige(); };
+    document.getElementById('do-prestige') && (document.getElementById('do-prestige').onclick = ()=> { if(confirm('Prestige will reset progression for legacy points. Continue?')) doPrestige(); });
+    document.getElementById('close-prestige') && (document.getElementById('close-prestige').onclick = ()=> closeModal('modal-prestige'));
+    document.getElementById('add-watch') && (document.getElementById('add-watch').onclick = ()=>{
+        const inp = document.getElementById('watch-input');
+        const sym = (inp && inp.value || '').trim().toUpperCase();
+        if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){
+            watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`);
+        } else toast('Invalid symbol or already watched');
+    });
     setInterval(updateSeasonTimer,1000);
 });
 
@@ -491,11 +604,12 @@ function checkMissions(){
     dayProgress.typesBought = dayProgress.typesBought || [];
     state.missions.forEach(m=>{
         if(m.done) return;
-        if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true;
-        if(m.id==='profit_500' && (dayProgress.dayProfit||0) >=500) m.done=true;
-        if(m.id==='hold_10' && (dayProgress.holdTicks||0) >=10) m.done=true;
-        if(m.id==='trade_10' && (dayProgress.trades||0) >=10) m.done=true;
-        if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true;
+        if(m.check && m.check(dayProgress)) m.done = true;
+        else if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true;
+        else if(m.id==='profit_500' && (dayProgress.dayProfit||0) >=500) m.done=true;
+        else if(m.id==='hold_10' && (dayProgress.holdTicks||0) >=10) m.done=true;
+        else if(m.id==='trade_10' && (dayProgress.trades||0) >=10) m.done=true;
+        else if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true;
     });
     renderMissionsModal();
 }
@@ -511,9 +625,9 @@ function shareSnapshot(){
 function openModal(id){ const m = document.getElementById(id); if(m) m.setAttribute('aria-hidden','false'); }
 function closeModal(id){ const m = document.getElementById(id); if(m) m.setAttribute('aria-hidden','true'); }
 
-// ------------------ Utilities & End ------------------
-function getPortfolioValue(){ let v = portfolio.cash; STOCKS.forEach(s=> v += (portfolio.stocks[s.symbol]||0) * (prices[s.symbol]||0)); return +v; }
+// ------------------ Utilities ------------------
+function getPortfolioValue(){ let v = portfolio.cash; STOCKS.forEach(s=> v += (portfolio.stocks[s.symbol]||0) * (prices[symbol]||prices[s.symbol]||0)); return +v; }
 function getSeasonId(){ const d=new Date(); const onejan=new Date(d.getFullYear(),0,1); const days=Math.floor((d-onejan)/(24*60*60*1000)); const week=Math.ceil((days+onejan.getDay()+1)/7); return `${d.getFullYear()}-W${week}`; }
 
-// initial persistence save
+// ------------------ Initial persistence save ------------------
 saveState();
