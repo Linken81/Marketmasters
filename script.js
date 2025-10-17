@@ -2,7 +2,7 @@
 // Chart appends a new data point every 10s to build an intra-day time-series.
 // Next Day button removed; all panel sizes/layout preserved.
 
-// (Script content is unchanged from the last working version — kept here in full for convenience.)
+// (Script content based on last working version, with updateTradeTable enhanced to show Change.)
 
 const STOCKS = [
     { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
@@ -149,12 +149,18 @@ function updateTradeTable() {
     tbody.innerHTML = "";
     STOCKS.forEach(stock => {
         let price = prices[stock.symbol];
+        // compute change using prevPrices (same logic as stock table)
+        let change = +(price - (prevPrices[stock.symbol] || price));
+        let changeStr = (change > 0 ? "+" : "") + change.toFixed(2);
+        let className = change > 0 ? "price-up" : change < 0 ? "price-down" : "price-same";
+
         const rowId = `buy_${stock.symbol}`;
         const costId = `buy_cost_${stock.symbol}`;
         let tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${stock.symbol}</td>
             <td>$${price.toFixed(2)}</td>
+            <td class="${className}">${changeStr}</td>
             <td>
                 <input type="number" min="1" value="1" class="buy-input" id="${rowId}">
                 <button onclick="buyStock('${stock.symbol}')">Buy</button>
@@ -163,6 +169,7 @@ function updateTradeTable() {
         `;
         tbody.appendChild(tr);
 
+        // Live cost update for Buy input
         setTimeout(() => {
             const qtyInput = document.getElementById(rowId);
             const costSpan = document.getElementById(costId);
