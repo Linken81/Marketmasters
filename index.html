@@ -9,33 +9,15 @@
 </head>
 <body>
     <div class="dashboard">
-        <!-- Header: Cash, Coins, Level, Marketmasters centered -->
+        <!-- Header: Cash on the left, Marketmasters centered -->
         <div class="header">
             <div class="header-flex">
                 <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
-                <div class="header-hud">
-                    <div class="hud-left">
-                        <div class="coins">Coins: <span id="coins">0</span></div>
-                        <div class="level">Level: <span id="level">1</span></div>
-                    </div>
-                    <div class="hud-xp">
-                        <div id="xp-bar-wrap" title="XP progress">
-                            <div id="xp-bar"></div>
-                        </div>
-                        <div id="next-level-info"></div>
-                    </div>
-                </div>
                 <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
-                <div class="header-actions">
-                    <button id="btn-missions" class="action-btn">Missions</button>
-                    <button id="btn-shop" class="action-btn">Shop</button>
-                    <button id="btn-achievements" class="action-btn">Achievements</button>
-                    <button id="btn-prestige" class="action-btn">Prestige</button>
-                </div>
             </div>
         </div>
 
-        <!-- Left Panel (Portfolio Chart + Trade) - RESTORED to original positions -->
+        <!-- Left Panel (Portfolio Chart + My Portfolio) -->
         <div class="left-panel">
             <div class="panel">
                 <div class="panel-title">Portfolio Chart</div>
@@ -44,41 +26,7 @@
                 </div>
             </div>
 
-            <div class="panel">
-                <div class="panel-title">Trade</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Stock</th>
-                            <th>Type</th>
-                            <th>Price</th>
-                            <th>Change</th>
-                            <th>Buy</th>
-                        </tr>
-                    </thead>
-                    <tbody id="trade-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Center Panel (Stocks + My Portfolio) - RESTORED to original positions -->
-        <div class="center-panel">
-            <div class="panel">
-                <div class="panel-title">Stocks</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Type</th>
-                            <th>Price</th>
-                            <th>Change</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stock-table"></tbody>
-                </table>
-            </div>
-
+            <!-- MY PORTFOLIO panel -->
             <div class="panel">
                 <div class="panel-title">My Portfolio</div>
                 <table>
@@ -97,20 +45,65 @@
             </div>
         </div>
 
-        <!-- Right Panel -->
+        <!-- Center Panel (Trade only + reserved slot used for Missions/Achievements/Shop links) -->
+        <div class="center-panel">
+            <div class="panel">
+                <div class="panel-title">Trade</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Type</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Buy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table"></tbody>
+                </table>
+            </div>
+
+            <!-- Reserved slot: now contains Missions / Achievements quick panel (keeps original place/size) -->
+            <div class="panel" id="engage-panel">
+                <div class="panel-title">Missions & Progress</div>
+                <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
+                    <div>
+                        <div id="xp-display" style="font-weight:700; color:#21e6c1;">XP: <span id="xp">0</span></div>
+                        <div id="level-display" style="font-weight:700; color:#00fc87;">Level: <span id="level">1</span></div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="action-btn" id="open-missions">Missions</button>
+                        <button class="action-btn" id="open-achievements">Achievements</button>
+                        <button class="action-btn" id="open-shop">Shop</button>
+                    </div>
+                </div>
+                <div id="missions-brief" style="margin-top:10px; font-size:0.95em; color:#e7ebf3;"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel (Leaderboard, Events/Watchlist, News) -->
         <div class="right-panel">
             <div class="panel">
                 <div class="panel-title">Leaderboard</div>
                 <ul class="leaderboard-list" id="scores"></ul>
                 <div class="buttons-row">
                     <button id="save-score" class="action-btn">Save My Score</button>
-                    <button id="btn-share" class="action-btn">Share Snapshot</button>
-                </div>
-                <div style="font-size:0.85em; color:#9aa7b2; margin-top:8px;">
-                    Season ends in: <span id="season-timer">--:--:--</span>
                 </div>
             </div>
-            <!-- News panel -->
+
+            <!-- New Events / Watchlist panel added here (keeps layout width/height consistent) -->
+            <div class="panel" id="events-panel">
+                <div class="panel-title">Events & Watchlist</div>
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                    <input id="watch-input" placeholder="Add symbol to watchlist (e.g. ZOOMX)" style="background:#202539;color:#e7ebf3;border:1px solid #21e6c1;padding:6px;border-radius:6px;">
+                    <button id="add-watch" class="action-btn">Add</button>
+                </div>
+                <div id="watchlist" style="margin-bottom:10px;"></div>
+                <div style="margin-top:6px; font-weight:700; color:#21e6c1;">Recent Events</div>
+                <ul id="events-list" style="margin-top:6px; list-style:none; padding:0; margin:0;"></ul>
+            </div>
+
+            <!-- News panel in the red square -->
             <div class="panel news-panel">
                 <div class="panel-title">News</div>
                 <div id="news-content"></div>
@@ -118,30 +111,18 @@
         </div>
     </div>
 
-    <!-- Missions panel (reserved slot moved into modal but keep the reserved panel if needed) -->
-    <div id="modal-missions" class="modal" role="dialog" aria-hidden="true">
+    <!-- Modals: Missions, Achievements, Shop, Prestige -->
+    <div id="modal-missions" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>Daily Missions</h3>
-            <div id="missions-modal-list"></div>
+            <div id="missions-list"></div>
             <div style="margin-top:12px; text-align:right;">
                 <button id="close-missions" class="action-btn">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- Shop Modal -->
-    <div id="modal-shop" class="modal" role="dialog" aria-hidden="true">
-        <div class="modal-content">
-            <h3>Shop</h3>
-            <div id="shop-items"></div>
-            <div style="margin-top:12px; text-align:right;">
-                <button id="close-shop" class="action-btn">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Achievements Modal -->
-    <div id="modal-achievements" class="modal" role="dialog" aria-hidden="true">
+    <div id="modal-achievements" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>Achievements</h3>
             <div id="achievements-list"></div>
@@ -151,8 +132,29 @@
         </div>
     </div>
 
-    <!-- Toasts -->
-    <div id="toasts" class="toasts"></div>
+    <div id="modal-shop" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Shop</h3>
+            <div id="shop-items"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-shop" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-prestige" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Prestige</h3>
+            <div id="prestige-content"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="do-prestige" class="action-btn">Prestige</button>
+                <button id="close-prestige" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toaster -->
+    <div id="toasts" style="position:fixed; right:18px; bottom:18px; z-index:80;"></div>
 
     <script src="script.js"></script>
 </body>
