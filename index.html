@@ -16,7 +16,7 @@
                 <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
             </div>
         </div>
-        <!-- Left Panel -->
+        <!-- Left Panel (Portfolio Chart + STOCKS panel moved here) -->
         <div class="left-panel">
             <div class="panel">
                 <div class="panel-title">Portfolio Chart</div>
@@ -24,25 +24,8 @@
                     <canvas id="portfolioChart"></canvas>
                 </div>
             </div>
-            <div class="panel">
-                <div class="panel-title">Trade</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Stock</th>
-                            <th>Price</th>
-                            <th>Buy</th>
-                        </tr>
-                    </thead>
-                    <tbody id="trade-table"></tbody>
-                </table>
-                <div class="buttons-row">
-                    <!-- Next Day button intentionally removed -->
-                </div>
-            </div>
-        </div>
-        <!-- Center Panel -->
-        <div class="center-panel">
+
+            <!-- STOCKS panel moved here (was in center-panel) -->
             <div class="panel">
                 <div class="panel-title">Stocks</div>
                 <table>
@@ -58,6 +41,24 @@
                     <tbody id="stock-table"></tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- Center Panel (TRADE panel moved here) -->
+        <div class="center-panel">
+            <div class="panel">
+                <div class="panel-title">Trade</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Buy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table"></tbody>
+                </table>
+            </div>
+
             <div class="panel">
                 <div class="panel-title">My Portfolio</div>
                 <table>
@@ -75,6 +76,7 @@
                 </table>
             </div>
         </div>
+
         <!-- Right Panel -->
         <div class="right-panel">
             <div class="panel">
