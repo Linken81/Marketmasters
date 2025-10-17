@@ -16,7 +16,8 @@
                 <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
             </div>
         </div>
-        <!-- Left Panel (Portfolio Chart + STOCKS panel moved here) -->
+
+        <!-- Left Panel (Portfolio Chart + MY PORTFOLIO moved here) -->
         <div class="left-panel">
             <div class="panel">
                 <div class="panel-title">Portfolio Chart</div>
@@ -25,25 +26,26 @@
                 </div>
             </div>
 
-            <!-- STOCKS panel moved here (was in center-panel) -->
+            <!-- MY PORTFOLIO panel moved here (was in center-panel) -->
             <div class="panel">
-                <div class="panel-title">Stocks</div>
+                <div class="panel-title">My Portfolio</div>
                 <table>
                     <thead>
                         <tr>
                             <th>Symbol</th>
-                            <th>Type</th>
+                            <th>Owned</th>
                             <th>Price</th>
+                            <th>Total Value</th>
                             <th>Change</th>
-                            <th>Action</th>
+                            <th>Sell</th>
                         </tr>
                     </thead>
-                    <tbody id="stock-table"></tbody>
+                    <tbody id="portfolio-table"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Center Panel (TRADE panel moved here) -->
+        <!-- Center Panel (TRADE + STOCKS) -->
         <div class="center-panel">
             <div class="panel">
                 <div class="panel-title">Trade</div>
@@ -61,20 +63,20 @@
                 </table>
             </div>
 
+            <!-- STOCKS panel moved here (was in left-panel) -->
             <div class="panel">
-                <div class="panel-title">My Portfolio</div>
+                <div class="panel-title">Stocks</div>
                 <table>
                     <thead>
                         <tr>
                             <th>Symbol</th>
-                            <th>Owned</th>
+                            <th>Type</th>
                             <th>Price</th>
-                            <th>Total Value</th>
                             <th>Change</th>
-                            <th>Sell</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody id="portfolio-table"></tbody>
+                    <tbody id="stock-table"></tbody>
                 </table>
             </div>
         </div>
