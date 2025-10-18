@@ -1,10 +1,8 @@
 // script.js - full updated file
-// Changes applied in this update:
-// - FIX: corrected template-expression syntax errors (missing '}' in a few onclick templates).
-// - FIX: replaced accidental prices[symbol] occurrences with prices[s.symbol] where appropriate.
-// - Kept previous mission logic (baselines, per-tick profit check, trade counting) intact.
-// - Ensured the "Missions" button label shows "Missions (N active)".
-// Backup of the prior file (that had the syntax error) was included above. No other logic altered.
+// Changes in this update (minimal):
+// 1) Replace UI text "Daily Missions (N active)" -> "Missions (N active)" by scanning text nodes and replacing occurrences.
+// 2) Change mission label "Make $500 profit (day)" -> "Make $500 profit (tick)" in the mission definitions.
+// No other logic or behavior changed. Backup was created above prior to this change.
 // Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
@@ -250,10 +248,10 @@ function renderNextAchievement() {
 }
 
 // ------------------ Missions ------------------
-// Mission candidates (profit_500 rewritten to per-tick)
+// NOTE: updated profit text requested -> "Make $500 profit (tick)"
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
-  { id: 'profit_500', text: 'Make $500 profit in one tick', check: (p) => false, reward: { coins: 120, xp: 40 } },
+  { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { coins: 120, xp: 40 } },
   { id: 'hold_10', text: 'Hold a stock for 10 ticks', check: (p) => false, reward: { coins: 80, xp: 30 } },
   { id: 'trade_10', text: 'Execute 10 trades', check: (p) => p.trades >= 10, reward: { coins: 70, xp: 25 } },
   { id: 'buy_food', text: 'Buy a Food stock', check: (p) => p.typesBought && p.typesBought.includes('Food'), reward: { coins: 40, xp: 12 } }
@@ -338,6 +336,21 @@ function generateSingleMission() {
   return nm;
 }
 
+// Replace "Daily Missions" occurrences in text nodes with "Missions" to update any static UI labels
+function fixDailyMissionsLabel() {
+  try {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    const nodesToUpdate = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.nodeValue && node.nodeValue.includes('Daily Missions')) nodesToUpdate.push(node);
+    }
+    nodesToUpdate.forEach(n => { n.nodeValue = n.nodeValue.replace(/Daily Missions/g, 'Missions'); });
+  } catch (e) {
+    console.warn('fixDailyMissionsLabel error', e);
+  }
+}
+
 function updateMissionsButtonLabel() {
   try {
     const btn = document.getElementById('open-missions');
@@ -387,11 +400,13 @@ function renderMissionsModal() {
           renderMissionsModal();
           renderMissionsBrief();
           updateMissionsButtonLabel();
+          fixDailyMissionsLabel();
         };
       }
     }
   });
   updateMissionsButtonLabel();
+  fixDailyMissionsLabel();
 }
 
 function renderMissionsBrief() {
@@ -408,6 +423,7 @@ function renderMissionsBrief() {
     el.appendChild(div);
   });
   updateMissionsButtonLabel();
+  fixDailyMissionsLabel();
 }
 
 // ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
@@ -709,8 +725,6 @@ function tickPrices() {
     if (owned > 0) { holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1; }
     else { holdCounters[s.symbol] = 0; }
   });
-
-  // compute tick delta (portfolio change due to price movement this tick)
   let tickDelta = 0;
   STOCKS.forEach(s => {
     const owned = portfolio.stocks[s.symbol] || 0;
@@ -720,17 +734,14 @@ function tickPrices() {
   });
   state.tickDeltas = state.tickDeltas || [];
   state.tickDeltas.push({ ts: new Date().toISOString(), delta: +tickDelta.toFixed(2) });
-  if (state.tickDeltas.length > 500) state.tickDeltas.shift(); // keep history bounded
-
+  if (state.tickDeltas.length > 500) state.tickDeltas.shift();
   updateTradeTable();
   updateStockTable();
   updatePortfolioTable();
   pushChartSample(getPortfolioValue());
-
   let totalHoldTicks = 0;
   STOCKS.forEach(s => { if (portfolio.stocks[s.symbol] > 0) totalHoldTicks += 1; });
   dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
-
   checkMissions();
   updateHUD();
 }
@@ -801,6 +812,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
     const addWatchBtn = document.getElementById('add-watch'); if (addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
     setInterval(updateSeasonTimer, 1000);
+    // run UI text fix (replaces any "Daily Missions" strings in text nodes)
+    fixDailyMissionsLabel();
   } catch (startupErr) {
     console.error('Startup error caught:', startupErr);
     try {
@@ -814,6 +827,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (typeof renderLeaderboard === 'function') renderLeaderboard();
       if (!priceInterval) priceInterval = setInterval(tickPrices, 10000);
       if (!newsInterval) newsInterval = setInterval(newsTick, 180000);
+      fixDailyMissionsLabel();
     } catch (e) { console.error('Error during recovery UI population:', e); }
   }
 });
