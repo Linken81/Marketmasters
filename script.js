@@ -1,9 +1,7 @@
-// script.js (fixed)
-// - Restores a complete, syntactically-correct single-file script.
-// - Minimal changes: keep the missions fixes (per-symbol hold counters, robust checks) and ensure no truncation.
-// - Declares globals once, defensive DOM guards, first-trade achievement, XP/progress, confetti, chart, ticks, news.
-// - Keeps behavior: achievements & shop reset on refresh (as you requested earlier).
-// NOTE: This replaces your existing script.js. Hard-refresh the page after dropping it in (Ctrl/Cmd+Shift+R).
+// Fully updated script.js (missions reward visible in Missions modal and brief)
+// - Minimal change: show each mission's reward (coins & XP) in the Missions modal and on the Missions brief.
+// - Keeps the previous fixes: per-symbol hold counters, first-trade achievement, header cash updates, defensive DOM guards.
+// - Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
 function getSeasonId() {
@@ -21,8 +19,8 @@ function getTodayStr() {
 let priceInterval = null;
 let newsInterval = null;
 
-let watchlist = [];     // user's watchlist
-let orderHistory = [];  // recorded orders
+let watchlist = [];     // user's watchlist (single declaration)
+let orderHistory = [];  // recorded orders (single declaration)
 
 let dayProgress = {     // tracking for missions and day progress
   buyDifferent: 0,
@@ -31,9 +29,6 @@ let dayProgress = {     // tracking for missions and day progress
   trades: 0,
   typesBought: []
 };
-
-// per-symbol hold counters to detect "hold N ticks" per stock
-let holdCounters = {}; // { SYMBOL: consecutiveTicksHeld }
 
 // ------------------ Stocks & Portfolio ------------------
 const STOCKS = [
@@ -60,10 +55,14 @@ const STOCKS = [
 ];
 
 let portfolio = { cash: 10000, stocks: {} };
-STOCKS.forEach(s => { portfolio.stocks[s.symbol] = 0; holdCounters[s.symbol] = 0; });
+STOCKS.forEach(s => { portfolio.stocks[s.symbol] = 0; });
 
 let averageBuyPrice = {};
 STOCKS.forEach(s => { averageBuyPrice[s.symbol] = 0; });
+
+// per-symbol hold counters to detect "hold N ticks" per stock
+let holdCounters = {};
+STOCKS.forEach(s => holdCounters[s.symbol] = 0);
 
 // ------------------ Prices ------------------
 let prices = {};
@@ -101,7 +100,7 @@ function saveState() {
 }
 loadState();
 
-// Per user's earlier request: reset achievements & shop and level/XP on refresh
+// Per user's request: reset achievements/shop and level/XP on refresh
 state.level = 1;
 state.xp = 0;
 state.achievements = {};
@@ -180,7 +179,7 @@ function updateHUD() {
     bar.style.width = pct + '%';
   }
 
-  // update cash in header
+  // update header cash
   updateCash();
 
   renderNextAchievement();
@@ -253,43 +252,69 @@ function generateSingleMission() {
   if (pool.length === 0) return null;
   return { ...pool[Math.floor(Math.random() * pool.length)], done: false };
 }
+
 function renderMissionsModal() {
   const modalList = document.getElementById('missions-list');
   if (!modalList) return;
   modalList.innerHTML = '';
+
   (state.missions || []).forEach((m, idx) => {
+    const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
+    const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
+    const rewardText = `Reward: ${rewardCoins}c, ${rewardXP} XP`;
+
     const div = document.createElement('div');
     div.className = 'mission';
     div.style.display = 'flex';
     div.style.justifyContent = 'space-between';
     div.style.alignItems = 'center';
-    div.innerHTML = `<div><strong>${m.text}</strong><div class="meta">${m.done ? 'Completed' : 'In progress'}</div></div>
-      <div>${m.done ? `<button class="action-btn" data-claim="${idx}">Claim</button>` : ''}</div>`;
+
+    // Left side: mission text + reward
+    const left = document.createElement('div');
+    left.innerHTML = `<strong>${m.text}</strong>
+      <div style="font-size:0.9em;color:#9aa7b2">${m.desc || ''}</div>
+      <div style="font-size:0.85em;color:#7ee7bf;margin-top:6px">${rewardText}</div>`;
+
+    // Right side: status / claim button
+    const right = document.createElement('div');
+    right.style.textAlign = 'right';
+    right.innerHTML = `<div class="meta" style="margin-bottom:6px">${m.done ? 'Completed' : 'In progress'}</div>
+      ${m.done ? `<button class="action-btn" data-claim="${idx}">Claim (${rewardCoins}c, ${rewardXP}XP)</button>` : ''}`;
+
+    div.appendChild(left);
+    div.appendChild(right);
     modalList.appendChild(div);
+
     if (m.done) {
       const btn = div.querySelector('button');
-      btn.onclick = () => {
-        const reward = m.reward || { coins: 50, xp: 15 };
-        state.coins += reward.coins || 0;
-        addXP(reward.xp || 0);
-        toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
-        const newM = generateSingleMission();
-        if (newM) state.missions[idx] = newM;
-        else state.missions.splice(idx, 1);
-        saveState();
-        renderMissionsModal();
-        renderMissionsBrief();
-      };
+      if (btn) {
+        btn.onclick = () => {
+          const reward = m.reward || { coins: 50, xp: 15 };
+          state.coins += reward.coins || 0;
+          addXP(reward.xp || 0);
+          toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
+          const newM = generateSingleMission();
+          if (newM) state.missions[idx] = newM;
+          else state.missions.splice(idx, 1);
+          saveState();
+          renderMissionsModal();
+          renderMissionsBrief();
+        };
+      }
     }
   });
 }
+
 function renderMissionsBrief() {
   const el = document.getElementById('missions-brief');
   if (!el) return;
   el.innerHTML = '';
   (state.missions || []).slice(0, 3).forEach(m => {
+    const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
+    const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
+    const txt = `${m.text} — Reward: ${rewardCoins}c, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
     const div = document.createElement('div');
-    div.textContent = `${m.text}${m.done ? ' ✅' : ''}`;
+    div.textContent = txt;
     el.appendChild(div);
   });
 }
@@ -597,7 +622,7 @@ function tickPrices() {
   STOCKS.forEach(s => {
     const owned = (portfolio.stocks[s.symbol] || 0);
     if (owned > 0) {
-      holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1;
+      holdCounters[s.symbol] = (holdCounters[symbol] || holdCounters[s.symbol] || 0) + 1;
     } else {
       holdCounters[s.symbol] = 0;
     }
