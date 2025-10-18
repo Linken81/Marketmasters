@@ -1,8 +1,8 @@
-// script.js — fully updated and cleaned
-// - Adds XP/levels, achievements, missions (3 active), shop, prestige, watchlist, order history, confetti.
-// - Keeps market behavior: prices tick every 10s, news every 3 minutes, chart appends a new sample on each tick.
-// - Resets level to 1 on page refresh (per request).
-// - Fixed previous ReferenceError by ensuring getPortfolioValue uses properly-scoped variables and added defensive DOM guards.
+// script.js — fully updated with cash header fixes + progression systems.
+// - Adds updateCash() and calls it after buys/sells/prestige/startup so the "Cash: $..." header updates.
+// - Keeps existing features: XP/levels, achievements, missions (3 active), shop, prestige, watchlist, order history, confetti.
+// - Market behavior: prices tick every 10s, news every 3 minutes, chart appends a new sample each tick.
+// - Resets level to 1 on refresh (per request).
 
 // ------------------ Constants & Initial Data ------------------
 const STOCKS = [
@@ -88,6 +88,13 @@ function toast(text, timeout = 3000){
 }
 function formatCurrency(v){ return `$${(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
 
+// Update cash header
+function updateCash(){
+  const el = document.getElementById('cash');
+  if(!el) return;
+  el.textContent = formatCurrency(portfolio.cash || 0);
+}
+
 // ------------------ Confetti ------------------
 function launchConfetti(amount = 40){
   const colors = ['#FF3CAC','#784BA0','#21e6c1','#00fc87','#FFD166','#FF6B6B'];
@@ -140,6 +147,8 @@ function updateHUD(){
     const pct = Math.min(100, Math.round((state.xp / xpForLevel(state.level)) * 100));
     bar.style.width = pct + '%';
   }
+  // ensure cash is shown too
+  updateCash();
   renderNextAchievement();
 }
 
@@ -256,6 +265,9 @@ function renderMissionsBrief(){
 }
 function getTodayStr(){ return new Date().toISOString().slice(0,10); }
 
+// quick in-memory day progress
+let dayProgress = { buyDifferent:0, dayProfit:0, holdTicks:0, trades:0, typesBought:[] };
+
 // ------------------ Shop ------------------
 const SHOP_ITEMS = [
   { id:'xp_boost_1', name:'XP Booster (1h)', desc:'+50% XP for 1 hour', price:300, effect:{xpMultiplier:1.5, durationMs:3600000} },
@@ -311,7 +323,7 @@ function doPrestige(){
   state.xp = 0; state.level = 1; state.coins = 0; state.achievements = {}; state.missions = []; state.missionsDate = null;
   toast(`Prestiged! +${legacyGain} legacy points`);
   launchConfetti(80);
-  saveState(); updateHUD();
+  saveState(); updateHUD(); updateCash();
 }
 
 // ------------------ Leaderboard ------------------
@@ -517,7 +529,7 @@ window.buyStock = function(symbol){
     state.coins += Math.max(0, Math.round(cost/1000));
     recordOrder('buy', symbol, qty, prices[symbol]);
     toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
-    saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
+    saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
     renderWatchlist();
   } else {
     toast('Not enough cash');
@@ -541,7 +553,7 @@ window.sellStock = function(symbol){
   }
   recordOrder('sell', symbol, qty, prices[symbol]);
   toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
-  saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
+  saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
 };
 
 window.sellAllStock = function(symbol){
@@ -587,7 +599,6 @@ function checkMissions(){
         if(candidate && candidate.check(dayProgress)) m.done = true;
       }
     } catch(e){
-      // fallback simple checks
       if(m.id === 'buy_3' && dayProgress.buyDifferent >= 3) m.done = true;
       if(m.id === 'profit_500' && (dayProgress.dayProfit || 0) >= 500) m.done = true;
       if(m.id === 'hold_10' && (dayProgress.holdTicks || 0) >= 10) m.done = true;
@@ -598,7 +609,7 @@ function checkMissions(){
   renderMissionsModal();
 }
 
-// ------------------ Utility: getPortfolioValue (FIXED) ------------------
+// ------------------ Utility: getPortfolioValue (safe) ------------------
 function getPortfolioValue(){
   let total = (portfolio && portfolio.cash) ? portfolio.cash : 0;
   for(let i = 0; i < STOCKS.length; i++){
@@ -634,6 +645,9 @@ window.addEventListener('DOMContentLoaded', () => {
   try { updateStockTable(); } catch(e){ console.warn(e); }
   try { updateTradeTable(); } catch(e){ console.warn(e); }
   try { updatePortfolioTable(); } catch(e){ console.warn(e); }
+
+  // ensure cash header updates on load
+  updateCash();
 
   if(portfolioChart){
     try { portfolioChart.data.datasets[0].data[0] = +getPortfolioValue().toFixed(2); portfolioChart.update(); } catch(e){ console.warn(e); }
