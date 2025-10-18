@@ -1,12 +1,7 @@
 // script.js - full updated file
-// - Claim button text in Missions modal now reads "Claim" only; reward text remains on the left.
-// - XP HUD shows numeric "current / required XP" and remaining XP to next level.
-// - Missions display rewards in modal and brief.
-// - First-trade achievement unlocks on first buy/sell.
-// - Missions fixed (per-symbol hold counters, robust checks).
-// - Header cash updates after trades.
-// - Defensive DOM guards and single top-level declarations.
-// - Market ticks (10s), news (3min), chart sampling, confetti, shop, watchlist, order history.
+// - Minimal focused change: updateCash() is called immediately after portfolio.cash changes in buyStock and sellStock.
+// - No other behavior altered.
+// - Keeps: missions, achievements, XP HUD, claim button, chart, ticks, news, watchlist, order history.
 //
 // NOTE: Replace your existing script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 //
@@ -335,7 +330,7 @@ function renderMissionsBrief() {
   });
 }
 
-// ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
+// ------------------ Shop, Leaderboard, News, Price Simulation, Chart, Trading ------------------
 const SHOP_ITEMS = [
   { id: 'xp_boost_1', name: 'XP Booster (1h)', desc: '+50% XP for 1 hour', price: 300, effect: { xpMultiplier: 1.5, durationMs: 3600000 } },
   { id: 'auto_rebuy', name: 'Auto Rebuy (permanent)', desc: 'Automatically re-buy small positions', price: 1200, effect: { autoRebuy: true } },
@@ -545,6 +540,7 @@ window.buyStock = function (symbol) {
     const totalQty = prevQty + qty;
     averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + (prices[symbol] || 0) * qty) / Math.max(1, totalQty);
     portfolio.cash -= cost;
+    updateCash(); // <- ensure header updates immediately
     portfolio.stocks[symbol] = totalQty;
     dayProgress.trades = (dayProgress.trades || 0) + 1;
     if (!dayProgress.typesBought) dayProgress.typesBought = [];
@@ -574,6 +570,7 @@ window.sellStock = function (symbol) {
   if (qty > owned) { toast('Not enough shares'); return; }
   const revenue = (prices[symbol] || 0) * qty;
   portfolio.cash += revenue;
+  updateCash(); // <- ensure header updates immediately
   portfolio.stocks[symbol] = owned - qty;
   if (portfolio.stocks[symbol] === 0) averageBuyPrice[symbol] = 0;
   const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
