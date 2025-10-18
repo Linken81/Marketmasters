@@ -1,12 +1,10 @@
-// script.js — full, cleaned version
-// Fixes:
-// - Ensures dayProgress and getTodayStr are declared before any use (prevents ReferenceError).
-// - Moves Chart initialization into DOMContentLoaded so DOM elements exist before accessing them.
-// - Adds defensive guards throughout so missing elements don't abort execution.
-// - Keeps gameplay features: XP/levels, achievements, daily missions (3 active), shop, prestige, events/news, watchlist, order history, confetti, price ticks (10s), news ticks (3m).
-// Replace your existing script.js with this file and hard-refresh the page.
+// script.js — Fix for "tickCount is not defined" + defensive guards
+// - Declares tickCount early so tickPrices and other logic can use it.
+// - Keeps previous features (market ticks, news, chart, XP, missions, achievements, shop, watchlist).
+// - Adds small runtime guards to avoid ReferenceErrors bubbling and spamming console.
+// Replace your script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
-///// ------------------ Core Data ------------------ /////
+// ------------------ Core Data ------------------
 const STOCKS = [
   { symbol: "ZOOMX", name: "Zoomix Technologies", type: "Electronics" },
   { symbol: "FRUIQ", name: "FruityQ Foods", type: "Food" },
@@ -41,14 +39,16 @@ function randomPrice(){ return +(Math.random()*900 + 100).toFixed(2); }
 function initPricesIfNeeded(){ STOCKS.forEach(s => { if (prices[s.symbol] === undefined) prices[s.symbol] = randomPrice(); }); }
 initPricesIfNeeded();
 
-///// ------------------ Globals that must exist early ------------------ /////
-// dayProgress must exist before buy/sell/missions checks run
+// ------------------ Globals that must exist early ------------------
+// tickCount must exist before tickPrices runs (fix ReferenceError)
+let tickCount = 0;
+
+// dayProgress must exist early for mission checks and buy/sell flow
 let dayProgress = { buyDifferent:0, dayProfit:0, holdTicks:0, trades:0, typesBought:[] };
 
-// getTodayStr helper must exist before mission generation
 function getTodayStr(){ return new Date().toISOString().slice(0,10); }
 
-///// ------------------ Persistent State ------------------ /////
+// ------------------ Persistence & State ------------------
 const STORAGE_KEY = "marketmasters_full_v1";
 let state = {
   xp: 0,
@@ -65,6 +65,7 @@ let state = {
   cumulativeProfit: 0,
   firstTradeDone: false
 };
+
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -74,12 +75,12 @@ function loadState(){
 function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){ console.warn('saveState', e); } }
 loadState();
 
-// As requested: reset level to 1 on refresh
+// Per request: reset level to 1 on refresh
 state.level = 1;
 state.xp = 0;
 saveState();
 
-///// ------------------ UI Helpers ------------------ /////
+// ------------------ UI Helpers ------------------
 function toast(text, timeout=3000){
   const toasts = document.getElementById('toasts');
   if(!toasts) return;
@@ -92,7 +93,7 @@ function toast(text, timeout=3000){
 function formatCurrency(v){ return `$${(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
 function updateCash(){ const el=document.getElementById('cash'); if(el) el.textContent = formatCurrency(portfolio.cash||0); }
 
-///// ------------------ Confetti ------------------ /////
+// ------------------ Confetti ------------------
 function launchConfetti(amount=40){
   const colors = ['#FF3CAC','#784BA0','#21e6c1','#00fc87','#FFD166','#FF6B6B'];
   for(let i=0;i<amount;i++){
@@ -110,10 +111,10 @@ function launchConfetti(amount=40){
   }
 }
 
-///// ------------------ XP / Leveling ------------------ /////
+// ------------------ XP / Leveling ------------------
 function xpForLevel(l){ return Math.floor(100 * Math.pow(l,1.35)); }
 function addXP(amount){
-  if(!amount || amount<=0) return;
+  if(!amount || amount <= 0) return;
   if(state.activeBoosts.xpMultiplier) amount = Math.round(amount * state.activeBoosts.xpMultiplier);
   state.xp += Math.floor(amount);
   checkLevelUp();
@@ -137,15 +138,12 @@ function updateHUD(){
   const xpEl = document.getElementById('xp'); if(xpEl) xpEl.textContent = state.xp;
   const levelEl = document.getElementById('level'); if(levelEl) levelEl.textContent = state.level;
   const bar = document.getElementById('xp-bar');
-  if(bar){
-    const pct = Math.min(100, Math.round((state.xp / xpForLevel(state.level)) * 100));
-    bar.style.width = pct + '%';
-  }
+  if(bar){ const pct = Math.min(100, Math.round((state.xp / xpForLevel(state.level)) * 100)); bar.style.width = pct + '%'; }
   updateCash();
   renderNextAchievement();
 }
 
-///// ------------------ Achievements ------------------ /////
+// ------------------ Achievements ------------------
 const ACHIEVEMENT_LIST = [
   { id:'first_trade', name:'First Trade', desc:'Make your first trade', coins:50 },
   { id:'profit_1000', name:'Profit $1,000', desc:'Accumulate $1,000 profit total', coins:150 },
@@ -161,7 +159,8 @@ function unlockAchievement(id, note=''){
   saveState(); renderAchievements(); updateHUD();
 }
 function renderAchievements(){
-  const el = document.getElementById('achievements-list'); if(!el) return;
+  const el = document.getElementById('achievements-list');
+  if(!el) return;
   el.innerHTML = '';
   ACHIEVEMENT_LIST.forEach(a=>{
     const unlocked = !!state.achievements[a.id];
@@ -173,18 +172,19 @@ function renderAchievements(){
   });
 }
 function renderNextAchievement(){
-  const el = document.getElementById('next-achievement'); if(!el) return;
+  const el = document.getElementById('next-achievement');
+  if(!el) return;
   const next = ACHIEVEMENT_LIST.find(a => !state.achievements[a.id]);
   el.textContent = next ? `Next achievement: ${next.name} — ${next.desc}` : '';
 }
 function checkAchievements(){
   if(!state.achievements['first_trade'] && state.firstTradeDone) unlockAchievement('first_trade');
-  if(!state.achievements['profit_1000'] && (state.cumulativeProfit||0) >= 1000) unlockAchievement('profit_1000');
-  if(!state.achievements['hold_50ticks'] && (dayProgress.holdTicks||0) >= 50) unlockAchievement('hold_50ticks');
+  if(!state.achievements['profit_1000'] && (state.cumulativeProfit || 0) >= 1000) unlockAchievement('profit_1000');
+  if(!state.achievements['hold_50ticks'] && (dayProgress.holdTicks || 0) >= 50) unlockAchievement('hold_50ticks');
   if(!state.achievements['level_10'] && state.level >= 10) unlockAchievement('level_10');
 }
 
-///// ------------------ Missions ------------------ /////
+// ------------------ Missions ------------------
 const MISSION_CANDIDATES = [
   { id:'buy_3', text:'Buy 3 different stocks', check: p => (p.buyDifferent||0) >= 3, reward:{coins:60,xp:20} },
   { id:'profit_500', text:'Make $500 profit (day)', check: p => (p.dayProfit||0) >= 500, reward:{coins:120,xp:40} },
@@ -194,17 +194,17 @@ const MISSION_CANDIDATES = [
 ];
 function generateDailyMissions(){
   const today = getTodayStr();
-  if(state.missionsDate === today && state.missions && state.missions.length===3) return;
-  const shuffled = [...MISSION_CANDIDATES].sort(()=>Math.random()-0.5).slice(0,3);
-  state.missions = shuffled.map(m=>({...m, done:false}));
+  if(state.missionsDate === today && state.missions && state.missions.length === 3) return;
+  const pool = [...MISSION_CANDIDATES].sort(()=> Math.random()-0.5).slice(0,3);
+  state.missions = pool.map(m => ({ ...m, done:false }));
   state.missionsDate = today;
   saveState();
 }
 function generateSingleMission(){
-  const activeIds = new Set((state.missions||[]).map(m=>m.id));
-  const pool = MISSION_CANDIDATES.filter(c=>!activeIds.has(c.id));
-  if(pool.length===0) return null;
-  return {...pool[Math.floor(Math.random()*pool.length)], done:false};
+  const active = new Set((state.missions||[]).map(m=>m.id));
+  const pool = MISSION_CANDIDATES.filter(c=>!active.has(c.id));
+  if(pool.length === 0) return null;
+  return { ...pool[Math.floor(Math.random()*pool.length)], done:false };
 }
 function renderMissionsModal(){
   const modalList = document.getElementById('missions-list'); if(!modalList) return;
@@ -229,22 +229,21 @@ function renderMissionsModal(){
   });
 }
 function renderMissionsBrief(){
-  const el = document.getElementById('missions-brief'); if(!el) return; el.innerHTML='';
-  (state.missions||[]).slice(0,3).forEach(m=>{ const d=document.createElement('div'); d.textContent=`${m.text}${m.done?' ✅':''}`; el.appendChild(d); });
+  const el = document.getElementById('missions-brief'); if(!el) return; el.innerHTML=''; (state.missions||[]).slice(0,3).forEach(m=>{ const d=document.createElement('div'); d.textContent=`${m.text}${m.done?' ✅':''}`; el.appendChild(d); });
 }
 
-///// ------------------ Shop & Prestige (unchanged) ------------------ /////
+// ------------------ Shop / Prestige ------------------
 const SHOP_ITEMS = [
   { id:'xp_boost_1', name:'XP Booster (1h)', desc:'+50% XP for 1 hour', price:300, effect:{xpMultiplier:1.5, durationMs:3600000} },
   { id:'auto_rebuy', name:'Auto Rebuy (permanent)', desc:'Automatically re-buy small positions', price:1200, effect:{autoRebuy:true} },
   { id:'chart_skin_neon', name:'Chart Skin - Neon', desc:'Cosmetic chart theme', price:200, effect:{cosmetic:'neon'} }
 ];
-function renderShop(){ const el=document.getElementById('shop-items'); if(!el) return; el.innerHTML=''; SHOP_ITEMS.forEach(item=>{ const div=document.createElement('div'); div.className='shop-item'; const owned=!!state.shopOwned[item.id]; div.innerHTML=`<div><strong>${item.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${item.desc}</div></div><div>${owned?'Owned':`<button class="action-btn">Buy ${item.price}c</button>`}</div>`; el.appendChild(div); if(!owned){ const btn=div.querySelector('button'); if(btn) btn.onclick=()=>{ if(state.coins>=item.price){ state.coins-=item.price; state.shopOwned[item.id]=true; applyShopEffect(item); toast(`Purchased ${item.name}`); saveState(); updateHUD(); renderShop(); } else toast('Not enough coins'); }; } }); }
-function applyShopEffect(item){ if(item.effect.autoRebuy) state.autoRebuy=true; if(item.effect.cosmetic) state.cosmetic=item.effect.cosmetic; if(item.effect.xpMultiplier){ state.activeBoosts.xpMultiplier = item.effect.xpMultiplier; setTimeout(()=>{ delete state.activeBoosts.xpMultiplier; toast('XP booster expired'); saveState(); }, item.effect.durationMs); } saveState(); }
-function canPrestige(){ return state.level>=20; }
+function renderShop(){ const el=document.getElementById('shop-items'); if(!el) return; el.innerHTML=''; SHOP_ITEMS.forEach(item=>{ const div=document.createElement('div'); div.className='shop-item'; const owned=!!state.shopOwned[item.id]; div.innerHTML=`<div><strong>${item.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${item.desc}</div></div><div>${owned?'Owned':`<button class="action-btn">Buy ${item.price}c</button>`}</div>`; el.appendChild(div); if(!owned){ const btn=div.querySelector('button'); if(btn) btn.onclick=()=>{ if(state.coins>=item.price){ state.coins-=item.price; state.shopOwned[item.id]=true; applyShopEffect(item); toast(`Purchased ${item.name}`); saveState(); updateHUD(); renderShop(); } else toast('Not enough coins'); } } }); }
+function applyShopEffect(item){ if(item.effect.autoRebuy) state.autoRebuy=true; if(item.effect.cosmetic) state.cosmetic=item.effect.cosmetic; if(item.effect.xpMultiplier){ state.activeBoosts.xpMultiplier=item.effect.xpMultiplier; setTimeout(()=>{ delete state.activeBoosts.xpMultiplier; toast('XP booster expired'); saveState(); }, item.effect.durationMs); } saveState(); }
+function canPrestige(){ return state.level >= 20; }
 function doPrestige(){ if(!canPrestige()){ toast('Reach level 20 to prestige'); return; } const legacyGain=Math.floor(state.level/5); state.prestige.count+=1; state.prestige.legacyPoints+=legacyGain; state.xp=0; state.level=1; state.coins=0; state.achievements={}; state.missions=[]; state.missionsDate=null; toast(`Prestiged! +${legacyGain} legacy points`); launchConfetti(80); saveState(); updateHUD(); updateCash(); }
 
-///// ------------------ Leaderboard, News, Events ------------------ /////
+// ------------------ Leaderboard / News / Events ------------------
 function renderLeaderboard(){ const ul=document.getElementById('scores'); if(!ul) return; const list=(state.leaderboard||[]).filter(s=>s.season===state.seasonId).sort((a,b)=>b.value-a.value).slice(0,10); ul.innerHTML=''; list.forEach(item=>{ const li=document.createElement('li'); li.innerHTML=`<strong>${item.name}</strong>: <span class="price-up">$${(+item.value).toFixed(2)}</span>`; ul.appendChild(li); }); }
 function saveLeaderboardEntry(name='Player'){ const entry={name,value:+getPortfolioValue().toFixed(2),ts:new Date().toISOString(),season:state.seasonId}; state.leaderboard=state.leaderboard||[]; state.leaderboard.push(entry); localStorage.setItem('leaderboard_scores', JSON.stringify(state.leaderboard)); renderLeaderboard(); }
 function updateSeasonTimer(){ const el=document.getElementById('season-timer'); if(!el) return; const now=new Date(); const day=now.getDay(); const daysLeft=(7-day)%7; const end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+daysLeft+1); const diff=end-now; const hrs=String(Math.floor(diff/3600000)).padStart(2,'0'); const mins=String(Math.floor((diff%3600000)/60000)).padStart(2,'0'); const secs=String(Math.floor((diff%60000)/1000)).padStart(2,'0'); el.textContent=`${hrs}:${mins}:${secs}`; }
@@ -259,131 +258,46 @@ const NEWS_EVENTS = [
 function triggerRandomNews(){ const news=NEWS_EVENTS[Math.floor(Math.random()*NEWS_EVENTS.length)]; const el=document.getElementById('news-content'); if(el) el.textContent=news.text; const map={}; if(news.type==='stock') map[news.symbol]=news.effect; else if(news.type==='type') STOCKS.forEach(s=>{ if(s.type===news.target) map[s.symbol]=news.effect; }); else STOCKS.forEach(s=>map[s.symbol]=news.effect); if(news.mood==='good') addXP(5+Math.round(Math.abs(news.effect)*100)); if(news.mood==='bad') addXP(2); addEventToList(news.text); return map; }
 function addEventToList(text){ const ul=document.getElementById('events-list'); if(!ul) return; const li=document.createElement('li'); li.textContent=`${new Date().toLocaleTimeString()} — ${text}`; ul.insertBefore(li, ul.firstChild); while(ul.children.length>8) ul.removeChild(ul.lastChild); }
 
-///// ------------------ Price simulation ------------------ /////
-function setRandomPrices(newsEffectMap={}){ prevPrices = {...prices}; STOCKS.forEach(stock=>{ let old = prices[stock.symbol]||randomPrice(); let change = (Math.random()*0.07)-0.035; if(Math.random()<0.10) change += (Math.random()*0.06-0.03); if(newsEffectMap[stock.symbol]) change += newsEffectMap[stock.symbol]; change = Math.max(-0.5, Math.min(0.5, change)); prices[stock.symbol] = Math.max(5, +(old*(1+change)).toFixed(2)); }); }
+// ------------------ Price simulation ------------------
+function setRandomPrices(newsEffectMap={}){ prevPrices={...prices}; STOCKS.forEach(stock=>{ let old = prices[stock.symbol]||randomPrice(); let change = (Math.random()*0.07)-0.035; if(Math.random()<0.10) change += (Math.random()*0.06-0.03); if(newsEffectMap[stock.symbol]) change += newsEffectMap[stock.symbol]; change = Math.max(-0.5, Math.min(0.5, change)); prices[stock.symbol] = Math.max(5, +(old*(1+change)).toFixed(2)); }); }
 
-///// ------------------ Chart (initialized after DOM ready) ------------------ /////
+// ------------------ Chart ------------------
 let portfolioChart = null;
 let chartData = { labels: [], datasets: [{ label:'Portfolio Value', data: [], borderColor:'#00FC87', backgroundColor:'rgba(14,210,247,0.10)', fill:true, tension:0.28 }] };
+function pushChartSample(value){ if(!portfolioChart) return; const nowLabel=new Date().toLocaleTimeString(); chartData.labels.push(nowLabel); chartData.datasets[0].data.push(+value.toFixed(2)); const maxSamples=300; while(chartData.labels.length>maxSamples){ chartData.labels.shift(); chartData.datasets[0].data.shift(); } portfolioChart.update(); }
 
-function pushChartSample(value){
-  if(!portfolioChart) return;
-  const nowLabel = new Date().toLocaleTimeString();
-  chartData.labels.push(nowLabel);
-  chartData.datasets[0].data.push(+value.toFixed(2));
-  const maxSamples = 300;
-  while(chartData.labels.length > maxSamples){ chartData.labels.shift(); chartData.datasets[0].data.shift(); }
-  portfolioChart.update();
-}
-
-///// ------------------ Watchlist & Orders ------------------ /////
+// ------------------ Watchlist / Orders ------------------
 let watchlist = [];
-function renderWatchlist(){ const wrap=document.getElementById('watchlist'); if(!wrap) return; wrap.innerHTML=''; watchlist.forEach(sym=>{ const div=document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center'; div.style.marginBottom='6px'; const price = (prices[sym] !== undefined) ? `$${prices[sym].toFixed(2)}` : '—'; div.innerHTML=`<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`; wrap.appendChild(div); const btn=div.querySelector('button'); if(btn) btn.onclick=()=>{ watchlist = watchlist.filter(s=>s!==sym); renderWatchlist(); }; }); }
+function renderWatchlist(){ const wrap=document.getElementById('watchlist'); if(!wrap) return; wrap.innerHTML=''; watchlist.forEach(sym=>{ const div=document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center'; div.style.marginBottom='6px'; const price=(prices[sym]!==undefined)?`$${prices[sym].toFixed(2)}`:'—'; div.innerHTML=`<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`; wrap.appendChild(div); const btn=div.querySelector('button'); if(btn) btn.onclick=()=>{ watchlist = watchlist.filter(s=>s!==sym); renderWatchlist(); }; }); }
 let orderHistory = [];
 function recordOrder(type, symbol, qty, price){ orderHistory.unshift({type,symbol,qty,price,ts:new Date().toISOString()}); if(orderHistory.length>200) orderHistory.pop(); }
 
-///// ------------------ Table updates ------------------ /////
+// ------------------ Table updates & trading logic ------------------
 function updateStockTable(){ const tbody=document.getElementById('stock-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const p=(prices[stock.symbol]!==undefined)?prices[stock.symbol]:0; const change=+(p-(prevPrices[stock.symbol]||p)); const changeStr=(change>0?'+':'')+change.toFixed(2); const className = change>0?'price-up':change<0?'price-down':'price-same'; const tr=document.createElement('tr'); tr.innerHTML=`<td>${stock.symbol}</td><td>${stock.type}</td><td>$${p.toFixed(2)}</td><td class="${className}">${changeStr}</td><td></td>`; tbody.appendChild(tr); }); }
 function updateTradeTable(){ const tbody=document.getElementById('trade-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const p=(prices[stock.symbol]!==undefined)?prices[stock.symbol]:0; const change=+(p-(prevPrices[stock.symbol]||p)); const changeStr=(change>0?'+':'')+change.toFixed(2); const className = change>0?'price-up':change<0?'price-down':'price-same'; const rowId=`buy_${stock.symbol}`, costId=`buy_cost_${stock.symbol}`; const tr=document.createElement('tr'); tr.innerHTML=`<td>${stock.symbol}</td><td>${stock.type}</td><td>$${p.toFixed(2)}</td><td class="${className}">${changeStr}</td><td><input type="number" min="1" value="1" class="buy-input" id="${rowId}"><button onclick="buyStock('${stock.symbol}')" class="action-btn">Buy</button><span class="buy-cost" id="${costId}">$${p.toFixed(2)}</span></td>`; tbody.appendChild(tr); setTimeout(()=>{ const qtyInput=document.getElementById(rowId), costSpan=document.getElementById(costId); if(qtyInput && costSpan){ function updateCost(){ let q=parseInt(qtyInput.value)||0; costSpan.textContent=`$${(q*p).toFixed(2)}`; } qtyInput.addEventListener('input', updateCost); updateCost(); } },0); }); }
-function updatePortfolioTable(){ const tbody=document.getElementById('portfolio-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const owned=portfolio.stocks[stock.symbol]||0; if(owned>0){ const p=(prices[stock.symbol]!==undefined)?prices[stock.symbol]:0; const totalValue = owned*p; const profitLoss = (p-averageBuyPrice[stock.symbol])*owned; const changeStr=(profitLoss>0?'+':'')+profitLoss.toFixed(2); const className = profitLoss>0?'price-up':profitLoss<0?'price-down':'price-same'; const tr=document.createElement('tr'); tr.innerHTML=`<td>${stock.symbol}</td><td>${owned}</td><td>$${p.toFixed(2)}</td><td>$${totalValue.toFixed(2)}</td><td class="${className}">${changeStr}</td><td style="white-space:nowrap;min-width:200px;"><input type="number" min="1" value="1" id="sell_${stock.symbol}" style="width:40px;"><button class="sell-btn action-btn" onclick="sellStock('${stock.symbol}')">Sell</button><button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button></td>`; tbody.appendChild(tr); } }); }
+function updatePortfolioTable(){ const tbody=document.getElementById('portfolio-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const owned=portfolio.stocks[stock.symbol]||0; if(owned>0){ const p=(prices[stock.symbol]!==undefined)?prices[stock.symbol]:0; const totalValue=owned*p; const profitLoss=(p-averageBuyPrice[stock.symbol])*owned; const changeStr=(profitLoss>0?'+':'')+profitLoss.toFixed(2); const className=profitLoss>0?'price-up':profitLoss<0?'price-down':'price-same'; const tr=document.createElement('tr'); tr.innerHTML=`<td>${stock.symbol}</td><td>${owned}</td><td>$${p.toFixed(2)}</td><td>$${totalValue.toFixed(2)}</td><td class="${className}">${changeStr}</td><td style="white-space:nowrap;min-width:200px;"><input type="number" min="1" value="1" id="sell_${stock.symbol}" style="width:40px;"><button class="sell-btn action-btn" onclick="sellStock('${stock.symbol}')">Sell</button><button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button></td>`; tbody.appendChild(tr); } }); }
 
-///// ------------------ Trading logic ------------------ /////
-window.buyStock = function(symbol){
-  const input = document.getElementById(`buy_${symbol}`);
-  let qty = input ? parseInt(input.value) : 1; qty = Math.max(1, qty || 1);
-  const cost = (prices[symbol]||0) * qty;
-  if(cost <= portfolio.cash){
-    const prevQty = portfolio.stocks[symbol] || 0;
-    const totalQty = prevQty + qty;
-    averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + prices[symbol] * qty) / Math.max(1, totalQty);
-    portfolio.cash -= cost;
-    portfolio.stocks[symbol] = totalQty;
-    dayProgress.trades = (dayProgress.trades||0)+1;
-    if(!dayProgress.typesBought) dayProgress.typesBought=[];
-    const type = (STOCKS.find(s=>s.symbol===symbol)||{}).type;
-    if(type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
-    if(!state.firstTradeDone){ state.firstTradeDone=true; saveState(); }
-    addXP(Math.max(1, Math.round(cost/200)));
-    state.coins += Math.max(0, Math.round(cost/1000));
-    recordOrder('buy', symbol, qty, prices[symbol]);
-    toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
-    saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
-    renderWatchlist();
-    checkAchievements();
-  } else { toast('Not enough cash'); }
-};
+window.buyStock = function(symbol){ const input=document.getElementById(`buy_${symbol}`); let qty=input?parseInt(input.value):1; qty=Math.max(1, qty||1); const cost=(prices[symbol]||0)*qty; if(cost<=portfolio.cash){ const prevQty=portfolio.stocks[symbol]||0; const totalQty=prevQty+qty; averageBuyPrice[symbol] = (averageBuyPrice[symbol]*prevQty + prices[symbol]*qty)/Math.max(1,totalQty); portfolio.cash -= cost; portfolio.stocks[symbol] = totalQty; dayProgress.trades = (dayProgress.trades||0)+1; if(!dayProgress.typesBought) dayProgress.typesBought=[]; const type=(STOCKS.find(s=>s.symbol===symbol)||{}).type; if(type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type); if(!state.firstTradeDone){ state.firstTradeDone=true; saveState(); } addXP(Math.max(1, Math.round(cost/200))); state.coins += Math.max(0, Math.round(cost/1000)); recordOrder('buy', symbol, qty, prices[symbol]); toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`); saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable(); renderWatchlist(); checkAchievements(); } else toast('Not enough cash'); };
 
-window.sellStock = function(symbol){
-  const input = document.getElementById(`sell_${symbol}`);
-  let qty = input ? parseInt(input.value) : 1; qty = Math.max(1, qty || 1);
-  const owned = portfolio.stocks[symbol] || 0;
-  if(qty > owned){ toast('Not enough shares'); return; }
-  const revenue = (prices[symbol]||0)*qty;
-  portfolio.cash += revenue;
-  portfolio.stocks[symbol] = owned - qty;
-  if(portfolio.stocks[symbol] === 0){ averageBuyPrice[symbol]=0; prevOwned[symbol]=0; }
-  const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
-  if(profit>0){ addXP(Math.round(profit/10)); state.coins += Math.round(profit/50); dayProgress.dayProfit=(dayProgress.dayProfit||0)+profit; state.cumulativeProfit=(state.cumulativeProfit||0)+profit; }
-  recordOrder('sell', symbol, qty, prices[symbol]);
-  toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
-  saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
-  checkAchievements();
-};
+window.sellStock = function(symbol){ const input=document.getElementById(`sell_${symbol}`); let qty=input?parseInt(input.value):1; qty=Math.max(1, qty||1); const owned=portfolio.stocks[symbol]||0; if(qty>owned){ toast('Not enough shares'); return; } const revenue=(prices[symbol]||0)*qty; portfolio.cash += revenue; portfolio.stocks[symbol] = owned-qty; if(portfolio.stocks[symbol]===0){ averageBuyPrice[symbol]=0; prevOwned[symbol]=0; } const profit=(prices[symbol]-averageBuyPrice[symbol])*qty; if(profit>0){ addXP(Math.round(profit/10)); state.coins += Math.round(profit/50); dayProgress.dayProfit = (dayProgress.dayProfit||0) + profit; state.cumulativeProfit = (state.cumulativeProfit||0) + profit; } recordOrder('sell', symbol, qty, prices[symbol]); toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`); saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable(); checkAchievements(); };
 
-window.sellAllStock = function(symbol){ const owned = portfolio.stocks[symbol] || 0; if(owned>0){ const inpt=document.getElementById(`sell_${symbol}`); if(inpt) inpt.value=owned; sellStock(symbol); } };
+window.sellAllStock=function(symbol){ const owned=portfolio.stocks[symbol]||0; if(owned>0){ const inpt=document.getElementById(`sell_${symbol}`); if(inpt) inpt.value=owned; sellStock(symbol); } };
 
-///// ------------------ Auto ticks ------------------ /////
+// ------------------ Auto ticks ------------------
 let priceInterval = null, newsInterval = null;
-function tickPrices(){ setRandomPrices({}); updateStockTable(); updateTradeTable(); updatePortfolioTable(); pushChartSample(getPortfolioValue()); tickCount++; STOCKS.forEach(s=>{ if(portfolio.stocks[s.symbol]>0) dayProgress.holdTicks=(dayProgress.holdTicks||0)+1; }); checkMissions(); checkAchievements(); updateHUD(); }
-function newsTick(){ const newsMap = triggerRandomNews(); setRandomPrices(newsMap); updateStockTable(); updateTradeTable(); updatePortfolioTable(); pushChartSample(getPortfolioValue()); renderLeaderboard(); saveState(); }
+function tickPrices(){ try { setRandomPrices({}); updateStockTable(); updateTradeTable(); updatePortfolioTable(); pushChartSample(getPortfolioValue()); tickCount++; STOCKS.forEach(s=>{ if(portfolio.stocks[s.symbol]>0) dayProgress.holdTicks=(dayProgress.holdTicks||0)+1; }); checkMissions(); checkAchievements(); updateHUD(); } catch(e){ console.error('tickPrices error', e); } }
+function newsTick(){ try { const newsMap=triggerRandomNews(); setRandomPrices(newsMap); updateStockTable(); updateTradeTable(); updatePortfolioTable(); pushChartSample(getPortfolioValue()); renderLeaderboard(); saveState(); } catch(e){ console.error('newsTick error', e); } }
 
-///// ------------------ Missions check ------------------ /////
-function checkMissions(){
-  dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length;
-  dayProgress.trades = dayProgress.trades || 0;
-  dayProgress.typesBought = dayProgress.typesBought || [];
-  (state.missions||[]).forEach(m=>{
-    if(m.done) return;
-    try {
-      if(typeof m.check === 'function' ? m.check(dayProgress) : false) m.done = true;
-      else {
-        const candidate = MISSION_CANDIDATES.find(c=>c.id===m.id);
-        if(candidate && candidate.check(dayProgress)) m.done = true;
-      }
-    } catch(e){
-      if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true;
-      if(m.id==='profit_500' && (dayProgress.dayProfit||0)>=500) m.done=true;
-      if(m.id==='hold_10' && (dayProgress.holdTicks||0)>=10) m.done=true;
-      if(m.id==='trade_10' && (dayProgress.trades||0)>=10) m.done=true;
-      if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true;
-    }
-  });
-  renderMissionsModal();
-}
+// ------------------ Missions check ------------------
+function checkMissions(){ dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length; dayProgress.trades = dayProgress.trades || 0; dayProgress.typesBought = dayProgress.typesBought || []; (state.missions||[]).forEach(m=>{ if(m.done) return; try{ if(typeof m.check === 'function' ? m.check(dayProgress) : false) m.done = true; else { const candidate = MISSION_CANDIDATES.find(c=>c.id===m.id); if(candidate && candidate.check(dayProgress)) m.done = true; } } catch(e){ if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true; if(m.id==='profit_500' && (dayProgress.dayProfit||0) >=500) m.done=true; if(m.id==='hold_10' && (dayProgress.holdTicks||0) >=10) m.done=true; if(m.id==='trade_10' && (dayProgress.trades||0) >=10) m.done=true; if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true; } }); renderMissionsModal(); }
 
-///// ------------------ Portfolio value (safe) ------------------ /////
-function getPortfolioValue(){
-  let total = (portfolio && portfolio.cash) ? portfolio.cash : 0;
-  for(let i=0;i<STOCKS.length;i++){
-    const s = STOCKS[i]; const sym = s && s.symbol;
-    if(!sym) continue;
-    const owned = (portfolio.stocks && portfolio.stocks[sym]) ? portfolio.stocks[sym] : 0;
-    const p = (prices && prices[sym] !== undefined) ? prices[sym] : 0;
-    total += owned * p;
-  }
-  return +total;
-}
+// ------------------ Helpers ------------------
+function getPortfolioValue(){ let total=(portfolio&&portfolio.cash)?portfolio.cash:0; for(let i=0;i<STOCKS.length;i++){ const s=STOCKS[i]; const sym=s&&s.symbol; if(!sym) continue; const owned=(portfolio.stocks&&portfolio.stocks[sym])?portfolio.stocks[sym]:0; const p=(prices&&prices[sym]!==undefined)?prices[sym]:0; total += owned * p; } return +total; }
+function setRandomPrices(newsEffectMap={}){ prevPrices = {...prices}; STOCKS.forEach(stock=>{ let old = prices[stock.symbol]||randomPrice(); let change = (Math.random()*0.07)-0.035; if(Math.random()<0.10) change += (Math.random()*0.06-0.03); if(newsEffectMap[stock.symbol]) change += newsEffectMap[stock.symbol]; change = Math.max(-0.5, Math.min(0.5, change)); prices[stock.symbol] = Math.max(5, +(old*(1+change)).toFixed(2)); }); }
 
-///// ------------------ Startup & wiring ------------------ /////
-document.addEventListener('click', (e)=>{
-  if(e.target && e.target.id === 'add-watch'){
-    const inp = document.getElementById('watch-input'); const sym = (inp && inp.value||'').trim().toUpperCase();
-    if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); if(inp) inp.value=''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched');
-  }
-});
-
-window.addEventListener('DOMContentLoaded', ()=>{
-  // initialize chart safely now that DOM is ready
+// ------------------ DOMContentLoaded startup ------------------
+document.addEventListener('DOMContentLoaded', ()=> {
+  // init chart only after DOM ready
   const canvas = document.getElementById('portfolioChart');
   if(canvas && typeof Chart !== 'undefined'){
     const ctx = canvas.getContext('2d');
@@ -393,7 +307,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
     portfolioChart = new Chart(ctx, { type:'line', data: chartData, options:{ animation:{duration:300}, scales:{ x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}} } });
   }
 
-  // mission/achievement/shop init
   try { generateDailyMissions(); } catch(e){ console.warn(e); }
   try { renderMissionsModal(); renderMissionsBrief(); } catch(e){}
   try { renderShop(); renderAchievements(); renderLeaderboard(); } catch(e){}
@@ -405,38 +318,31 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(priceInterval) clearInterval(priceInterval); priceInterval = setInterval(tickPrices, 10000);
   if(newsInterval) clearInterval(newsInterval); newsInterval = setInterval(newsTick, 180000);
 
-  const openM = document.getElementById('open-missions'); if(openM) openM.onclick = ()=> openModal('modal-missions');
-  const closeM = document.getElementById('close-missions'); if(closeM) closeM.onclick = ()=> closeModal('modal-missions');
-  const openA = document.getElementById('open-achievements'); if(openA) openA.onclick = ()=> { renderAchievements(); openModal('modal-achievements'); };
-  const closeA = document.getElementById('close-achievements'); if(closeA) closeA.onclick = ()=> closeModal('modal-achievements');
-  const openS = document.getElementById('open-shop'); if(openS) openS.onclick = ()=> { renderShop(); openModal('modal-shop'); };
-  const closeS = document.getElementById('close-shop'); if(closeS) closeS.onclick = ()=> closeModal('modal-shop');
-  const saveBtn = document.getElementById('save-score'); if(saveBtn) saveBtn.onclick = ()=> { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
-  const addWatchBtn = document.getElementById('add-watch'); if(addWatchBtn) addWatchBtn.onclick = ()=>{ const inp=document.getElementById('watch-input'); const sym=(inp&&inp.value||'').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); if(inp) inp.value=''; toast(`${sym} added to watchlist`);} else toast('Invalid symbol or already watched'); };
+  const openM=document.getElementById('open-missions'); if(openM) openM.onclick = ()=> openModal('modal-missions');
+  const closeM=document.getElementById('close-missions'); if(closeM) closeM.onclick = ()=> closeModal('modal-missions');
+  const openA=document.getElementById('open-achievements'); if(openA) openA.onclick = ()=> { renderAchievements(); openModal('modal-achievements'); };
+  const closeA=document.getElementById('close-achievements'); if(closeA) closeA.onclick = ()=> closeModal('modal-achievements');
+  const openS=document.getElementById('open-shop'); if(openS) openS.onclick = ()=> { renderShop(); openModal('modal-shop'); };
+  const closeS=document.getElementById('close-shop'); if(closeS) closeS.onclick = ()=> closeModal('modal-shop');
+
+  const saveBtn=document.getElementById('save-score'); if(saveBtn) saveBtn.onclick = ()=> { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
+  const addWatchBtn=document.getElementById('add-watch'); if(addWatchBtn) addWatchBtn.onclick = ()=> { const inp=document.getElementById('watch-input'); const sym=(inp&&inp.value||'').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); if(inp) inp.value=''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
 
   setInterval(updateSeasonTimer, 1000);
-
-  // initial achievement check
   checkAchievements();
 });
 
-///// ------------------ Modals & helpers ------------------ /////
+// ------------------ Modals & helpers ------------------
 function openModal(id){ const m=document.getElementById(id); if(m) m.setAttribute('aria-hidden','false'); }
 function closeModal(id){ const m=document.getElementById(id); if(m) m.setAttribute('aria-hidden','true'); }
 function getSeasonId(){ const d=new Date(); const onejan=new Date(d.getFullYear(),0,1); const days=Math.floor((d-onejan)/(24*60*60*1000)); const week=Math.ceil((days + onejan.getDay()+1)/7); return `${d.getFullYear()}-W${week}`; }
 
-// persist at the end
+// save final state
 saveState();
 
-// Optional global error reporting (helps debugging in browser)
+// global error hook (optional, helpful while debugging)
 window.onerror = function(message, source, lineno, colno, error){
   console.error('Global error:', message, 'at', source+':'+lineno+':'+colno, error);
-  try {
-    const toasts = document.getElementById('toasts');
-    if(toasts){
-      const el = document.createElement('div'); el.className='toast'; el.textContent = `Error: ${message} (line ${lineno})`; toasts.appendChild(el);
-      setTimeout(()=> el.remove(), 8000);
-    }
-  } catch(e){}
-  return false; // let browser still show error
+  try { const toasts=document.getElementById('toasts'); if(toasts){ const el=document.createElement('div'); el.className='toast'; el.textContent=`Error: ${message} (line ${lineno})`; toasts.appendChild(el); setTimeout(()=>el.remove(), 8000); } } catch(e){}
+  return false;
 };
