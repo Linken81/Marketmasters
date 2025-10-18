@@ -1,14 +1,14 @@
 // script.js - full updated file
-// - XP HUD now shows numeric "current / required XP" and remaining XP to next level.
-// - Missions modal and brief show mission rewards (coins + XP).
+// - Claim button text in Missions modal now reads "Claim" only; reward text remains on the left.
+// - XP HUD shows numeric "current / required XP" and remaining XP to next level.
+// - Missions display rewards in modal and brief.
 // - First-trade achievement unlocks on first buy/sell.
 // - Missions fixed (per-symbol hold counters, robust checks).
 // - Header cash updates after trades.
 // - Defensive DOM guards and single top-level declarations.
 // - Market ticks (10s), news (3min), chart sampling, confetti, shop, watchlist, order history.
-
 //
-// NOTE: Replace your existing script.js with this full file and hard-refresh (Ctrl/Cmd+Shift+R).
+// NOTE: Replace your existing script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 //
 
 // ------------------ Date / Season helpers (defined first) ------------------
@@ -293,8 +293,9 @@ function renderMissionsModal() {
 
     const right = document.createElement('div');
     right.style.textAlign = 'right';
+    // Claim button shows "Claim" only — reward stays on the left
     right.innerHTML = `<div class="meta" style="margin-bottom:6px">${m.done ? 'Completed' : 'In progress'}</div>
-      ${m.done ? `<button class="action-btn" data-claim="${idx}">Claim (${rewardCoins}c, ${rewardXP}XP)</button>` : ''}`;
+      ${m.done ? `<button class="action-btn" data-claim="${idx}">Claim</button>` : ''}`;
 
     div.appendChild(left);
     div.appendChild(right);
@@ -334,9 +335,7 @@ function renderMissionsBrief() {
   });
 }
 
-// ------------------ Shop, Leaderboard, News, Price Simulation, Chart, Trading ------------------
-// Full implementations preserved from working version.
-
+// ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
 const SHOP_ITEMS = [
   { id: 'xp_boost_1', name: 'XP Booster (1h)', desc: '+50% XP for 1 hour', price: 300, effect: { xpMultiplier: 1.5, durationMs: 3600000 } },
   { id: 'auto_rebuy', name: 'Auto Rebuy (permanent)', desc: 'Automatically re-buy small positions', price: 1200, effect: { autoRebuy: true } },
