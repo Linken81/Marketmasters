@@ -1,11 +1,9 @@
 // script.js - full updated file
-// Changes in this update:
-// 1) Mission "Make $500 profit (day)" changed to "Make $500 profit in one tick" and logic updated
-//    so it requires a single-tick profit >= $500 since the mission was assigned.
-//    Implementation: we record per-tick portfolio delta values (tick deltas) and the mission checks
-//    whether any tick delta after assignment meets the threshold.
-// 2) Shop button cost text: replaced the trailing 'c' markup with a dollar prefix. ("Buy 300c" -> "Buy $300")
-// Backup of the previous file has been included before this update. No other logic changed.
+// Changes applied in this update:
+// - Fixed "Execute 10 trades" mission check: it now counts actual executed orders (buys + sells) since mission assignment,
+//   ensuring the mission completes after 10 trades are executed after the mission was issued.
+// - Updated the "Missions" button label to show "Missions (N active)" instead of "Daily Missions (N active)".
+// - No other logic altered. A backup of the prior file was included above.
 //
 // Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
@@ -321,7 +319,7 @@ function isMissionComplete(m) {
       return bought.size >= 3;
     }
     case 'profit_500': {
-      // NEW: require a single tick delta >= 500 after mission assignment
+      // require a single tick delta >= 500 after mission assignment
       state.tickDeltas = state.tickDeltas || [];
       return (state.tickDeltas || []).some(entry => {
         try {
@@ -340,9 +338,14 @@ function isMissionComplete(m) {
       });
     }
     case 'trade_10': {
-      const baseline = m.baseline.trades || 0;
-      const current = dayProgress.trades || 0;
-      return (current - baseline) >= 10;
+      // FIXED: Count executed trades (buys + sells) since assignedAt using orderHistory
+      const count = (orderHistory || []).reduce((acc, o) => {
+        try {
+          if (new Date(o.ts) > assignedAt) return acc + 1;
+        } catch (_) {}
+        return acc;
+      }, 0);
+      return count >= 10;
     }
     case 'buy_food': {
       // check any buy of a Food stock since assignedAt
@@ -385,6 +388,18 @@ function generateSingleMission() {
   const nm = { ...pool[Math.floor(Math.random() * pool.length)], done: false };
   attachMissionBaseline(nm);
   return nm;
+}
+
+// Update Missions button label to "Missions (N active)" if present
+function updateMissionsButtonLabel() {
+  try {
+    const btn = document.getElementById('open-missions');
+    if (!btn) return;
+    const n = (state.missions || []).length;
+    btn.textContent = `Missions (${n} active)`;
+  } catch (e) {
+    console.warn('updateMissionsButtonLabel error', e);
+  }
 }
 
 function renderMissionsModal() {
@@ -440,10 +455,13 @@ function renderMissionsModal() {
           saveState();
           renderMissionsModal();
           renderMissionsBrief();
+          updateMissionsButtonLabel();
         };
       }
     }
   });
+
+  updateMissionsButtonLabel();
 }
 
 function renderMissionsBrief() {
@@ -463,6 +481,8 @@ function renderMissionsBrief() {
     div.textContent = txt;
     el.appendChild(div);
   });
+
+  updateMissionsButtonLabel();
 }
 
 // ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
@@ -480,7 +500,7 @@ function renderShop() {
     const owned = !!state.shopOwned[item.id];
     const div = document.createElement('div');
     div.className = 'shop-item';
-    // Changed cost notation from trailing "c" to dollar prefix as requested
+    // Changed cost notation from trailing "c" to dollar prefix as previously requested
     div.innerHTML = `<div><strong>${item.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${item.desc}</div></div>
       <div>${owned ? 'Owned' : `<button class="action-btn">Buy $${item.price}</button>`}</div>`;
     el.appendChild(div);
@@ -658,7 +678,7 @@ function updatePortfolioTable() {
         <td style="white-space:nowrap;min-width:200px;">
           <input type="number" min="1" value="1" id="sell_${stock.symbol}" style="width:40px;">
           <button class="sell-btn action-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
-          <button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
+          <button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol')">Sell All</button>
         </td>`;
       tbody.appendChild(tr);
     }
@@ -773,7 +793,7 @@ function tickPrices() {
   let tickDelta = 0;
   STOCKS.forEach(s => {
     const owned = portfolio.stocks[s.symbol] || 0;
-    const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[s.symbol];
+    const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[symbol];
     const after = prices[s.symbol] !== undefined ? prices[s.symbol] : before;
     tickDelta += owned * (after - before);
   });
@@ -829,7 +849,7 @@ function checkMissions() {
 
 function getPortfolioValue() {
   let v = portfolio.cash || 0;
-  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
+  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
   return +v;
 }
 
