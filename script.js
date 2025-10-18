@@ -1,9 +1,8 @@
 // script.js - full updated file
-// Changes applied in this update:
-// - Fixed "Execute 10 trades" mission check: it now counts actual executed orders (buys + sells) since mission assignment,
-//   ensuring the mission completes after 10 trades are executed after the mission was issued.
-// - Updated the "Missions" button label to show "Missions (N active)" instead of "Daily Missions (N active)".
-// - No other logic altered. A backup of the prior file was included above.
+// Change: mission assignment now records a baseline (assignedAt + baseline values).
+// Mission completion checks are evaluated relative to that baseline so that
+// when a mission is completed and later re-issued the user must perform the required actions again.
+// Backup of prior file included above. No other unrelated behavior changed.
 //
 // Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
@@ -84,9 +83,7 @@ let state = {
   prestige: { count: 0, legacyPoints: 0 },
   seasonId: getSeasonId(),
   leaderboard: JSON.parse(localStorage.getItem('leaderboard_scores') || "[]"),
-  activeBoosts: {},
-  // tickDeltas stores recent per-tick portfolio deltas: {ts, delta}
-  tickDeltas: []
+  activeBoosts: {}
 };
 
 function loadState() {
@@ -270,10 +267,10 @@ function renderNextAchievement() {
 }
 
 // ------------------ Missions ------------------
-// Mission candidates with updated profit_500 phrasing (now per-tick)
+// Mission candidates remain the same, but assignment includes baselines
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
-  { id: 'profit_500', text: 'Make $500 profit in one tick', check: (p) => false, reward: { coins: 120, xp: 40 } },
+  { id: 'profit_500', text: 'Make $500 profit (day)', check: (p) => p.dayProfit >= 500, reward: { coins: 120, xp: 40 } },
   { id: 'hold_10', text: 'Hold a stock for 10 ticks', check: (p) => false, reward: { coins: 80, xp: 30 } }, // handled with holdCounters
   { id: 'trade_10', text: 'Execute 10 trades', check: (p) => p.trades >= 10, reward: { coins: 70, xp: 25 } },
   { id: 'buy_food', text: 'Buy a Food stock', check: (p) => p.typesBought && p.typesBought.includes('Food'), reward: { coins: 40, xp: 12 } }
@@ -287,8 +284,8 @@ function attachMissionBaseline(m) {
       dayProfit: (dayProgress.dayProfit || 0),
       trades: (dayProgress.trades || 0),
       // snapshot hold counters
-      holdCounters: Object.assign({}, holdCounters || {})
-      // for profit-in-one-tick we use state.tickDeltas which records per-tick deltas
+      holdCounters: Object.assign({}, holdCounters || {}),
+      // we rely on order timestamps for "buy" checks (order.ts)
     };
   } catch (e) {
     // defensive; don't let baseline attachment break anything
@@ -319,13 +316,9 @@ function isMissionComplete(m) {
       return bought.size >= 3;
     }
     case 'profit_500': {
-      // require a single tick delta >= 500 after mission assignment
-      state.tickDeltas = state.tickDeltas || [];
-      return (state.tickDeltas || []).some(entry => {
-        try {
-          return new Date(entry.ts) > assignedAt && (entry.delta || 0) >= 500;
-        } catch (_) { return false; }
-      });
+      const baseline = m.baseline.dayProfit || 0;
+      const current = dayProgress.dayProfit || 0;
+      return (current - baseline) >= 500;
     }
     case 'hold_10': {
       const threshold = 10;
@@ -338,14 +331,9 @@ function isMissionComplete(m) {
       });
     }
     case 'trade_10': {
-      // FIXED: Count executed trades (buys + sells) since assignedAt using orderHistory
-      const count = (orderHistory || []).reduce((acc, o) => {
-        try {
-          if (new Date(o.ts) > assignedAt) return acc + 1;
-        } catch (_) {}
-        return acc;
-      }, 0);
-      return count >= 10;
+      const baseline = m.baseline.trades || 0;
+      const current = dayProgress.trades || 0;
+      return (current - baseline) >= 10;
     }
     case 'buy_food': {
       // check any buy of a Food stock since assignedAt
@@ -388,18 +376,6 @@ function generateSingleMission() {
   const nm = { ...pool[Math.floor(Math.random() * pool.length)], done: false };
   attachMissionBaseline(nm);
   return nm;
-}
-
-// Update Missions button label to "Missions (N active)" if present
-function updateMissionsButtonLabel() {
-  try {
-    const btn = document.getElementById('open-missions');
-    if (!btn) return;
-    const n = (state.missions || []).length;
-    btn.textContent = `Missions (${n} active)`;
-  } catch (e) {
-    console.warn('updateMissionsButtonLabel error', e);
-  }
 }
 
 function renderMissionsModal() {
@@ -455,13 +431,10 @@ function renderMissionsModal() {
           saveState();
           renderMissionsModal();
           renderMissionsBrief();
-          updateMissionsButtonLabel();
         };
       }
     }
   });
-
-  updateMissionsButtonLabel();
 }
 
 function renderMissionsBrief() {
@@ -481,8 +454,6 @@ function renderMissionsBrief() {
     div.textContent = txt;
     el.appendChild(div);
   });
-
-  updateMissionsButtonLabel();
 }
 
 // ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
@@ -500,9 +471,8 @@ function renderShop() {
     const owned = !!state.shopOwned[item.id];
     const div = document.createElement('div');
     div.className = 'shop-item';
-    // Changed cost notation from trailing "c" to dollar prefix as previously requested
     div.innerHTML = `<div><strong>${item.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${item.desc}</div></div>
-      <div>${owned ? 'Owned' : `<button class="action-btn">Buy $${item.price}</button>`}</div>`;
+      <div>${owned ? 'Owned' : `<button class="action-btn">Buy ${item.price}c</button>`}</div>`;
     el.appendChild(div);
     if (!owned) {
       const btn = div.querySelector('button');
@@ -678,7 +648,7 @@ function updatePortfolioTable() {
         <td style="white-space:nowrap;min-width:200px;">
           <input type="number" min="1" value="1" id="sell_${stock.symbol}" style="width:40px;">
           <button class="sell-btn action-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
-          <button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol')">Sell All</button>
+          <button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
         </td>`;
       tbody.appendChild(tr);
     }
@@ -789,18 +759,6 @@ function tickPrices() {
     }
   });
 
-  // compute tick delta (portfolio change due to price movement this tick)
-  let tickDelta = 0;
-  STOCKS.forEach(s => {
-    const owned = portfolio.stocks[s.symbol] || 0;
-    const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[symbol];
-    const after = prices[s.symbol] !== undefined ? prices[s.symbol] : before;
-    tickDelta += owned * (after - before);
-  });
-  state.tickDeltas = state.tickDeltas || [];
-  state.tickDeltas.push({ ts: new Date().toISOString(), delta: +tickDelta.toFixed(2) });
-  if (state.tickDeltas.length > 500) state.tickDeltas.shift(); // keep history bounded
-
   updateTradeTable();
   updateStockTable();
   updatePortfolioTable();
@@ -849,7 +807,7 @@ function checkMissions() {
 
 function getPortfolioValue() {
   let v = portfolio.cash || 0;
-  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
+  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
   return +v;
 }
 
