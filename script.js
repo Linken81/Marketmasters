@@ -1,8 +1,8 @@
-// script.js (clean single-file replacement)
-// - Removes duplicate declarations and fixes SyntaxError from 'orderHistory' redeclaration.
-// - Keeps features: market ticks (10s), news (3min), chart sampling, XP/progress, confetti,
-//   achievements/shop reset on refresh, missions (3 active with replacement), watchlist, order history.
-// - Defensive DOM guards so missing elements don't abort execution.
+// script.js (fixed)
+// - Declares priceInterval and newsInterval once.
+// - Declares dayProgress once and uses it consistently.
+// - Removes duplicate top-level declarations and adds defensive DOM guards.
+// - Preserves XP/progress, achievements reset on refresh, missions (3 active + replacement), shop reset, confetti, chart, ticks, news.
 
 // ------------------ Stocks & Portfolio ------------------
 const STOCKS = [
@@ -34,22 +34,22 @@ STOCKS.forEach(s => portfolio.stocks[s.symbol] = 0);
 let averageBuyPrice = {};
 STOCKS.forEach(s => averageBuyPrice[s.symbol] = 0);
 
-// prices
+// ------------------ Prices ------------------
 let prices = {};
 let prevPrices = {};
 function randomPrice(){ return +(Math.random()*900 + 100).toFixed(2); }
-function initPrices(){
+function initPricesIfNeeded(){
   STOCKS.forEach(s => { if (prices[s.symbol] === undefined) prices[s.symbol] = randomPrice(); });
 }
-initPrices();
+initPricesIfNeeded();
 
-// ------------------ Single persistent state ------------------
+// ------------------ Persistent game state ------------------
 const STORAGE_KEY = "marketmasters_full_v1";
 let state = {
   xp: 0,
   level: 1,
   coins: 0,
-  achievements: {},   // boolean flags only
+  achievements: {},
   missions: [],
   missionsDate: null,
   shopOwned: {},
@@ -58,7 +58,6 @@ let state = {
   leaderboard: JSON.parse(localStorage.getItem('leaderboard_scores') || "[]"),
   activeBoosts: {}
 };
-
 function loadState(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -70,18 +69,25 @@ function saveState(){
 }
 loadState();
 
-// Per your request: reset level/xp and clear achievements/shop on refresh
+// Per user request: reset level and XP on refresh; reset achievements and shop on refresh
 state.level = 1;
 state.xp = 0;
 state.achievements = {};
 state.shopOwned = {};
 saveState();
 
-// ------------------ Collections (declared exactly once) ------------------
+// ------------------ Single global collections (declared once) ------------------
 let watchlist = [];
-let orderHistory = []; // [{type, symbol, qty, price, ts}]
+let orderHistory = []; // {type, symbol, qty, price, ts}
 
-// ------------------ Small UI helpers ------------------
+// ------------------ Day progress (declared once) ------------------
+let dayProgress = { buyDifferent:0, dayProfit:0, holdTicks:0, trades:0, typesBought:[] };
+
+// ------------------ Intervals (declared once) ------------------
+let priceInterval = null;
+let newsInterval = null;
+
+// ------------------ UI helpers ------------------
 function toast(text, timeout=3000){
   const toasts = document.getElementById('toasts');
   if(!toasts) return;
@@ -112,7 +118,7 @@ function launchConfetti(amount = 40){
 }
 
 // ------------------ XP & Leveling ------------------
-function xpForLevel(l){ return Math.floor(100 * Math.pow(l, 1.35)); }
+function xpForLevel(l){ return Math.floor(100 * Math.pow(l,1.35)); }
 function addXP(amount){
   if(amount <= 0) return;
   if(state.activeBoosts.xpMultiplier) amount = Math.round(amount * state.activeBoosts.xpMultiplier);
@@ -131,7 +137,7 @@ function checkLevelUp(){
     state.coins += rewardCoins;
     toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
     launchConfetti(60);
-    unlockAchievement('level_up'); // boolean flag only
+    unlockAchievement('level_up');
   }
   if(leveled) saveState();
 }
@@ -148,7 +154,7 @@ function updateHUD(){
   renderNextAchievement();
 }
 
-// ------------------ Achievements (boolean flags; no dates) ------------------
+// ------------------ Achievements ------------------
 const ACHIEVEMENT_LIST = [
   { id:'first_trade', name:'First Trade', desc:'Make your first trade', coins:50 },
   { id:'profit_1000', name:'Profit $1,000', desc:'Accumulate $1,000 profit total', coins:150 },
@@ -158,7 +164,7 @@ const ACHIEVEMENT_LIST = [
 function unlockAchievement(id){
   if(state.achievements[id]) return;
   const spec = ACHIEVEMENT_LIST.find(a=>a.id===id);
-  state.achievements[id] = true;
+  state.achievements[id] = true; // boolean flag only (no date)
   if(spec){
     state.coins += spec.coins;
     toast(`Achievement unlocked: ${spec.name} (+${spec.coins} coins)`);
@@ -191,7 +197,7 @@ function renderNextAchievement(){
   el.textContent = next ? `Next achievement: ${next.name} — ${next.desc}` : 'All achievements unlocked!';
 }
 
-// ------------------ Missions (3 active, replace on claim) ------------------
+// ------------------ Missions ------------------
 const MISSION_CANDIDATES = [
   { id:'buy_3', text:'Buy 3 different stocks', check: (p)=> p.buyDifferent >=3, reward:{coins:60,xp:20} },
   { id:'profit_500', text:'Make $500 profit (day)', check: (p)=> p.dayProfit>=500, reward:{coins:120,xp:40} },
@@ -300,7 +306,7 @@ function applyShopEffect(item){
 // ------------------ Prestige ------------------
 function canPrestige(){ return state.level >= 20; }
 function doPrestige(){
-  if(!canPrestige()) { toast('Reach level 20 to prestige'); return; }
+  if(!canPrestige()){ toast('Reach level 20 to prestige'); return; }
   const legacyGain = Math.floor(state.level / 5);
   state.prestige.count += 1;
   state.prestige.legacyPoints += legacyGain;
@@ -343,7 +349,7 @@ function updateSeasonTimer(){
   el.textContent = `${hrs}:${mins}:${secs}`;
 }
 
-// ------------------ News & Events ------------------
+// ------------------ News & events ------------------
 const NEWS_EVENTS = [
   { type: "stock", symbol: "ZOOMX", text: "Zoomix launches new AI chip — big upside", effect: 0.22, mood: "good" },
   { type: "stock", symbol: "FRUIQ", text: "FruityQ seasonal recall — selloff", effect: -0.11, mood: "bad" },
@@ -376,41 +382,38 @@ function addEventToList(text){
 // ------------------ Price simulation ------------------
 function setRandomPrices(newsEffectMap = {}){
   prevPrices = {...prices};
-  STOCKS.forEach(stock=>{
-    let oldPrice = prices[stock.symbol] || randomPrice();
+  STOCKS.forEach(stock => {
+    let old = prices[stock.symbol] || randomPrice();
     let changePercent = (Math.random()*0.07) - 0.035;
     if(Math.random() < 0.10) changePercent += (Math.random()*0.06 - 0.03);
     if(newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol];
     changePercent = Math.max(-0.5, Math.min(0.5, changePercent));
-    prices[stock.symbol] = Math.max(5, +((oldPrice * (1 + changePercent)).toFixed(2)));
+    prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2));
   });
 }
 
-// ------------------ Chart initialization (single) ------------------
+// ------------------ Chart ------------------
 let portfolioChartInstance = null;
 let chartData = null;
 function initChartIfPresent(){
   const canvas = document.getElementById('portfolioChart');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  const initialTime = new Date().toLocaleTimeString();
-  chartData = { labels:[initialTime], datasets:[{ label:'Portfolio Value', data:[getPortfolioValue()], borderColor:'#00FC87', backgroundColor:'rgba(14,210,247,0.10)', fill:true, tension:0.28 }] };
+  chartData = { labels:[new Date().toLocaleTimeString()], datasets:[{ label:'Portfolio Value', data:[getPortfolioValue()], borderColor:'#00FC87', backgroundColor:'rgba(14,210,247,0.10)', fill:true, tension:0.28 }] };
   portfolioChartInstance = new Chart(ctx, { type:'line', data:chartData, options:{ animation:{duration:300}, scales:{ x:{ display:false }, y:{ display:false }}, plugins:{ legend:{display:false}} } });
 }
 function pushChartSample(value){
   if(!portfolioChartInstance) return;
-  const now = new Date().toLocaleTimeString();
-  chartData.labels.push(now);
+  chartData.labels.push(new Date().toLocaleTimeString());
   chartData.datasets[0].data.push(+value.toFixed(2));
   const max = 300;
   while(chartData.labels.length > max){ chartData.labels.shift(); chartData.datasets[0].data.shift(); }
   portfolioChartInstance.update();
 }
 
-// ------------------ UI Table updates ------------------
+// ------------------ Table updates ------------------
 function updateStockTable(){
-  const tbody = document.getElementById('stock-table');
-  if(!tbody) return;
+  const tbody = document.getElementById('stock-table'); if(!tbody) return;
   tbody.innerHTML = '';
   STOCKS.forEach(stock=>{
     const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0;
@@ -441,7 +444,7 @@ function updateTradeTable(){
     tbody.appendChild(tr);
     setTimeout(()=>{
       const qtyInput = document.getElementById(rowId), costSpan = document.getElementById(costId);
-      if(qtyInput && costSpan){ function updateCost(){ let qty = parseInt(qtyInput.value)||0; costSpan.textContent = `$${(qty*price).toFixed(2)}`; } qtyInput.addEventListener('input', updateCost); updateCost(); }
+      if(qtyInput && costSpan){ function updateCost(){ let q = parseInt(qtyInput.value)||0; costSpan.textContent = `$${(q*price).toFixed(2)}`; } qtyInput.addEventListener('input', updateCost); updateCost(); }
     },0);
   });
 }
@@ -511,6 +514,41 @@ window.sellAllStock = function(symbol){
   if(owned > 0){ const el = document.getElementById(`sell_${symbol}`); if(el) el.value = owned; sellStock(symbol); }
 };
 
+// ------------------ Order history & watchlist helpers ------------------
+function recordOrder(type, symbol, qty, price){
+  orderHistory.unshift({ type, symbol, qty, price, ts: new Date().toISOString() });
+  if(orderHistory.length > 200) orderHistory.pop();
+}
+function renderWatchlist(){
+  const wrap = document.getElementById('watchlist'); if(!wrap) return;
+  wrap.innerHTML = '';
+  watchlist.forEach(sym => {
+    const div = document.createElement('div');
+    div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center'; div.style.marginBottom='6px';
+    const price = prices[sym] ? `$${prices[sym].toFixed(2)}` : '—';
+    div.innerHTML = `<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`;
+    wrap.appendChild(div);
+    const btn = div.querySelector('button'); btn.onclick = ()=> { watchlist = watchlist.filter(s=>s!==sym); renderWatchlist(); };
+  });
+}
+
+// ------------------ Ticks ------------------
+function tickPrices(){
+  setRandomPrices({});
+  updateStockTable(); updateTradeTable(); updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  STOCKS.forEach(s => { if(portfolio.stocks[s.symbol] > 0) dayProgress.holdTicks = (dayProgress.holdTicks||0) + 1; });
+  checkMissions(); updateHUD();
+}
+function newsTick(){
+  const newsMap = triggerRandomNews();
+  setRandomPrices(newsMap);
+  updateStockTable(); updateTradeTable(); updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  renderLeaderboard();
+  saveState();
+}
+
 // ------------------ Missions check ------------------
 function checkMissions(){
   dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length;
@@ -521,7 +559,6 @@ function checkMissions(){
     try {
       if(typeof m.check === 'function' && m.check(dayProgress)) m.done = true;
       else {
-        // fallback checks
         if(m.id === 'buy_3' && dayProgress.buyDifferent >= 3) m.done = true;
         if(m.id === 'profit_500' && (dayProgress.dayProfit || 0) >= 500) m.done = true;
         if(m.id === 'hold_10' && (dayProgress.holdTicks || 0) >= 10) m.done = true;
@@ -533,7 +570,7 @@ function checkMissions(){
   renderMissionsModal();
 }
 
-// ------------------ Utility functions ------------------
+// ------------------ Utilities ------------------
 function getPortfolioValue(){
   let v = portfolio.cash || 0;
   STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
@@ -542,7 +579,7 @@ function getPortfolioValue(){
 function getTodayStr(){ return new Date().toISOString().slice(0,10); }
 function getSeasonId(){ const d=new Date(); const onejan=new Date(d.getFullYear(),0,1); const days=Math.floor((d-onejan)/(24*60*60*1000)); const week=Math.ceil((days+onejan.getDay()+1)/7); return `${d.getFullYear()}-W${week}`; }
 
-// ------------------ Event wiring & startup ------------------
+// ------------------ Startup & wiring ------------------
 document.addEventListener('click', (e) => {
   if(e.target && e.target.id === 'add-watch'){
     const inp = document.getElementById('watch-input');
@@ -561,13 +598,16 @@ window.addEventListener('DOMContentLoaded', () => {
   renderLeaderboard();
   updateHUD();
   initChartIfPresent();
+
   try { updateStockTable(); } catch(e){ console.warn(e); }
   try { updateTradeTable(); } catch(e){ console.warn(e); }
   try { updatePortfolioTable(); } catch(e){ console.warn(e); }
+
   if(priceInterval) clearInterval(priceInterval);
   priceInterval = setInterval(tickPrices, 10000);
   if(newsInterval) clearInterval(newsInterval);
   newsInterval = setInterval(newsTick, 180000);
+
   const openM = document.getElementById('open-missions'); if(openM) openM.onclick = ()=> openModal('modal-missions');
   const closeM = document.getElementById('close-missions'); if(closeM) closeM.onclick = ()=> closeModal('modal-missions');
   const openA = document.getElementById('open-achievements'); if(openA) openA.onclick = ()=> openModal('modal-achievements');
@@ -576,17 +616,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const closeS = document.getElementById('close-shop'); if(closeS) closeS.onclick = ()=> closeModal('modal-shop');
   const saveBtn = document.getElementById('save-score'); if(saveBtn) saveBtn.onclick = ()=> { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
   const addWatchBtn = document.getElementById('add-watch');
-  if(addWatchBtn) addWatchBtn.onclick = () => {
-    const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase();
-    if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`); }
-    else toast('Invalid symbol or already watched');
-  };
+  if(addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
+
   setInterval(updateSeasonTimer, 1000);
 });
 
-// ------------------ Modals ------------------
+// Modals
 function openModal(id){ const m = document.getElementById(id); if(m) m.setAttribute('aria-hidden','false'); }
 function closeModal(id){ const m = document.getElementById(id); if(m) m.setAttribute('aria-hidden','true'); }
 
-// Persist final state
+// persist
 saveState();
