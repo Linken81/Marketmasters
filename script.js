@@ -1,6 +1,9 @@
 // script.js - full updated file
-// Minimal change: Show mission reward currency with $ instead of "c" in the Missions modal and brief.
-// Backup of the previous file included above. No other logic changed.
+// Change: mission assignment now records a baseline (assignedAt + baseline values).
+// Mission completion checks are evaluated relative to that baseline so that
+// when a mission is completed and later re-issued the user must perform the required actions again.
+// Backup of prior file included above. No other unrelated behavior changed.
+//
 // Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
@@ -103,6 +106,12 @@ state.shopOwned = {};
 // ====== MINIMAL FIX (kept earlier): ensure saved missions do NOT start completed on startup ======
 if (state.missions && Array.isArray(state.missions)) {
   state.missions = state.missions.map(m => ({ ...m, done: false }));
+  // ensure baseline exists for any loaded mission so it won't be immediately completed
+  state.missions.forEach(m => {
+    if (!m.assignedAt) {
+      attachMissionBaseline(m);
+    }
+  });
   saveState();
 }
 // ================================================================================
@@ -258,6 +267,7 @@ function renderNextAchievement() {
 }
 
 // ------------------ Missions ------------------
+// Mission candidates remain the same, but assignment includes baselines
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
   { id: 'profit_500', text: 'Make $500 profit (day)', check: (p) => p.dayProfit >= 500, reward: { coins: 120, xp: 40 } },
@@ -266,11 +276,96 @@ const MISSION_CANDIDATES = [
   { id: 'buy_food', text: 'Buy a Food stock', check: (p) => p.typesBought && p.typesBought.includes('Food'), reward: { coins: 40, xp: 12 } }
 ];
 
+// Helper: attach baseline when a mission is assigned so checks use deltas since assignment
+function attachMissionBaseline(m) {
+  try {
+    m.assignedAt = new Date().toISOString();
+    m.baseline = {
+      dayProfit: (dayProgress.dayProfit || 0),
+      trades: (dayProgress.trades || 0),
+      // snapshot hold counters
+      holdCounters: Object.assign({}, holdCounters || {}),
+      // we rely on order timestamps for "buy" checks (order.ts)
+    };
+  } catch (e) {
+    // defensive; don't let baseline attachment break anything
+    console.warn('attachMissionBaseline error', e);
+    m.assignedAt = new Date().toISOString();
+    m.baseline = { dayProfit: 0, trades: 0, holdCounters: {} };
+  }
+}
+
+// Test if a mission is completed relative to its baseline/assignedAt
+function isMissionComplete(m) {
+  if (!m) return false;
+  // ensure baseline exists
+  if (!m.assignedAt || !m.baseline) {
+    attachMissionBaseline(m);
+    saveState();
+  }
+  const assignedAt = new Date(m.assignedAt);
+  switch (m.id) {
+    case 'buy_3': {
+      // count unique bought symbols since assignedAt
+      const bought = new Set();
+      (orderHistory || []).forEach(o => {
+        try {
+          if (o.type === 'buy' && new Date(o.ts) > assignedAt) bought.add(o.symbol);
+        } catch (_) {}
+      });
+      return bought.size >= 3;
+    }
+    case 'profit_500': {
+      const baseline = m.baseline.dayProfit || 0;
+      const current = dayProgress.dayProfit || 0;
+      return (current - baseline) >= 500;
+    }
+    case 'hold_10': {
+      const threshold = 10;
+      // check per-symbol hold counter delta since baseline snapshot
+      const baseHold = m.baseline.holdCounters || {};
+      return Object.keys(holdCounters).some(sym => {
+        const prev = baseHold[sym] || 0;
+        const now = holdCounters[sym] || 0;
+        return (now - prev) >= threshold;
+      });
+    }
+    case 'trade_10': {
+      const baseline = m.baseline.trades || 0;
+      const current = dayProgress.trades || 0;
+      return (current - baseline) >= 10;
+    }
+    case 'buy_food': {
+      // check any buy of a Food stock since assignedAt
+      const foodSymbols = new Set(STOCKS.filter(s => s.type === 'Food').map(s => s.symbol));
+      return (orderHistory || []).some(o => {
+        try {
+          return o.type === 'buy' && new Date(o.ts) > assignedAt && foodSymbols.has(o.symbol);
+        } catch (_) { return false; }
+      });
+    }
+    default: {
+      // fallback: if mission has a check function, evaluate but based on deltas where possible
+      try {
+        if (typeof m.check === 'function') {
+          // best effort: call original check against full dayProgress (note: may be optimistic)
+          return m.check(dayProgress);
+        }
+      } catch (e) { console.warn('mission check error', e); }
+      return false;
+    }
+  }
+}
+
 function generateDailyMissions() {
   const today = getTodayStr();
   if (state.missionsDate === today && state.missions && state.missions.length === 3) return;
   const shuffled = MISSION_CANDIDATES.sort(() => Math.random() - 0.5).slice(0, 3);
-  state.missions = shuffled.map(m => ({ ...m, done: false }));
+  state.missions = shuffled.map(m => {
+    const nm = { ...m, done: false };
+    attachMissionBaseline(nm);
+    return nm;
+  });
   state.missionsDate = today;
   saveState();
 }
@@ -278,7 +373,9 @@ function generateSingleMission() {
   const activeIds = new Set((state.missions || []).map(m => m.id));
   const pool = MISSION_CANDIDATES.filter(c => !activeIds.has(c.id));
   if (pool.length === 0) return null;
-  return { ...pool[Math.floor(Math.random() * pool.length)], done: false };
+  const nm = { ...pool[Math.floor(Math.random() * pool.length)], done: false };
+  attachMissionBaseline(nm);
+  return nm;
 }
 
 function renderMissionsModal() {
@@ -287,6 +384,12 @@ function renderMissionsModal() {
   modalList.innerHTML = '';
 
   (state.missions || []).forEach((m, idx) => {
+    // update m.done based on baseline-relative checks (this ensures UI shows correct state)
+    if (!m.done && isMissionComplete(m)) {
+      m.done = true;
+      saveState();
+    }
+
     const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const rewardText = `Reward: $${rewardCoins}, ${rewardXP} XP`;
@@ -319,9 +422,12 @@ function renderMissionsModal() {
           state.coins += reward.coins || 0;
           addXP(reward.xp || 0);
           toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
+
+          // replace the mission (ensuring new mission gets its own baseline)
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
+
           saveState();
           renderMissionsModal();
           renderMissionsBrief();
@@ -336,6 +442,11 @@ function renderMissionsBrief() {
   if (!el) return;
   el.innerHTML = '';
   (state.missions || []).slice(0, 3).forEach(m => {
+    // update done state just-in-time
+    if (!m.done && isMissionComplete(m)) {
+      m.done = true;
+      saveState();
+    }
     const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const txt = `${m.text} — Reward: $${rewardCoins}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
@@ -672,8 +783,9 @@ function newsTick() {
   saveState();
 }
 
-// ------------------ MISSIONS check (robust) ------------------
+// ------------------ MISSIONS check (robust, baseline-relative) ------------------
 function checkMissions() {
+  // refresh basic progress values
   dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v => v > 0).length;
   dayProgress.trades = dayProgress.trades || 0;
   dayProgress.typesBought = dayProgress.typesBought || [];
@@ -683,22 +795,8 @@ function checkMissions() {
   (state.missions || []).forEach(m => {
     if (m.done) return;
 
-    if (m.id === 'hold_10') {
-      const threshold = 10;
-      const anyHeld = Object.keys(holdCounters).some(sym => (holdCounters[sym] || 0) >= threshold);
-      if (anyHeld) { m.done = true; changed = true; }
-      return;
-    }
-
     try {
-      if (typeof m.check === 'function') {
-        if (m.check(dayProgress)) { m.done = true; changed = true; }
-      } else {
-        if (m.id === 'buy_3' && dayProgress.buyDifferent >= 3) { m.done = true; changed = true; }
-        if (m.id === 'profit_500' && (dayProgress.dayProfit || 0) >= 500) { m.done = true; changed = true; }
-        if (m.id === 'trade_10' && (dayProgress.trades || 0) >= 10) { m.done = true; changed = true; }
-        if (m.id === 'buy_food' && (dayProgress.typesBought || []).includes('Food')) { m.done = true; changed = true; }
-      }
+      if (isMissionComplete(m)) { m.done = true; changed = true; }
     } catch (e) {
       console.warn('mission check error', e);
     }
