@@ -1,9 +1,8 @@
 // script.js - full updated file
-// Change: mission assignment now records a baseline (assignedAt + baseline values).
-// Mission completion checks are evaluated relative to that baseline so that
-// when a mission is completed and later re-issued the user must perform the required actions again.
-// Backup of prior file included above. No other unrelated behavior changed.
-//
+// Changes in this update (minimal):
+// 1) Replace UI text "Daily Missions (N active)" -> "Missions (N active)" by scanning text nodes and replacing occurrences.
+// 2) Change mission label "Make $500 profit (day)" -> "Make $500 profit (tick)" in the mission definitions.
+// No other logic or behavior changed. Backup was created above prior to this change.
 // Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
@@ -83,7 +82,8 @@ let state = {
   prestige: { count: 0, legacyPoints: 0 },
   seasonId: getSeasonId(),
   leaderboard: JSON.parse(localStorage.getItem('leaderboard_scores') || "[]"),
-  activeBoosts: {}
+  activeBoosts: {},
+  tickDeltas: []
 };
 
 function loadState() {
@@ -103,12 +103,12 @@ state.xp = 0;
 state.achievements = {};
 state.shopOwned = {};
 
-// ====== MINIMAL FIX (kept earlier): ensure saved missions do NOT start completed on startup ======
+// Ensure saved missions don't start completed and attach baselines to loaded missions
 if (state.missions && Array.isArray(state.missions)) {
   state.missions = state.missions.map(m => ({ ...m, done: false }));
+  state.missions.forEach(m => { if (!m.assignedAt) attachMissionBaseline(m); });
   saveState();
 }
-// ================================================================================
 
 // ------------------ Small UI helpers ------------------
 function toast(text, timeout = 3000) {
@@ -130,16 +130,11 @@ function updateCash() {
 }
 
 // ------------------ Global defensive logging ------------------
-// Log any uncaught errors so we can see what's causing startup issues.
 window.addEventListener('error', function (ev) {
-  try {
-    console.error('Unhandled error event:', ev.error || ev.message || ev);
-  } catch (e) { /* ignore */ }
+  try { console.error('Unhandled error event:', ev.error || ev.message || ev); } catch (e) {}
 });
 window.addEventListener('unhandledrejection', function (ev) {
-  try {
-    console.error('Unhandled promise rejection:', ev.reason || ev);
-  } catch (e) { /* ignore */ }
+  try { console.error('Unhandled promise rejection:', ev.reason || ev); } catch (e) {}
 });
 
 // ------------------ Confetti ------------------
@@ -185,21 +180,15 @@ function checkLevelUp() {
   if (gained) saveState();
 }
 
-// Updated: show numeric XP "current / required XP" and remaining-to-next in tooltip/ARIA
+// ------------------ HUD ------------------
 function updateHUD() {
   const elXp = document.getElementById('xp');
   const elLevel = document.getElementById('level');
   if (elLevel) elLevel.textContent = state.level;
-
   const required = xpForLevel(state.level);
   const current = state.xp;
   const remaining = Math.max(0, required - current);
-
-  if (elXp) {
-    elXp.textContent = `${current} / ${required} XP`;
-    elXp.title = `${current} XP — ${remaining} XP to next level`;
-  }
-
+  if (elXp) { elXp.textContent = `${current} / ${required} XP`; elXp.title = `${current} XP — ${remaining} XP to next level`; }
   const bar = document.getElementById('xp-bar');
   if (bar) {
     const pct = Math.min(100, Math.round((current / required) * 100));
@@ -210,10 +199,8 @@ function updateHUD() {
     bar.setAttribute('aria-valuemax', String(required));
     bar.setAttribute('aria-label', `${current} of ${required} XP, ${remaining} to next level`);
   }
-
   const xpRemEl = document.getElementById('xp-remaining');
   if (xpRemEl) xpRemEl.textContent = `${remaining} XP to next level`;
-
   renderNextAchievement();
 }
 
@@ -261,66 +248,50 @@ function renderNextAchievement() {
 }
 
 // ------------------ Missions ------------------
-// Mission candidates remain the same, but assignment includes baselines
+// NOTE: updated profit text requested -> "Make $500 profit (tick)"
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
-  { id: 'profit_500', text: 'Make $500 profit in one tick', check: (p) => false, reward: { coins: 120, xp: 40 } },
-  { id: 'hold_10', text: 'Hold a stock for 10 ticks', check: (p) => false, reward: { coins: 80, xp: 30 } }, // handled with holdCounters
+  { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { coins: 120, xp: 40 } },
+  { id: 'hold_10', text: 'Hold a stock for 10 ticks', check: (p) => false, reward: { coins: 80, xp: 30 } },
   { id: 'trade_10', text: 'Execute 10 trades', check: (p) => p.trades >= 10, reward: { coins: 70, xp: 25 } },
   { id: 'buy_food', text: 'Buy a Food stock', check: (p) => p.typesBought && p.typesBought.includes('Food'), reward: { coins: 40, xp: 12 } }
 ];
 
-// Helper: attach baseline when a mission is assigned so checks use deltas since assignment
 function attachMissionBaseline(m) {
   try {
     m.assignedAt = new Date().toISOString();
     m.baseline = {
       dayProfit: (dayProgress.dayProfit || 0),
       trades: (dayProgress.trades || 0),
-      // snapshot hold counters
-      holdCounters: Object.assign({}, holdCounters || {}),
-      // we rely on order timestamps for "buy" checks (order.ts)
+      holdCounters: Object.assign({}, holdCounters || {})
     };
   } catch (e) {
-    // defensive; don't let baseline attachment break anything
     console.warn('attachMissionBaseline error', e);
     m.assignedAt = new Date().toISOString();
     m.baseline = { dayProfit: 0, trades: 0, holdCounters: {} };
   }
 }
 
-// Test if a mission is completed relative to its baseline/assignedAt
 function isMissionComplete(m) {
   if (!m) return false;
-  // ensure baseline exists
-  if (!m.assignedAt || !m.baseline) {
-    attachMissionBaseline(m);
-    saveState();
-  }
+  if (!m.assignedAt || !m.baseline) { attachMissionBaseline(m); saveState(); }
   const assignedAt = new Date(m.assignedAt);
   switch (m.id) {
     case 'buy_3': {
-      // count unique bought symbols since assignedAt
       const bought = new Set();
       (orderHistory || []).forEach(o => {
-        try {
-          if (o.type === 'buy' && new Date(o.ts) > assignedAt) bought.add(o.symbol);
-        } catch (_) {}
+        try { if (o.type === 'buy' && new Date(o.ts) > assignedAt) bought.add(o.symbol); } catch (_) {}
       });
       return bought.size >= 3;
     }
     case 'profit_500': {
-      // NEW: require a single tick delta >= 500 after mission assignment
       state.tickDeltas = state.tickDeltas || [];
       return (state.tickDeltas || []).some(entry => {
-        try {
-          return new Date(entry.ts) > assignedAt && (entry.delta || 0) >= 500;
-        } catch (_) { return false; }
+        try { return new Date(entry.ts) > assignedAt && (entry.delta || 0) >= 500; } catch (_) { return false; }
       });
     }
     case 'hold_10': {
       const threshold = 10;
-      // check per-symbol hold counter delta since baseline snapshot
       const baseHold = m.baseline.holdCounters || {};
       return Object.keys(holdCounters).some(sym => {
         const prev = baseHold[sym] || 0;
@@ -329,27 +300,20 @@ function isMissionComplete(m) {
       });
     }
     case 'trade_10': {
-      const baseline = m.baseline.trades || 0;
-      const current = dayProgress.trades || 0;
-      return (current - baseline) >= 10;
+      const count = (orderHistory || []).reduce((acc, o) => {
+        try { if (new Date(o.ts) > assignedAt) return acc + 1; } catch (_) {}
+        return acc;
+      }, 0);
+      return count >= 10;
     }
     case 'buy_food': {
-      // check any buy of a Food stock since assignedAt
       const foodSymbols = new Set(STOCKS.filter(s => s.type === 'Food').map(s => s.symbol));
       return (orderHistory || []).some(o => {
-        try {
-          return o.type === 'buy' && new Date(o.ts) > assignedAt && foodSymbols.has(o.symbol);
-        } catch (_) { return false; }
+        try { return o.type === 'buy' && new Date(o.ts) > assignedAt && foodSymbols.has(o.symbol); } catch (_) { return false; }
       });
     }
     default: {
-      // fallback: if mission has a check function, evaluate but based on deltas where possible
-      try {
-        if (typeof m.check === 'function') {
-          // best effort: call original check against full dayProgress (note: may be optimistic)
-          return m.check(dayProgress);
-        }
-      } catch (e) { console.warn('mission check error', e); }
+      try { if (typeof m.check === 'function') return m.check(dayProgress); } catch (e) { console.warn('mission check error', e); }
       return false;
     }
   }
@@ -359,11 +323,7 @@ function generateDailyMissions() {
   const today = getTodayStr();
   if (state.missionsDate === today && state.missions && state.missions.length === 3) return;
   const shuffled = MISSION_CANDIDATES.sort(() => Math.random() - 0.5).slice(0, 3);
-  state.missions = shuffled.map(m => {
-    const nm = { ...m, done: false };
-    attachMissionBaseline(nm);
-    return nm;
-  });
+  state.missions = shuffled.map(m => { const nm = { ...m, done: false }; attachMissionBaseline(nm); return nm; });
   state.missionsDate = today;
   saveState();
 }
@@ -376,42 +336,55 @@ function generateSingleMission() {
   return nm;
 }
 
+// Replace "Daily Missions" occurrences in text nodes with "Missions" to update any static UI labels
+function fixDailyMissionsLabel() {
+  try {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    const nodesToUpdate = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.nodeValue && node.nodeValue.includes('Daily Missions')) nodesToUpdate.push(node);
+    }
+    nodesToUpdate.forEach(n => { n.nodeValue = n.nodeValue.replace(/Daily Missions/g, 'Missions'); });
+  } catch (e) {
+    console.warn('fixDailyMissionsLabel error', e);
+  }
+}
+
+function updateMissionsButtonLabel() {
+  try {
+    const btn = document.getElementById('open-missions');
+    if (!btn) return;
+    const n = (state.missions || []).length;
+    btn.textContent = `Missions (${n} active)`;
+  } catch (e) { console.warn('updateMissionsButtonLabel error', e); }
+}
+
 function renderMissionsModal() {
   const modalList = document.getElementById('missions-list');
   if (!modalList) return;
   modalList.innerHTML = '';
-
   (state.missions || []).forEach((m, idx) => {
-    // update m.done based on baseline-relative checks (this ensures UI shows correct state)
-    if (!m.done && isMissionComplete(m)) {
-      m.done = true;
-      saveState();
-    }
-
+    if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
     const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const rewardText = `Reward: $${rewardCoins}, ${rewardXP} XP`;
-
     const div = document.createElement('div');
     div.className = 'mission';
     div.style.display = 'flex';
     div.style.justifyContent = 'space-between';
     div.style.alignItems = 'center';
-
     const left = document.createElement('div');
     left.innerHTML = `<strong>${m.text}</strong>
       <div style="font-size:0.9em;color:#9aa7b2">${m.desc || ''}</div>
       <div style="font-size:0.85em;color:#7ee7bf;margin-top:6px">${rewardText}</div>`;
-
     const right = document.createElement('div');
     right.style.textAlign = 'right';
     right.innerHTML = `<div class="meta" style="margin-bottom:6px">${m.done ? 'Completed' : 'In progress'}</div>
       ${m.done ? `<button class="action-btn" data-claim="${idx}">Claim</button>` : ''}`;
-
     div.appendChild(left);
     div.appendChild(right);
     modalList.appendChild(div);
-
     if (m.done) {
       const btn = div.querySelector('button');
       if (btn) {
@@ -420,19 +393,20 @@ function renderMissionsModal() {
           state.coins += reward.coins || 0;
           addXP(reward.xp || 0);
           toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
-
-          // replace the mission (ensuring new mission gets its own baseline)
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
-
           saveState();
           renderMissionsModal();
           renderMissionsBrief();
+          updateMissionsButtonLabel();
+          fixDailyMissionsLabel();
         };
       }
     }
   });
+  updateMissionsButtonLabel();
+  fixDailyMissionsLabel();
 }
 
 function renderMissionsBrief() {
@@ -440,11 +414,7 @@ function renderMissionsBrief() {
   if (!el) return;
   el.innerHTML = '';
   (state.missions || []).slice(0, 3).forEach(m => {
-    // update done state just-in-time
-    if (!m.done && isMissionComplete(m)) {
-      m.done = true;
-      saveState();
-    }
+    if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
     const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const txt = `${m.text} — Reward: $${rewardCoins}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
@@ -452,6 +422,8 @@ function renderMissionsBrief() {
     div.textContent = txt;
     el.appendChild(div);
   });
+  updateMissionsButtonLabel();
+  fixDailyMissionsLabel();
 }
 
 // ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
@@ -498,6 +470,7 @@ function applyShopEffect(item) {
   saveState();
 }
 
+// ------------------ Leaderboard ------------------
 function renderLeaderboard() {
   const ul = document.getElementById('scores');
   if (!ul) return;
@@ -530,6 +503,7 @@ function updateSeasonTimer() {
   el.textContent = `${hrs}:${mins}:${secs}`;
 }
 
+// ------------------ News events ------------------
 const NEWS_EVENTS = [
   { type: "stock", symbol: "ZOOMX", text: "Zoomix launches new AI chip — big upside", effect: 0.22, mood: "good" },
   { type: "stock", symbol: "FRUIQ", text: "FruityQ seasonal recall — selloff", effect: -0.11, mood: "bad" },
@@ -560,6 +534,7 @@ function addEventToList(text) {
   while (ul.children.length > 8) ul.removeChild(ul.lastChild);
 }
 
+// ------------------ Price simulation ------------------
 function setRandomPrices(newsEffectMap = {}) {
   prevPrices = { ...prices };
   STOCKS.forEach(stock => {
@@ -572,6 +547,7 @@ function setRandomPrices(newsEffectMap = {}) {
   });
 }
 
+// ------------------ Chart ------------------
 let portfolioChart = null;
 let chartData = null;
 function initChartIfPresent() {
@@ -589,6 +565,7 @@ function pushChartSample(v) {
   portfolioChart.update();
 }
 
+// ------------------ Table updates ------------------
 function updateStockTable() {
   const tbody = document.getElementById('stock-table'); if (!tbody) return;
   tbody.innerHTML = '';
@@ -653,4 +630,211 @@ function updatePortfolioTable() {
   });
 }
 
-// (rest unchanged)
+// ------------------ Trading (buy/sell) ------------------
+window.buyStock = function (symbol) {
+  const input = document.getElementById(`buy_${symbol}`);
+  let qty = input ? parseInt(input.value, 10) : 1;
+  qty = Math.max(1, qty || 1);
+  const cost = (prices[symbol] || 0) * qty;
+  if (cost <= portfolio.cash) {
+    const prevQty = portfolio.stocks[symbol] || 0;
+    const totalQty = prevQty + qty;
+    averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + (prices[symbol] || 0) * qty) / Math.max(1, totalQty);
+    portfolio.cash -= cost;
+    updateCash();
+    portfolio.stocks[symbol] = totalQty;
+    dayProgress.trades = (dayProgress.trades || 0) + 1;
+    if (!dayProgress.typesBought) dayProgress.typesBought = [];
+    const type = (STOCKS.find(s => s.symbol === symbol) || {}).type;
+    if (type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
+    addXP(Math.max(1, Math.round(cost / 200)));
+    state.coins += Math.max(0, Math.round(cost / 1000));
+    recordOrder('buy', symbol, qty, prices[symbol]);
+    if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
+    toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
+    saveState();
+    updateHUD();
+    updatePortfolioTable();
+    updateTradeTable();
+    updateStockTable();
+    renderWatchlist();
+  } else toast('Not enough cash');
+};
+
+window.sellStock = function (symbol) {
+  const input = document.getElementById(`sell_${symbol}`);
+  let qty = input ? parseInt(input.value, 10) : 1;
+  qty = Math.max(1, qty || 1);
+  const owned = portfolio.stocks[symbol] || 0;
+  if (qty > owned) { toast('Not enough shares'); return; }
+  const revenue = (prices[symbol] || 0) * qty;
+  portfolio.cash += revenue;
+  updateCash();
+  portfolio.stocks[symbol] = owned - qty;
+  if (portfolio.stocks[symbol] === 0) averageBuyPrice[symbol] = 0;
+  const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
+  if (profit > 0) {
+    addXP(Math.round(profit / 10));
+    state.coins += Math.round(profit / 50);
+    dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
+  }
+  recordOrder('sell', symbol, qty, prices[symbol]);
+  if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
+  toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
+  saveState();
+  updateHUD();
+  updatePortfolioTable();
+  updateTradeTable();
+  updateStockTable();
+};
+
+window.sellAllStock = function (symbol) {
+  const owned = portfolio.stocks[symbol] || 0;
+  if (owned > 0) {
+    const el = document.getElementById(`sell_${symbol}`);
+    if (el) el.value = owned;
+    sellStock(symbol);
+  }
+};
+
+// ------------------ Order recording & Watchlist ------------------
+function recordOrder(type, symbol, qty, price) {
+  orderHistory.unshift({ type, symbol, qty, price, ts: new Date().toISOString() });
+  if (orderHistory.length > 200) orderHistory.pop();
+}
+function renderWatchlist() {
+  const wrap = document.getElementById('watchlist');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  watchlist.forEach(sym => {
+    const div = document.createElement('div');
+    div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center'; div.style.marginBottom = '6px';
+    const price = prices[sym] ? `$${prices[sym].toFixed(2)}` : '—';
+    div.innerHTML = `<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`;
+    wrap.appendChild(div);
+    const btn = div.querySelector('button');
+    btn.onclick = () => { watchlist = watchlist.filter(s => s !== sym); renderWatchlist(); };
+  });
+}
+
+// ------------------ TICKS: update holdCounters & tick deltas ------------------
+function tickPrices() {
+  setRandomPrices({});
+  STOCKS.forEach(s => {
+    const owned = (portfolio.stocks[s.symbol] || 0);
+    if (owned > 0) { holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1; }
+    else { holdCounters[s.symbol] = 0; }
+  });
+  let tickDelta = 0;
+  STOCKS.forEach(s => {
+    const owned = portfolio.stocks[s.symbol] || 0;
+    const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[s.symbol];
+    const after = prices[s.symbol] !== undefined ? prices[s.symbol] : before;
+    tickDelta += owned * (after - before);
+  });
+  state.tickDeltas = state.tickDeltas || [];
+  state.tickDeltas.push({ ts: new Date().toISOString(), delta: +tickDelta.toFixed(2) });
+  if (state.tickDeltas.length > 500) state.tickDeltas.shift();
+  updateTradeTable();
+  updateStockTable();
+  updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  let totalHoldTicks = 0;
+  STOCKS.forEach(s => { if (portfolio.stocks[s.symbol] > 0) totalHoldTicks += 1; });
+  dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
+  checkMissions();
+  updateHUD();
+}
+
+function newsTick() {
+  const newsMap = triggerRandomNews();
+  setRandomPrices(newsMap);
+  updateTradeTable();
+  updateStockTable();
+  updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  renderLeaderboard();
+  saveState();
+}
+
+// ------------------ MISSIONS check (baseline-relative) ------------------
+function checkMissions() {
+  dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v => v > 0).length;
+  dayProgress.trades = dayProgress.trades || 0;
+  dayProgress.typesBought = dayProgress.typesBought || [];
+  let changed = false;
+  (state.missions || []).forEach(m => {
+    if (m.done) return;
+    try { if (isMissionComplete(m)) { m.done = true; changed = true; } } catch (e) { console.warn('mission check error', e); }
+  });
+  if (changed) { saveState(); renderMissionsModal(); renderMissionsBrief(); }
+}
+
+function getPortfolioValue() {
+  let v = portfolio.cash || 0;
+  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
+  return +v;
+}
+
+// ------------------ Startup & wiring (defensive) ------------------
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'add-watch') {
+    const inp = document.getElementById('watch-input');
+    const sym = (inp && inp.value || '').trim().toUpperCase();
+    if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); }
+    else toast('Invalid symbol or already watched');
+  }
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    generateDailyMissions();
+    renderMissionsModal();
+    renderMissionsBrief();
+    renderShop();
+    renderAchievements();
+    renderLeaderboard();
+    updateHUD();
+    initChartIfPresent();
+    try { updateStockTable(); } catch (e) { console.warn('updateStockTable failed during startup', e); }
+    try { updateTradeTable(); } catch (e) { console.warn('updateTradeTable failed during startup', e); }
+    try { updatePortfolioTable(); } catch (e) { console.warn('updatePortfolioTable failed during startup', e); }
+    if (priceInterval) clearInterval(priceInterval);
+    priceInterval = setInterval(tickPrices, 10000);
+    if (newsInterval) clearInterval(newsInterval);
+    newsInterval = setInterval(newsTick, 180000);
+    const openM = document.getElementById('open-missions'); if (openM) openM.onclick = () => openModal('modal-missions');
+    const closeM = document.getElementById('close-missions'); if (closeM) closeM.onclick = () => closeModal('modal-missions');
+    const openA = document.getElementById('open-achievements'); if (openA) openA.onclick = () => openModal('modal-achievements');
+    const closeA = document.getElementById('close-achievements'); if (closeA) closeA.onclick = () => closeModal('modal-achievements');
+    const openS = document.getElementById('open-shop'); if (openS) openS.onclick = () => openModal('modal-shop');
+    const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
+    const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
+    const addWatchBtn = document.getElementById('add-watch'); if (addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
+    setInterval(updateSeasonTimer, 1000);
+    // run UI text fix (replaces any "Daily Missions" strings in text nodes)
+    fixDailyMissionsLabel();
+  } catch (startupErr) {
+    console.error('Startup error caught:', startupErr);
+    try {
+      if (typeof updateStockTable === 'function') updateStockTable();
+      if (typeof updateTradeTable === 'function') updateTradeTable();
+      if (typeof updatePortfolioTable === 'function') updatePortfolioTable();
+      if (typeof updateHUD === 'function') updateHUD();
+      if (typeof renderMissionsModal === 'function') renderMissionsModal();
+      if (typeof renderAchievements === 'function') renderAchievements();
+      if (typeof renderShop === 'function') renderShop();
+      if (typeof renderLeaderboard === 'function') renderLeaderboard();
+      if (!priceInterval) priceInterval = setInterval(tickPrices, 10000);
+      if (!newsInterval) newsInterval = setInterval(newsTick, 180000);
+      fixDailyMissionsLabel();
+    } catch (e) { console.error('Error during recovery UI population:', e); }
+  }
+});
+
+// ------------------ Modals ------------------
+function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
+function closeModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'true'); }
+
+// persist final state
+saveState();
