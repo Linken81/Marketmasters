@@ -1,4 +1,4 @@
-// Fully updated script.js
+// Fully updated script.js (includes updateCash to refresh header cash display)
 // - Single consolidated file with all requested features.
 // - Declared globals once: priceInterval, newsInterval, watchlist, orderHistory, dayProgress.
 // - getSeasonId defined before state so no ReferenceError.
@@ -123,6 +123,13 @@ function formatCurrency(v) {
   return `$${(+v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// NEW: update the cash display in the header
+function updateCash() {
+  const el = document.getElementById('cash');
+  if (!el) return;
+  el.textContent = formatCurrency(portfolio.cash || 0);
+}
+
 // ------------------ Confetti ------------------
 function launchConfetti(amount = 40) {
   const colors = ['#FF3CAC', '#784BA0', '#21e6c1', '#00fc87', '#FFD166', '#FF6B6B'];
@@ -175,6 +182,10 @@ function updateHUD() {
     const pct = Math.min(100, Math.round((state.xp / xpForLevel(state.level)) * 100));
     bar.style.width = pct + '%';
   }
+
+  // ensure header cash is updated whenever HUD updates
+  updateCash();
+
   renderNextAchievement();
 }
 
