@@ -1,9 +1,19 @@
-// Cleaned, consolidated script.js
+// script.js (fixed: getSeasonId moved before use; globals declared once; defensive guards)
 // - Declares priceInterval, newsInterval, dayProgress, watchlist, orderHistory once up-front.
-// - Ensures helper functions (renderWatchlist, getPortfolioValue, etc.) are defined before they're used.
-// - Defensive DOM guards everywhere so missing elements don't abort execution.
-// - Keeps features: market ticks (10s), news (3min), chart sampling, XP/progress, confetti, achievements reset on refresh,
-//   missions (3 active with replacement), shop reset on refresh, watchlist, order history.
+// - getSeasonId is defined before state is created to avoid ReferenceError.
+// - Defensive DOM guards so missing elements don't abort execution.
+// - Keeps features: market ticks (10s), news (3min), chart sampling, XP/progress, confetti,
+//   achievements reset on refresh, missions (3 active with replacement), shop reset on refresh, watchlist, order history.
+
+// ------------------ Utility: date / season helpers (must be before state) ------------------
+function getSeasonId(){
+  const d = new Date();
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d - onejan) / (24 * 60 * 60 * 1000));
+  const week = Math.ceil((days + onejan.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${week}`;
+}
+function getTodayStr(){ return new Date().toISOString().slice(0,10); }
 
 // ------------------ Top-level declarations (single) ------------------
 let priceInterval = null;
@@ -361,37 +371,18 @@ function addEventToList(text){
 // ------------------ Price simulation ------------------
 function setRandomPrices(newsEffectMap = {}){
   prevPrices = {...prices};
-  STOCKS.forEach(stock=>{
-    let old = prices[stock.symbol] || randomPrice();
-    let changePercent = (Math.random()*0.07) - 0.035;
-    if(Math.random() < 0.10) changePercent += (Math.random()*0.06 - 0.03);
-    if(newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol];
-    changePercent = Math.max(-0.5, Math.min(0.5, changePercent));
-    prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2));
-  });
+  STOCKS.forEach(stock=>{ let old = prices[stock.symbol] || randomPrice(); let changePercent = (Math.random()*0.07) - 0.035; if(Math.random() < 0.10) changePercent += (Math.random()*0.06 - 0.03); if(newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol]; changePercent = Math.max(-0.5, Math.min(0.5, changePercent)); prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2)); });
 }
 
 // ------------------ Chart ------------------
 let portfolioChart = null;
 let chartData = null;
-function initChartIfPresent(){
-  const canvas = document.getElementById('portfolioChart'); if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  chartData = { labels:[new Date().toLocaleTimeString()], datasets:[{ label:'Portfolio Value', data:[getPortfolioValue()], borderColor:'#00FC87', backgroundColor:'rgba(14,210,247,0.10)', fill:true, tension:0.28 }] };
-  portfolioChart = new Chart(ctx, { type:'line', data:chartData, options:{ animation:{duration:300}, scales:{ x:{ display:false }, y:{ display:false }}, plugins:{ legend:{display:false}} } });
-}
-function pushChartSample(value){
-  if(!portfolioChart) return;
-  chartData.labels.push(new Date().toLocaleTimeString());
-  chartData.datasets[0].data.push(+value.toFixed(2));
-  const maxSamples = 300;
-  while(chartData.labels.length > maxSamples){ chartData.labels.shift(); chartData.datasets[0].data.shift(); }
-  portfolioChart.update();
-}
+function initChartIfPresent(){ const canvas = document.getElementById('portfolioChart'); if(!canvas) return; const ctx = canvas.getContext('2d'); chartData = { labels:[new Date().toLocaleTimeString()], datasets:[{ label:'Portfolio Value', data:[getPortfolioValue()], borderColor:'#00FC87', backgroundColor:'rgba(14,210,247,0.10)', fill:true, tension:0.28 }] }; portfolioChart = new Chart(ctx, { type:'line', data:chartData, options:{ animation:{duration:300}, scales:{ x:{ display:false }, y:{ display:false }}, plugins:{ legend:{display:false}} } }); }
+function pushChartSample(v){ if(!portfolioChart) return; chartData.labels.push(new Date().toLocaleTimeString()); chartData.datasets[0].data.push(+v.toFixed(2)); while(chartData.labels.length > 300){ chartData.labels.shift(); chartData.datasets[0].data.shift(); } portfolioChart.update(); }
 
 // ------------------ Table updates, trading, watchlist ------------------
 function updateStockTable(){ const tbody = document.getElementById('stock-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0; const change = +(price - (prevPrices[stock.symbol] || price)); const changeStr = (change>0?'+':'') + change.toFixed(2); const className = change>0 ? 'price-up' : change<0 ? 'price-down' : 'price-same'; const tr = document.createElement('tr'); tr.innerHTML = `<td>${stock.symbol}</td><td>${stock.type}</td><td>$${price.toFixed(2)}</td><td class="${className}">${changeStr}</td><td></td>`; tbody.appendChild(tr); }); }
-function updateTradeTable(){ const tbody = document.getElementById('trade-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0; const change = +(price - (prevPrices[stock.symbol] || price)); const changeStr = (change>0?'+':'') + change.toFixed(2); const className = change>0 ? 'price-up' : change<0 ? 'price-down' : 'price-same'; const rowId = `buy_${stock.symbol}`, costId = `buy_cost_${stock.symbol}`; const tr = document.createElement('tr'); tr.innerHTML = `<td>${stock.symbol}</td><td>${stock.type}</td><td>$${price.toFixed(2)}</td><td class="${className}">${changeStr}</td><td><input type="number" min="1" value="1" class="buy-input" id="${rowId}"><button onclick="buyStock('${stock.symbol}')" class="action-btn">Buy</button><span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span></td>`; tbody.appendChild(tr); setTimeout(()=>{ const qtyInput = document.getElementById(rowId), costSpan = document.getElementById(costId); if(qtyInput && costSpan){ function updateCost(){ let qty = parseInt(qtyInput.value)||0; costSpan.textContent = `$${(qty*price).toFixed(2)}`; } qtyInput.addEventListener('input', updateCost); updateCost(); } },0); }); }
+function updateTradeTable(){ const tbody = document.getElementById('trade-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0; const change = +(price - (prevPrices[stock.symbol] || price)); const changeStr = (change>0?'+':'') + change.toFixed(2); const className = change>0 ? 'price-up' : change<0 ? 'price-down' : 'price-same'; const rowId = `buy_${stock.symbol}`, costId = `buy_cost_${stock.symbol}`; const tr = document.createElement('tr'); tr.innerHTML = `<td>${stock.symbol}</td><td>${stock.type}</td><td>$${price.toFixed(2)}</td><td class="${className}">${changeStr}</td><td><input type="number" min="1" value="1" class="buy-input" id="${rowId}"><button onclick="buyStock('${stock.symbol}')" class="action-btn">Buy</button><span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span></td>`; tbody.appendChild(tr); setTimeout(()=>{ const qtyInput = document.getElementById(rowId), costSpan = document.getElementById(costId); if(qtyInput && costSpan){ function updateCost(){ let q = parseInt(qtyInput.value)||0; costSpan.textContent = `$${(q*price).toFixed(2)}`; } qtyInput.addEventListener('input', updateCost); updateCost(); } },0); }); }
 function updatePortfolioTable(){ const tbody = document.getElementById('portfolio-table'); if(!tbody) return; tbody.innerHTML=''; STOCKS.forEach(stock=>{ const owned = portfolio.stocks[stock.symbol] || 0; if(owned>0){ const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0; const total = owned * price; const profitLoss = (price - averageBuyPrice[stock.symbol]) * owned; const changeStr = (profitLoss>0?'+':'') + profitLoss.toFixed(2); const className = profitLoss>0 ? 'price-up' : profitLoss<0 ? 'price-down' : 'price-same'; const tr = document.createElement('tr'); tr.innerHTML = `<td>${stock.symbol}</td><td>${owned}</td><td>$${price.toFixed(2)}</td><td>$${total.toFixed(2)}</td><td class="${className}">${changeStr}</td><td style="white-space:nowrap;min-width:200px;"><input type="number" min="1" value="1" id="sell_${stock.symbol}" style="width:40px;"><button class="sell-btn action-btn" onclick="sellStock('${stock.symbol}')">Sell</button><button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button></td>`; tbody.appendChild(tr); } }); }
 window.buyStock = function(symbol){ const input = document.getElementById(`buy_${symbol}`); let qty = input ? parseInt(input.value) : 1; qty = Math.max(1, qty||1); const cost = (prices[symbol]||0) * qty; if(cost <= portfolio.cash){ const prevQty = portfolio.stocks[symbol] || 0; const totalQty = prevQty + qty; averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + (prices[symbol]||0) * qty) / Math.max(1,totalQty); portfolio.cash -= cost; portfolio.stocks[symbol] = totalQty; dayProgress.trades = (dayProgress.trades||0)+1; if(!dayProgress.typesBought) dayProgress.typesBought = []; const type = (STOCKS.find(s=>s.symbol===symbol) || {}).type; if(type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type); addXP(Math.max(1, Math.round(cost/200))); state.coins += Math.max(0, Math.round(cost/1000)); recordOrder('buy', symbol, qty, prices[symbol]); toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`); saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable(); renderWatchlist(); } else toast('Not enough cash'); };
 window.sellStock = function(symbol){ const input = document.getElementById(`sell_${symbol}`); let qty = input ? parseInt(input.value) : 1; qty = Math.max(1, qty||1); const owned = portfolio.stocks[symbol] || 0; if(qty > owned){ toast('Not enough shares'); return; } const revenue = (prices[symbol]||0) * qty; portfolio.cash += revenue; portfolio.stocks[symbol] = owned - qty; if(portfolio.stocks[symbol]===0) averageBuyPrice[symbol] = 0; const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty; if(profit>0){ addXP(Math.round(profit/10)); state.coins += Math.round(profit/50); dayProgress.dayProfit = (dayProgress.dayProfit||0) + profit; } recordOrder('sell', symbol, qty, prices[symbol]); toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`); saveState(); updateHUD(); updatePortfolioTable(); updateTradeTable(); updateStockTable(); };
@@ -406,10 +397,10 @@ function tickPrices(){ setRandomPrices({}); updateStockTable(); updateTradeTable
 function newsTick(){ const newsMap = triggerRandomNews(); setRandomPrices(newsMap); updateTradeTable(); updateStockTable(); updatePortfolioTable(); pushChartSample(getPortfolioValue()); renderLeaderboard(); saveState(); }
 
 // ------------------ Missions checking ------------------
-function checkMissions(){ dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length; dayProgress.trades = dayProgress.trades||0; dayProgress.typesBought = dayProgress.typesBought||[]; (state.missions||[]).forEach(m=>{ if(m.done) return; try{ if(typeof m.check === 'function' && m.check(dayProgress)) m.done = true; else { if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true; if(m.id==='profit_500' && (dayProgress.dayProfit||0)>=500) m.done=true; if(m.id==='hold_10' && (dayProgress.holdTicks||0)>=10) m.done=true; if(m.id==='trade_10' && (dayProgress.trades||0)>=10) m.done=true; if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true; } } catch(e){ console.warn('mission check error', e); } }); renderMissionsModal(); }
+function checkMissions(){ dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length; dayProgress.trades = dayProgress.trades||0; dayProgress.typesBought = dayProgress.typesBought||[]; (state.missions||[]).forEach(m=>{ if(m.done) return; try{ if(typeof m.check === 'function' && m.check(dayProgress)) m.done = true; else { if(m.id==='buy_3' && dayProgress.buyDifferent>=3) m.done=true; if(m.id==='profit_500' && (dayProgress.dayProfit||0)>=500) m.done=true; if(m.id==='hold_10' && (dayProgress.holdTicks||0)>=10) m.done=true; if(m.id==='trade_10' && (dayProgress.trades||0)>=10) m.done=true; if(m.id==='buy_food' && (dayProgress.typesBought||[]).includes('Food')) m.done=true; } }catch(e){ console.warn('mission check error', e); } }); renderMissionsModal(); }
 
 // ------------------ Price helpers & utilities ------------------
-function setRandomPrices(newsEffectMap = {}){ prevPrices = {...prices}; STOCKS.forEach(stock=>{ let old = prices[stock.symbol] || randomPrice(); let changePercent = (Math.random()*0.07) - 0.035; if(Math.random()<0.10) changePercent += (Math.random()*0.06 - 0.03); if(newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol]; changePercent = Math.max(-0.5, Math.min(0.5, changePercent)); prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2)); }); }
+function setRandomPrices(newsEffectMap = {}){ prevPrices = {...prices}; STOCKS.forEach(stock=>{ let old = prices[stock.symbol] || randomPrice(); let changePercent = (Math.random()*0.07) - 0.035; if(Math.random() < 0.10) changePercent += (Math.random()*0.06 - 0.03); if(newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol]; changePercent = Math.max(-0.5, Math.min(0.5, changePercent)); prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2)); }); }
 function getPortfolioValue(){ let v = portfolio.cash || 0; STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; }); return +v; }
 
 // ------------------ Chart ------------------
@@ -419,7 +410,7 @@ function initChartIfPresent(){ const canvas = document.getElementById('portfolio
 function pushChartSample(v){ if(!portfolioChartInstance) return; portfolioChartData.labels.push(new Date().toLocaleTimeString()); portfolioChartData.datasets[0].data.push(+v.toFixed(2)); while(portfolioChartData.labels.length > 300){ portfolioChartData.labels.shift(); portfolioChartData.datasets[0].data.shift(); } portfolioChartInstance.update(); }
 
 // ------------------ Startup & wiring ------------------
-document.addEventListener('click', (e)=>{ if(e.target && e.target.id === 'add-watch'){ const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); } });
+document.addEventListener('click', (e)=>{ if(e.target && e.target.id === 'add-watch'){ const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`);} else toast('Invalid symbol or already watched'); } });
 
 window.addEventListener('DOMContentLoaded', ()=>{
   generateDailyMissions(); renderMissionsModal(); renderMissionsBrief(); renderShop(); renderAchievements(); renderLeaderboard(); updateHUD();
@@ -427,12 +418,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
   try{ updateStockTable(); }catch(e){ console.warn(e); }
   try{ updateTradeTable(); }catch(e){ console.warn(e); }
   try{ updatePortfolioTable(); }catch(e){ console.warn(e); }
-
   if(priceInterval) clearInterval(priceInterval);
   priceInterval = setInterval(tickPrices, 10000);
   if(newsInterval) clearInterval(newsInterval);
   newsInterval = setInterval(newsTick, 180000);
-
   const openM = document.getElementById('open-missions'); if(openM) openM.onclick = ()=> openModal('modal-missions');
   const closeM = document.getElementById('close-missions'); if(closeM) closeM.onclick = ()=> closeModal('modal-missions');
   const openA = document.getElementById('open-achievements'); if(openA) openA.onclick = ()=> openModal('modal-achievements');
@@ -440,7 +429,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const openS = document.getElementById('open-shop'); if(openS) openS.onclick = ()=> openModal('modal-shop');
   const closeS = document.getElementById('close-shop'); if(closeS) closeS.onclick = ()=> closeModal('modal-shop');
   const saveBtn = document.getElementById('save-score'); if(saveBtn) saveBtn.onclick = ()=> { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
-  const addWatchBtn = document.getElementById('add-watch'); if(addWatchBtn) addWatchBtn.onclick = ()=> { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
+  const addWatchBtn = document.getElementById('add-watch'); if(addWatchBtn) addWatchBtn.onclick = ()=> { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if(sym && STOCKS.find(s=>s.symbol===sym) && !watchlist.includes(sym)){ watchlist.push(sym); renderWatchlist(); inp.value=''; toast(`${sym} added to watchlist`);} else toast('Invalid symbol or already watched'); };
   setInterval(updateSeasonTimer, 1000);
 });
 
