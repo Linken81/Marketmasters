@@ -1,9 +1,6 @@
 // script.js - full updated file
-// Patch: added defensive global error logging and a try/catch around the startup (DOMContentLoaded) boot sequence.
-// If the startup code throws, we log the error and force the UI update calls (updateStockTable, updateTradeTable, updatePortfolioTable, updateHUD)
-// so panels are populated as best-effort. This is a minimal change to help diagnose/fix the blank-panels problem you reported.
-// No other app behavior or mission logic was changed.
-//
+// Minimal change: Show mission reward currency with $ instead of "c" in the Missions modal and brief.
+// Backup of the previous file included above. No other logic changed.
 // Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
@@ -292,7 +289,7 @@ function renderMissionsModal() {
   (state.missions || []).forEach((m, idx) => {
     const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
-    const rewardText = `Reward: ${rewardCoins}c, ${rewardXP} XP`;
+    const rewardText = `Reward: $${rewardCoins}, ${rewardXP} XP`;
 
     const div = document.createElement('div');
     div.className = 'mission';
@@ -341,7 +338,7 @@ function renderMissionsBrief() {
   (state.missions || []).slice(0, 3).forEach(m => {
     const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
-    const txt = `${m.text} — Reward: ${rewardCoins}c, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
+    const txt = `${m.text} — Reward: $${rewardCoins}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
     const div = document.createElement('div');
     div.textContent = txt;
     el.appendChild(div);
