@@ -1,7 +1,6 @@
-// script.js — updated: auto-achievements, remove "All achievements unlocked!" text, achievements modal shows status (locked/unlocked).
-// - Keeps all previous systems (XP, missions, shop, prestige, watchlist, order history, confetti, market ticks).
-// - Fixes: achievements are auto-checked and unlocked when conditions are met; achievements modal displays all achievements and their status.
-// - Removed claim buttons; "next-achievement" no longer displays "All achievements unlocked!" — it is blank when none remain.
+// script.js — fixed: ensure dayProgress and getTodayStr are defined before use,
+// plus defensive guards so generateDailyMissions, checkMissions and buy/sell flows don't throw.
+// This is the full script (replace your existing script.js with this file).
 
 // ------------------ Constants & Initial Data ------------------
 const STOCKS = [
@@ -33,11 +32,18 @@ STOCKS.forEach(s => portfolio.stocks[s.symbol] = 0);
 let prevOwned = {}, averageBuyPrice = {};
 STOCKS.forEach(s => { prevOwned[s.symbol] = 0; averageBuyPrice[s.symbol] = 0; });
 
-// prices
+// prices state
 let prices = {}, prevPrices = {};
 function randomPrice(){ return +(Math.random()*900 + 100).toFixed(2); }
 function initPricesIfNeeded(){ STOCKS.forEach(s => { if (prices[s.symbol] === undefined) prices[s.symbol] = randomPrice(); }); }
 initPricesIfNeeded();
+
+// ------------------ Small but critical globals (fixes) ------------------
+// dayProgress MUST be defined before any function that references it (buyStock, checkMissions, etc.)
+let dayProgress = { buyDifferent:0, dayProfit:0, holdTicks:0, trades:0, typesBought:[] };
+
+// getTodayStr must be available before generateDailyMissions() calls it
+function getTodayStr(){ return new Date().toISOString().slice(0,10); }
 
 // ------------------ Persistence & Game State ------------------
 const STORAGE_KEY = "marketmasters_full_v1";
@@ -60,7 +66,7 @@ let state = {
 function loadState(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) {
+    if(raw){
       const parsed = JSON.parse(raw);
       Object.assign(state, parsed);
     }
@@ -72,7 +78,7 @@ function saveState(){
 }
 loadState();
 
-// reset level to 1 and xp on refresh (user request)
+// Per prior requirement: reset level to 1 and xp on page refresh
 state.level = 1;
 state.xp = 0;
 saveState();
@@ -134,7 +140,6 @@ function checkLevelUp(){
     state.coins += rewardCoins;
     toast(`Level up! Now level ${state.level} — +${rewardCoins} coins`);
     launchConfetti(60);
-    // unlocking level-based achievement will happen in checkAchievements()
   }
   if(leveled) saveState();
 }
@@ -149,7 +154,7 @@ function updateHUD(){
     bar.style.width = pct + '%';
   }
   updateCash();
-  renderNextAchievement(); // now blanks when none
+  renderNextAchievement();
 }
 
 // ------------------ Achievements ------------------
@@ -160,7 +165,6 @@ const ACHIEVEMENT_LIST = [
   { id:'level_10', name:'Rising Star', desc:'Reach level 10', coins:300 }
 ];
 
-// Unlock but only via conditions checked in checkAchievements()
 function unlockAchievement(id, note=''){
   if(state.achievements[id]) return;
   const spec = ACHIEVEMENT_LIST.find(a => a.id === id);
@@ -185,7 +189,6 @@ function renderAchievements(){
     const unlocked = !!state.achievements[a.id];
     const div = document.createElement('div');
     div.className = 'shop-item';
-    // Show locked/unlocked status, no manual claim button
     div.innerHTML = `<div><strong>${a.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${a.desc}</div></div>
       <div style="font-weight:700; color:${unlocked ? '#00fc87' : '#9aa7b2'}">${unlocked ? 'Unlocked' : 'Locked'}</div>`;
     el.appendChild(div);
@@ -195,24 +198,15 @@ function renderNextAchievement(){
   const el = document.getElementById('next-achievement');
   if(!el) return;
   const next = ACHIEVEMENT_LIST.find(a => !state.achievements[a.id]);
-  // Per request: remove "All achievements unlocked!" text and any extra text below.
-  // Show next achievement if available, otherwise show nothing (blank).
-  if(next) el.textContent = `Next achievement: ${next.name} — ${next.desc}`;
-  else el.textContent = '';
+  // Per request: show next achievement if any, otherwise blank
+  el.textContent = next ? `Next achievement: ${next.name} — ${next.desc}` : '';
 }
 
-// ------------------ Achievements checks (auto) ------------------
+// Auto-check achievements based on state / progress
 function checkAchievements(){
-  // first_trade: any trade executed
   if(!state.achievements['first_trade'] && state.firstTradeDone) unlockAchievement('first_trade');
-
-  // profit_1000: cumulative profit across session / saved state
   if(!state.achievements['profit_1000'] && (state.cumulativeProfit || 0) >= 1000) unlockAchievement('profit_1000');
-
-  // hold_50ticks: use dayProgress.holdTicks
   if(!state.achievements['hold_50ticks'] && (dayProgress.holdTicks || 0) >= 50) unlockAchievement('hold_50ticks');
-
-  // level_10: check level
   if(!state.achievements['level_10'] && state.level >= 10) unlockAchievement('level_10');
 }
 
@@ -537,18 +531,14 @@ window.buyStock = function(symbol){
     if(!dayProgress.typesBought) dayProgress.typesBought = [];
     const type = (STOCKS.find(s => s.symbol === symbol) || {}).type;
     if(type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
-    // mark first trade and check achievements
-    if(!state.firstTradeDone){
-      state.firstTradeDone = true;
-      saveState();
-    }
+    if(!state.firstTradeDone){ state.firstTradeDone = true; saveState(); }
     addXP(Math.max(1, Math.round(cost/200)));
     state.coins += Math.max(0, Math.round(cost/1000));
     recordOrder('buy', symbol, qty, prices[symbol]);
     toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
     saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
     renderWatchlist();
-    checkAchievements(); // auto-check achievements after buy
+    checkAchievements();
   } else {
     toast('Not enough cash');
   }
@@ -568,13 +558,12 @@ window.sellStock = function(symbol){
     addXP(Math.round(profit/10));
     state.coins += Math.round(profit/50);
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
-    // accumulate overall profit for profit_1000 achievement
     state.cumulativeProfit = (state.cumulativeProfit || 0) + profit;
   }
   recordOrder('sell', symbol, qty, prices[symbol]);
   toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
   saveState(); updateHUD(); updateCash(); updatePortfolioTable(); updateTradeTable(); updateStockTable();
-  checkAchievements(); // auto-check achievements after sell
+  checkAchievements();
 };
 
 window.sellAllStock = function(symbol){
@@ -595,7 +584,7 @@ function tickPrices(){
   tickCount++;
   STOCKS.forEach(s => { if(portfolio.stocks[s.symbol] > 0) dayProgress.holdTicks = (dayProgress.holdTicks || 0) + 1; });
   checkMissions();
-  checkAchievements(); // achievements based on hold ticks or other periodic conditions
+  checkAchievements();
   updateHUD();
 }
 function newsTick(){
@@ -621,7 +610,6 @@ function checkMissions(){
         if(candidate && candidate.check(dayProgress)) m.done = true;
       }
     } catch(e){
-      // fallback simple checks
       if(m.id === 'buy_3' && dayProgress.buyDifferent >= 3) m.done = true;
       if(m.id === 'profit_500' && (dayProgress.dayProfit || 0) >= 500) m.done = true;
       if(m.id === 'hold_10' && (dayProgress.holdTicks || 0) >= 10) m.done = true;
