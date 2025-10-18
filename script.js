@@ -1,6 +1,7 @@
-// Fixed script.js — achievements/shop reset on refresh, no unlocked date shown,
-// kept level reset-to-1 behavior, confetti, XP, missions, shop, watchlist, order history,
-// and original market behavior (10s ticks, news every 3 minutes, chart samples).
+// script.js (fixed) — removed duplicate declarations (orderHistory, watchlist), tightened guards,
+// and kept the requested behaviors: confetti, XP/progress bar, achievements reset on refresh,
+// missions with 3 active and replacement on completion, shop reset on refresh,
+// market ticks every 10s, news every 3 minutes, and chart samples every tick.
 
 // ------------------ Data and Initial State ------------------
 const STOCKS = [
@@ -58,7 +59,6 @@ function loadState(){
         const raw = localStorage.getItem(STORAGE_KEY);
         if(raw) {
             const parsed = JSON.parse(raw);
-            // merge so newly added keys won't be lost
             Object.assign(state, parsed);
         }
     }catch(e){ console.warn('loadState', e); }
@@ -66,11 +66,9 @@ function loadState(){
 function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){ console.warn('saveState', e); } }
 loadState();
 
-// Per user's request: reset level to 1 and XP on refresh
+// Per user's request: reset level to 1 and XP on refresh, and clear achievements & shop on refresh
 state.level = 1;
 state.xp = 0;
-
-// Per user's request: reset achievements and shop on refresh
 state.achievements = {};
 state.shopOwned = {};
 saveState();
@@ -125,7 +123,7 @@ function checkLevelUp(){
         state.coins += rewardCoins;
         toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
         launchConfetti(60);
-        unlockAchievement('level_up'); // unlocking without timestamp
+        unlockAchievement('level_up'); // store as boolean flag, no date
     }
     if(gained) saveState();
 }
@@ -143,7 +141,7 @@ function updateHUD(){
 }
 
 // ------------------ Achievements ------------------
-// NOTE: achievements are stored as simple flags (boolean) so no unlocked date is stored/displayed.
+// Stored as boolean flags (no dates)
 const ACHIEVEMENT_LIST = [
     { id:'first_trade', name:'First Trade', desc:'Make your first trade', coins:50 },
     { id:'profit_1000', name:'Profit $1,000', desc:'Accumulate $1,000 profit total', coins:150 },
@@ -153,7 +151,6 @@ const ACHIEVEMENT_LIST = [
 function unlockAchievement(id){
     if(state.achievements[id]) return;
     const spec = ACHIEVEMENT_LIST.find(a=>a.id===id);
-    // store as a boolean flag (no date)
     state.achievements[id] = true;
     if(spec) {
         state.coins += spec.coins;
@@ -173,7 +170,6 @@ function renderAchievements(){
         const unlocked = !!state.achievements[a.id];
         const div = document.createElement('div');
         div.className = 'shop-item';
-        // show "Unlocked" or "Locked" (no date)
         div.innerHTML = `<div><strong>${a.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${a.desc}</div></div>
             <div style="font-weight:700; color:${unlocked ? '#00fc87' : '#9aa7b2'}">${unlocked ? 'Unlocked' : 'Locked'}</div>`;
         el.appendChild(div);
@@ -409,7 +405,7 @@ function pushChartSample(value){
 }
 
 // ------------------ Watchlist ------------------
-let watchlist = [];
+let watchlist = []; // declared once
 function renderWatchlist(){
     const wrap = document.getElementById('watchlist');
     if(!wrap) return;
@@ -427,7 +423,7 @@ function renderWatchlist(){
 }
 
 // ------------------ Order History ------------------
-let orderHistory = []; // {type:'buy'|'sell', symbol, qty, price, ts}
+let orderHistory = []; // declared once
 function recordOrder(type, symbol, qty, price){
     orderHistory.unshift({ type, symbol, qty, price, ts: new Date().toISOString() });
     if(orderHistory.length>200) orderHistory.pop();
@@ -566,8 +562,7 @@ function newsTick(){
 // ------------------ Missions check ------------------
 function checkMissions(){
     dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v=>v>0).length;
-    dayProgress.trades = dayProgress.trades || 0;
-    dayProgress.typesBought = dayProgress.typesBought || [];
+    dayProgress.trades = dayProgress.trades || 0; dayProgress.typesBought = dayProgress.typesBought || [];
     (state.missions||[]).forEach(m=>{
         if(m.done) return;
         try {
@@ -608,28 +603,6 @@ function setRandomPrices(newsEffectMap = {}){
         prices[stock.symbol] = Math.max(5, +newPrice.toFixed(2));
     });
 }
-
-// ------------------ Watchlist and order helpers ------------------
-function renderWatchlist(){
-    const wrap = document.getElementById('watchlist');
-    if(!wrap) return;
-    wrap.innerHTML = '';
-    watchlist.forEach(sym=>{
-        const div = document.createElement('div');
-        div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center';
-        div.style.marginBottom='6px';
-        const price = prices[sym] ? `$${prices[sym].toFixed(2)}` : '—';
-        div.innerHTML = `<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`;
-        wrap.appendChild(div);
-        const btn = div.querySelector('button');
-        btn.onclick = ()=> { watchlist = watchlist.filter(s=>s!==sym); renderWatchlist(); };
-    });
-}
-function recordOrder(type, symbol, qty, price){
-    orderHistory.unshift({ type, symbol, qty, price, ts: new Date().toISOString() });
-    if(orderHistory.length>200) orderHistory.pop();
-}
-let orderHistory = [];
 
 // ------------------ Event wiring and startup ------------------
 document.addEventListener('click', (e)=>{
