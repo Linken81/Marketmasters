@@ -430,6 +430,27 @@ ul {
     border-radius: 6px;
 }
 
+/* Marketmasters styled header */
+.marketmasters-styled {
+    display: inline-block;
+    font-family: 'Montserrat', 'Inter', 'Segoe UI', 'Arial', sans-serif;
+    font-weight: 800;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #1fc8db 0%, #21e6c1 45%, #00fc87 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    text-shadow: 0 2px 4px rgba(33,230,193,0.2), 0 0px 14px rgba(0,252,135,0.3);
+    transition: text-shadow 0.3s, transform 0.3s;
+    padding: 4px 0;
+}
+
+.marketmasters-styled:hover {
+    text-shadow: 0 3px 8px rgba(33,230,193,0.3), 0 0px 18px rgba(0,252,135,0.5);
+    transform: scale(1.02);
+}
+
 @media (max-width: 1200px) {
     .dashboard {
         grid-template-columns: 1fr 1.1fr 0.9fr;
@@ -439,4 +460,15 @@ ul {
     }
     .panel, .card { padding: 8px 8px; }
     .header { font-size: 1.08rem; padding: 0 7px;}
+    .marketmasters-styled {
+        font-size: 1.5rem;
+        letter-spacing: 1.5px;
+    }
+}
+
+@media (max-width: 768px) {
+    .marketmasters-styled {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
 }
