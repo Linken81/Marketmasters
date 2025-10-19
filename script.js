@@ -776,6 +776,47 @@ function getPortfolioValue() {
   return +v;
 }
 
+// ------------------ Style Marketmasters Header ------------------
+function styleMarketmastersHeader() {
+  try {
+    // Find all text nodes containing exactly "Marketmasters" (case-insensitive)
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    const nodesToStyle = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.nodeValue && node.nodeValue.trim().toLowerCase() === 'marketmasters') {
+        // Skip if parent already has the styled class to avoid duplicate processing
+        const parent = node.parentElement;
+        if (parent && !parent.classList.contains('marketmasters-styled') && !parent.querySelector('.marketmasters-styled')) {
+          nodesToStyle.push(node);
+        }
+      }
+    }
+    
+    // Replace each found text node with styled span using CSS class only
+    nodesToStyle.forEach(textNode => {
+      const parentElement = textNode.parentElement;
+      if (parentElement) {
+        // Create styled span - rely on CSS class for all styling
+        const styledSpan = document.createElement('span');
+        styledSpan.className = 'marketmasters-styled';
+        styledSpan.textContent = 'Marketmasters';
+        
+        // Replace text node with styled span
+        parentElement.replaceChild(styledSpan, textNode);
+      }
+    });
+  } catch (e) {
+    console.warn('styleMarketmastersHeader error', e);
+  }
+}
+
 // ------------------ Startup & wiring (defensive) ------------------
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'add-watch') {
@@ -788,6 +829,9 @@ document.addEventListener('click', (e) => {
 
 window.addEventListener('DOMContentLoaded', () => {
   try {
+    // Style the "Marketmasters" header professionally
+    styleMarketmastersHeader();
+    
     generateDailyMissions();
     renderMissionsModal();
     renderMissionsBrief();
