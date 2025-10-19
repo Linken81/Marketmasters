@@ -176,6 +176,10 @@ function checkLevelUp() {
     toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
     launchConfetti(60);
     unlockAchievement('level_up');
+    // Check for level 10 achievement
+    if (state.level >= 10 && !state.achievements['level_10']) {
+      unlockAchievement('level_10');
+    }
   }
   if (gained) saveState();
 }
