@@ -779,7 +779,7 @@ function getPortfolioValue() {
 // ------------------ Style Marketmasters Header ------------------
 function styleMarketmastersHeader() {
   try {
-    // Find all text nodes and elements containing exactly "Marketmasters" (case-insensitive)
+    // Find all text nodes containing exactly "Marketmasters" (case-insensitive)
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
@@ -791,35 +791,22 @@ function styleMarketmastersHeader() {
     while (walker.nextNode()) {
       const node = walker.currentNode;
       if (node.nodeValue && node.nodeValue.trim().toLowerCase() === 'marketmasters') {
-        nodesToStyle.push(node);
+        // Skip if parent already has the styled class to avoid duplicate processing
+        const parent = node.parentElement;
+        if (parent && !parent.classList.contains('marketmasters-styled') && !parent.querySelector('.marketmasters-styled')) {
+          nodesToStyle.push(node);
+        }
       }
     }
     
-    // Replace each found text node with styled span
+    // Replace each found text node with styled span using CSS class only
     nodesToStyle.forEach(textNode => {
       const parentElement = textNode.parentElement;
       if (parentElement) {
-        // Create styled span with professional styling
+        // Create styled span - rely on CSS class for all styling
         const styledSpan = document.createElement('span');
         styledSpan.className = 'marketmasters-styled';
         styledSpan.textContent = 'Marketmasters';
-        
-        // Apply inline styles for bold, modern font with gradient and glow
-        styledSpan.style.cssText = `
-          display: inline-block;
-          font-family: 'Montserrat', 'Inter', 'Segoe UI', 'Arial', sans-serif;
-          font-size: inherit;
-          font-weight: 800;
-          letter-spacing: 2px;
-          background: linear-gradient(90deg, #1fc8db 0%, #21e6c1 45%, #00fc87 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          text-fill-color: transparent;
-          text-shadow: 0 2px 4px rgba(33,230,193,0.2), 0 0px 14px rgba(0,252,135,0.3);
-          transition: text-shadow 0.3s;
-          padding: 4px 0;
-        `;
         
         // Replace text node with styled span
         parentElement.replaceChild(styledSpan, textNode);

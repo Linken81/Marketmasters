@@ -438,8 +438,8 @@ ul {
     letter-spacing: 2px;
     background: linear-gradient(90deg, #1fc8db 0%, #21e6c1 45%, #00fc87 100%);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
     text-fill-color: transparent;
     text-shadow: 0 2px 4px rgba(33,230,193,0.2), 0 0px 14px rgba(0,252,135,0.3);
     transition: text-shadow 0.3s, transform 0.3s;
