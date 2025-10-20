@@ -1,5 +1,4 @@
 
-
 // script.js - full updated file
 // Changes in this update (minimal):
 // 1) Replace UI text "Daily Missions (N active)" -> "Missions (N active)" by scanning text nodes and replacing occurrences.
@@ -124,16 +123,11 @@ function toast(text, timeout = 3000) {
 }
 function formatCurrency(v) {
   return `$${(+v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-// Achievement unlock logic
-if (cumulativeProfit >= 1000) {
-    unlockAchievement('Cumulative Profit $1000');
 }
 function updateCash() {
   const el = document.getElementById('cash');
   if (!el) return;
   el.textContent = formatCurrency(portfolio.cash || 0);
-if (holdTicks >= 50) {
-    unlockAchievement('Hold for 50 Ticks');
 }
 
 // ------------------ Global defensive logging ------------------
@@ -185,8 +179,6 @@ function checkLevelUp() {
     unlockAchievement('level_up');
   }
   if (gained) saveState();
-if (firstTrade) {
-    unlockAchievement('First Trade Made');
 }
 
 // ------------------ HUD ------------------
@@ -211,8 +203,6 @@ function updateHUD() {
   const xpRemEl = document.getElementById('xp-remaining');
   if (xpRemEl) xpRemEl.textContent = `${remaining} XP to next level`;
   renderNextAchievement();
-if (level === 10) {
-    unlockAchievement('Reached Level 10');
 }
 
 // ------------------ Achievements ------------------
@@ -281,11 +271,6 @@ function attachMissionBaseline(m) {
     m.assignedAt = new Date().toISOString();
     m.baseline = { dayProfit: 0, trades: 0, holdCounters: {} };
   }
-// Mission reward claims logic
-function claimMissionReward(mission) {
-    const reward = mission.getReward();
-    state.coins += reward.coins;
-    portfolio.cash += reward.cash;
 }
 
 function isMissionComplete(m) {
@@ -854,5 +839,3 @@ function closeModal(id) { const m = document.getElementById(id); if (m) m.setAtt
 
 // persist final state
 saveState();
-// Other existing logic preserved
-// ... (existing code continues here) ...
