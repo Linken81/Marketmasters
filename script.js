@@ -1,12 +1,12 @@
-// script.js - full ready-to-use file (achievement & mission reward fixes applied)
+// script.js - full ready-to-use file (achievement, missions & startup fixes applied)
 //
 // This file preserves your full game logic and includes:
+// - Proper new-game detection so NEW games start at level 1 / xp 0
 // - Persistent cumulative profit tracking (state.totalProfit) and profit_1000 achievement
 // - Persistent per-stock hold tick tracking (state.stockHoldTicks) and hold_50ticks achievement
-// - Startup auto-unlock for level_10 if state.level >= 10
+// - Startup auto-unlock for achievements if conditions are already met
 // - Mission claim rewards now add coins to state.coins AND portfolio.cash, and saveState() after claim
-// - Consistent achievement id usage (matching ACHIEVEMENT_LIST)
-// - Additional debug console messages to aid testing
+// - Debug console messages to help testing
 //
 // Replace your existing script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
@@ -91,63 +91,43 @@ let state = {
   tickDeltas: []
 };
 
+/*
+  loadState now returns whether a stored state was present.
+  This lets the app treat "no saved state" as a true NEW GAME and initialize level/xp/achievements accordingly.
+*/
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) Object.assign(state, JSON.parse(raw));
-  } catch (e) { console.warn('loadState', e); }
+    if (!raw) {
+      // No saved state => New game (we will keep defaults defined above)
+      return false;
+    }
+    Object.assign(state, JSON.parse(raw));
+    return true;
+  } catch (e) { console.warn('loadState', e); return true; }
 }
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn('saveState', e); }
 }
-loadState();
+const hadSavedState = loadState();
 
-// Initialize new tracking values if missing (do not clobber existing)
-if (state.totalProfit === undefined) state.totalProfit = 0;
-if (!state.stockHoldTicks) state.stockHoldTicks = {};
-
-// Auto-unlock achievements on startup if conditions already met (covers users who start at level >= 10, etc.)
-(function startupAchievementChecks() {
-  try {
-    let dirty = false;
-    if (state.level >= 10 && !state.achievements['level_10']) {
-      console.debug('startup: unlocking level_10 because state.level=', state.level);
-      state.achievements['level_10'] = true;
-      const spec = { coins: 300 };
-      state.coins += spec.coins;
-      dirty = true;
-    }
-    if ((state.totalProfit || 0) >= 1000 && !state.achievements['profit_1000']) {
-      console.debug('startup: unlocking profit_1000 because state.totalProfit=', state.totalProfit);
-      state.achievements['profit_1000'] = true;
-      const spec = { coins: 150 };
-      state.coins += spec.coins;
-      dirty = true;
-    }
-    // check any stock hold ticks that already satisfy threshold
-    for (const sym of Object.keys(state.stockHoldTicks || {})) {
-      if ((state.stockHoldTicks[sym] || 0) >= 50 && !state.achievements['hold_50ticks']) {
-        console.debug('startup: unlocking hold_50ticks because', sym, state.stockHoldTicks[sym]);
-        state.achievements['hold_50ticks'] = true;
-        state.coins += 200;
-        dirty = true;
-        break;
-      }
-    }
-    if (dirty) {
-      saveState();
-      renderAchievements();
-      updateHUD();
-    }
-  } catch (e) { console.warn('startupAchievementChecks error', e); }
-})();
-
-// Ensure saved missions don't start completed and attach baselines to loaded missions
-if (state.missions && Array.isArray(state.missions)) {
-  state.missions = state.missions.map(m => ({ ...m, done: false }));
-  state.missions.forEach(m => { if (!m.assignedAt) attachMissionBaseline(m); });
+// If no saved state existed, *this is a new game session* — ensure level is 1 and XP is 0
+if (!hadSavedState) {
+  state.level = 1;
+  state.xp = 0;
+  state.achievements = {};
+  state.shopOwned = {};
+  // ensure other tracking starts fresh
+  state.totalProfit = 0;
+  state.stockHoldTicks = {};
+  state.missions = [];
+  state.missionsDate = null;
   saveState();
 }
+
+// Initialize tracking fields if they exist in storage but are missing
+if (state.totalProfit === undefined) state.totalProfit = 0;
+if (!state.stockHoldTicks) state.stockHoldTicks = {};
 
 // ------------------ Small UI helpers ------------------
 function toast(text, timeout = 3000) {
@@ -214,9 +194,8 @@ function checkLevelUp() {
     state.coins += rewardCoins;
     toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
     launchConfetti(60);
-    // Unlock level_10 if reached
+    // Unlock level achievement if reached
     if (state.level >= 10 && !state.achievements['level_10']) {
-      console.debug('checkLevelUp: unlocking level_10');
       unlockAchievement('level_10');
     }
   }
@@ -257,21 +236,16 @@ const ACHIEVEMENT_LIST = [
 function unlockAchievement(id) {
   if (!id) return;
   if (!state.achievements) state.achievements = {};
-  if (state.achievements[id]) {
-    console.debug('unlockAchievement: already unlocked', id);
-    return;
-  }
+  if (state.achievements[id]) return;
   const spec = ACHIEVEMENT_LIST.find(a => a.id === id);
   state.achievements[id] = true;
   if (spec) {
     state.coins += spec.coins || 0;
     toast(`Achievement unlocked: ${spec.name} (+${spec.coins || 0} coins)`);
     launchConfetti(80);
-    console.debug('unlockAchievement: unlocked', id, 'awarded', spec.coins);
   } else {
     toast(`Achievement unlocked: ${id}`);
     launchConfetti(40);
-    console.debug('unlockAchievement: unlocked (no spec)', id);
   }
   saveState();
   renderAchievements();
@@ -804,7 +778,7 @@ function tickPrices() {
   STOCKS.forEach(s => {
     const owned = portfolio.stocks[s.symbol] || 0;
     const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[s.symbol];
-    const after = prices[s.symbol] !== undefined ? prices[s.symbol] : before;
+    const after = prices[symbol] !== undefined ? prices[symbol] : before;
     tickDelta += owned * (after - before);
   });
   state.tickDeltas = state.tickDeltas || [];
@@ -848,7 +822,7 @@ function checkMissions() {
 
 function getPortfolioValue() {
   let v = portfolio.cash || 0;
-  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
+  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[symbol] !== undefined) ? prices[symbol] : 0; v += owned * p; });
   return +v;
 }
 
@@ -910,6 +884,15 @@ window.addEventListener('DOMContentLoaded', () => {
 // ------------------ Modals ------------------
 function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
 function closeModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'true'); }
+
+// ------------------ New Game helper ------------------
+// If you want to start a completely fresh game (level 1, xp 0, no achievements), run this in the browser console:
+//   newGame();  // confirms, clears STORAGE_KEY, reloads
+function newGame() {
+  if (!confirm('Start a NEW game? This will clear saved progress. Continue?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
 
 // persist final state
 saveState();
