@@ -1,7 +1,14 @@
-// script.js - full updated file with achievement & mission reward fixes applied
-// Changes: unify achievement IDs, persist cumulative profit & hold ticks, ensure saveState() after changes,
-// mission claim adds coins -> both state.coins and portfolio.cash, debug logs added.
-
+// script.js - full ready-to-use file (achievement & mission reward fixes applied)
+//
+// This file preserves your full game logic and includes:
+// - Persistent cumulative profit tracking (state.totalProfit) and profit_1000 achievement
+// - Persistent per-stock hold tick tracking (state.stockHoldTicks) and hold_50ticks achievement
+// - Startup auto-unlock for level_10 if state.level >= 10
+// - Mission claim rewards now add coins to state.coins AND portfolio.cash, and saveState() after claim
+// - Consistent achievement id usage (matching ACHIEVEMENT_LIST)
+// - Additional debug console messages to aid testing
+//
+// Replace your existing script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
 function getSeasonId() {
@@ -95,12 +102,45 @@ function saveState() {
 }
 loadState();
 
-// --- Initialize new tracking values if missing (do not clobber existing) ---
+// Initialize new tracking values if missing (do not clobber existing)
 if (state.totalProfit === undefined) state.totalProfit = 0;
 if (!state.stockHoldTicks) state.stockHoldTicks = {};
 
-// NOTE: We intentionally do not forcibly reset achievements/level here so progress persists.
-// If you want to force-reset on each reload, re-enable reset lines (not recommended).
+// Auto-unlock achievements on startup if conditions already met (covers users who start at level >= 10, etc.)
+(function startupAchievementChecks() {
+  try {
+    let dirty = false;
+    if (state.level >= 10 && !state.achievements['level_10']) {
+      console.debug('startup: unlocking level_10 because state.level=', state.level);
+      state.achievements['level_10'] = true;
+      const spec = { coins: 300 };
+      state.coins += spec.coins;
+      dirty = true;
+    }
+    if ((state.totalProfit || 0) >= 1000 && !state.achievements['profit_1000']) {
+      console.debug('startup: unlocking profit_1000 because state.totalProfit=', state.totalProfit);
+      state.achievements['profit_1000'] = true;
+      const spec = { coins: 150 };
+      state.coins += spec.coins;
+      dirty = true;
+    }
+    // check any stock hold ticks that already satisfy threshold
+    for (const sym of Object.keys(state.stockHoldTicks || {})) {
+      if ((state.stockHoldTicks[sym] || 0) >= 50 && !state.achievements['hold_50ticks']) {
+        console.debug('startup: unlocking hold_50ticks because', sym, state.stockHoldTicks[sym]);
+        state.achievements['hold_50ticks'] = true;
+        state.coins += 200;
+        dirty = true;
+        break;
+      }
+    }
+    if (dirty) {
+      saveState();
+      renderAchievements();
+      updateHUD();
+    }
+  } catch (e) { console.warn('startupAchievementChecks error', e); }
+})();
 
 // Ensure saved missions don't start completed and attach baselines to loaded missions
 if (state.missions && Array.isArray(state.missions)) {
@@ -174,9 +214,9 @@ function checkLevelUp() {
     state.coins += rewardCoins;
     toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
     launchConfetti(60);
-    // NEW: Unlock specific "level_10" achievement when reaching level 10
+    // Unlock level_10 if reached
     if (state.level >= 10 && !state.achievements['level_10']) {
-      console.debug('DEBUG: Reached level >=10, unlocking level_10');
+      console.debug('checkLevelUp: unlocking level_10');
       unlockAchievement('level_10');
     }
   }
@@ -218,7 +258,7 @@ function unlockAchievement(id) {
   if (!id) return;
   if (!state.achievements) state.achievements = {};
   if (state.achievements[id]) {
-    console.debug('DEBUG: Achievement already unlocked:', id);
+    console.debug('unlockAchievement: already unlocked', id);
     return;
   }
   const spec = ACHIEVEMENT_LIST.find(a => a.id === id);
@@ -227,11 +267,11 @@ function unlockAchievement(id) {
     state.coins += spec.coins || 0;
     toast(`Achievement unlocked: ${spec.name} (+${spec.coins || 0} coins)`);
     launchConfetti(80);
-    console.debug('DEBUG: Achievement unlocked:', id, 'awarded coins:', spec.coins);
+    console.debug('unlockAchievement: unlocked', id, 'awarded', spec.coins);
   } else {
     toast(`Achievement unlocked: ${id}`);
     launchConfetti(40);
-    console.debug('DEBUG: Achievement unlocked (no spec):', id);
+    console.debug('unlockAchievement: unlocked (no spec)', id);
   }
   saveState();
   renderAchievements();
@@ -258,7 +298,7 @@ function renderNextAchievement() {
 }
 
 // ------------------ Missions ------------------
-// NOTE: updated profit text requested -> "Make $500 profit (tick)"
+// NOTE: profit text changed to "Make $500 profit (tick)"
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
   { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { coins: 120, xp: 40 } },
@@ -346,7 +386,6 @@ function generateSingleMission() {
   return nm;
 }
 
-// Replace "Daily Missions" occurrences in text nodes with "Missions" to update any static UI labels
 function fixDailyMissionsLabel() {
   try {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
@@ -400,14 +439,12 @@ function renderMissionsModal() {
       if (btn) {
         btn.onclick = () => {
           const reward = m.reward || { coins: 50, xp: 15 };
-          // IMPORTANT: credit reward to both coins and cash (coins are in-state currency; cash is portfolio cash)
           const coinsToAdd = reward.coins || 0;
+          // credit to both state.coins and portfolio.cash (explicit per request)
           state.coins += coinsToAdd;
-          // Add to portfolio.cash as well (user wanted mission rewards to affect cash)
           portfolio.cash += coinsToAdd;
           addXP(reward.xp || 0);
           toast(`Mission claimed: +${coinsToAdd} coins, +${reward.xp || 0} XP (cash +${formatCurrency(coinsToAdd)})`);
-          // generate replacement mission or remove
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
@@ -695,7 +732,7 @@ window.sellStock = function (symbol) {
     state.coins += Math.round(profit / 50);
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
 
-    // NEW: Track cumulative profit and persist immediately
+    // Track cumulative profit and persist immediately
     state.totalProfit = (state.totalProfit || 0) + profit;
     console.debug('DEBUG: profit added, totalProfit=', state.totalProfit);
     if (state.totalProfit >= 1000 && !state.achievements['profit_1000']) {
@@ -750,7 +787,7 @@ function tickPrices() {
     const owned = (portfolio.stocks[s.symbol] || 0);
     if (owned > 0) {
       holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1;
-      // NEW: persistent per-stock hold ticks
+      // persistent per-stock hold ticks
       state.stockHoldTicks[s.symbol] = (state.stockHoldTicks[s.symbol] || 0) + 1;
       // Unlock hold achievement at 50 ticks
       if (state.stockHoldTicks[s.symbol] >= 50 && !state.achievements['hold_50ticks']) {
