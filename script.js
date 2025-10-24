@@ -1,14 +1,6 @@
 // script.js - full ready-to-use file (achievement, missions & startup fixes applied)
-//
-// This file preserves your full game logic and includes:
-// - Proper new-game detection so NEW games start at level 1 / xp 0
-// - Persistent cumulative profit tracking (state.totalProfit) and profit_1000 achievement
-// - Persistent per-stock hold tick tracking (state.stockHoldTicks) and hold_50ticks achievement
-// - Startup auto-unlock for achievements if conditions are already met
-// - Mission claim rewards now add coins to state.coins AND portfolio.cash, and saveState() after claim
-// - Debug console messages to help testing
-//
-// Replace your existing script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
+// Fixes applied: corrected undefined variable references (symbol -> s.symbol) that caused runtime ReferenceError,
+// and otherwise preserved full game logic and previous fixes.
 
 // ------------------ Date / Season helpers (defined first) ------------------
 function getSeasonId() {
@@ -778,7 +770,8 @@ function tickPrices() {
   STOCKS.forEach(s => {
     const owned = portfolio.stocks[s.symbol] || 0;
     const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[s.symbol];
-    const after = prices[symbol] !== undefined ? prices[symbol] : before;
+    // FIX: use s.symbol (was symbol) to avoid ReferenceError
+    const after = prices[s.symbol] !== undefined ? prices[s.symbol] : before;
     tickDelta += owned * (after - before);
   });
   state.tickDeltas = state.tickDeltas || [];
@@ -822,7 +815,8 @@ function checkMissions() {
 
 function getPortfolioValue() {
   let v = portfolio.cash || 0;
-  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[symbol] !== undefined) ? prices[symbol] : 0; v += owned * p; });
+  // FIX: use s.symbol (was symbol) to avoid ReferenceError
+  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
   return +v;
 }
 
