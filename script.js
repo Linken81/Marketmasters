@@ -1,10 +1,7 @@
+// script.js - full updated file with achievement & mission reward fixes applied
+// Changes: unify achievement IDs, persist cumulative profit & hold ticks, ensure saveState() after changes,
+// mission claim adds coins -> both state.coins and portfolio.cash, debug logs added.
 
-// script.js - full updated file
-// Changes in this update (minimal):
-// 1) Replace UI text "Daily Missions (N active)" -> "Missions (N active)" by scanning text nodes and replacing occurrences.
-// 2) Change mission label "Make $500 profit (day)" -> "Make $500 profit (tick)" in the mission definitions.
-// No other logic or behavior changed. Backup was created above prior to this change.
-// Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
 
 // ------------------ Date / Season helpers (defined first) ------------------
 function getSeasonId() {
@@ -98,11 +95,12 @@ function saveState() {
 }
 loadState();
 
-// Per earlier request: reset level/xp and clear achievements/shop on refresh
-state.level = 1;
-state.xp = 0;
-state.achievements = {};
-state.shopOwned = {};
+// --- Initialize new tracking values if missing (do not clobber existing) ---
+if (state.totalProfit === undefined) state.totalProfit = 0;
+if (!state.stockHoldTicks) state.stockHoldTicks = {};
+
+// NOTE: We intentionally do not forcibly reset achievements/level here so progress persists.
+// If you want to force-reset on each reload, re-enable reset lines (not recommended).
 
 // Ensure saved missions don't start completed and attach baselines to loaded missions
 if (state.missions && Array.isArray(state.missions)) {
@@ -114,7 +112,7 @@ if (state.missions && Array.isArray(state.missions)) {
 // ------------------ Small UI helpers ------------------
 function toast(text, timeout = 3000) {
   const toasts = document.getElementById('toasts');
-  if (!toasts) return;
+  if (!toasts) { console.debug('toast:', text); return; }
   const el = document.createElement('div');
   el.className = 'toast';
   el.textContent = text;
@@ -176,7 +174,11 @@ function checkLevelUp() {
     state.coins += rewardCoins;
     toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
     launchConfetti(60);
-    unlockAchievement('level_up');
+    // NEW: Unlock specific "level_10" achievement when reaching level 10
+    if (state.level >= 10 && !state.achievements['level_10']) {
+      console.debug('DEBUG: Reached level >=10, unlocking level_10');
+      unlockAchievement('level_10');
+    }
   }
   if (gained) saveState();
 }
@@ -213,16 +215,23 @@ const ACHIEVEMENT_LIST = [
   { id: 'level_10', name: 'Rising Star', desc: 'Reach level 10', coins: 300 }
 ];
 function unlockAchievement(id) {
-  if (state.achievements[id]) return;
+  if (!id) return;
+  if (!state.achievements) state.achievements = {};
+  if (state.achievements[id]) {
+    console.debug('DEBUG: Achievement already unlocked:', id);
+    return;
+  }
   const spec = ACHIEVEMENT_LIST.find(a => a.id === id);
   state.achievements[id] = true;
   if (spec) {
-    state.coins += spec.coins;
-    toast(`Achievement unlocked: ${spec.name} (+${spec.coins} coins)`);
+    state.coins += spec.coins || 0;
+    toast(`Achievement unlocked: ${spec.name} (+${spec.coins || 0} coins)`);
     launchConfetti(80);
+    console.debug('DEBUG: Achievement unlocked:', id, 'awarded coins:', spec.coins);
   } else {
     toast(`Achievement unlocked: ${id}`);
     launchConfetti(40);
+    console.debug('DEBUG: Achievement unlocked (no spec):', id);
   }
   saveState();
   renderAchievements();
@@ -391,9 +400,14 @@ function renderMissionsModal() {
       if (btn) {
         btn.onclick = () => {
           const reward = m.reward || { coins: 50, xp: 15 };
-          state.coins += reward.coins || 0;
+          // IMPORTANT: credit reward to both coins and cash (coins are in-state currency; cash is portfolio cash)
+          const coinsToAdd = reward.coins || 0;
+          state.coins += coinsToAdd;
+          // Add to portfolio.cash as well (user wanted mission rewards to affect cash)
+          portfolio.cash += coinsToAdd;
           addXP(reward.xp || 0);
-          toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
+          toast(`Mission claimed: +${coinsToAdd} coins, +${reward.xp || 0} XP (cash +${formatCurrency(coinsToAdd)})`);
+          // generate replacement mission or remove
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
@@ -555,8 +569,10 @@ function initChartIfPresent() {
   const canvas = document.getElementById('portfolioChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  chartData = { labels: [new Date().toLocaleTimeString()], datasets: [{ label: 'Portfolio Value', data: [getPortfolioValue()], borderColor: '#00FC87', backgroundColor: 'rgba(14,210,247,0.10)', fill: true, tension: 0.28 }] };
-  portfolioChart = new Chart(ctx, { type: 'line', data: chartData, options: { animation: { duration: 300 }, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } } });
+  chartData = { labels: [new Date().toLocaleTimeString()], datasets: [{ label: 'Portfolio Value', data: [getPortfolioValue()], borderColor: '#00FC87', backgroundColor: 'rgba(14,210,247,0.10)', fill: false }]};
+  try {
+    portfolioChart = new Chart(ctx, { type: 'line', data: chartData, options: { animation: { duration: 300 }, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } } });
+  } catch (e) { console.warn('Chart init failed', e); portfolioChart = null; }
 }
 function pushChartSample(v) {
   if (!portfolioChart) return;
@@ -678,6 +694,15 @@ window.sellStock = function (symbol) {
     addXP(Math.round(profit / 10));
     state.coins += Math.round(profit / 50);
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
+
+    // NEW: Track cumulative profit and persist immediately
+    state.totalProfit = (state.totalProfit || 0) + profit;
+    console.debug('DEBUG: profit added, totalProfit=', state.totalProfit);
+    if (state.totalProfit >= 1000 && !state.achievements['profit_1000']) {
+      console.debug('DEBUG: totalProfit threshold reached; unlocking profit_1000');
+      unlockAchievement('profit_1000');
+    }
+    saveState();
   }
   recordOrder('sell', symbol, qty, prices[symbol]);
   if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
@@ -723,9 +748,21 @@ function tickPrices() {
   setRandomPrices({});
   STOCKS.forEach(s => {
     const owned = (portfolio.stocks[s.symbol] || 0);
-    if (owned > 0) { holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1; }
-    else { holdCounters[s.symbol] = 0; }
+    if (owned > 0) {
+      holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1;
+      // NEW: persistent per-stock hold ticks
+      state.stockHoldTicks[s.symbol] = (state.stockHoldTicks[s.symbol] || 0) + 1;
+      // Unlock hold achievement at 50 ticks
+      if (state.stockHoldTicks[s.symbol] >= 50 && !state.achievements['hold_50ticks']) {
+        console.debug('DEBUG: hold ticks threshold reached for', s.symbol, state.stockHoldTicks[s.symbol]);
+        unlockAchievement('hold_50ticks');
+      }
+    } else {
+      holdCounters[s.symbol] = 0;
+      state.stockHoldTicks[s.symbol] = 0;
+    }
   });
+  // tick delta and store
   let tickDelta = 0;
   STOCKS.forEach(s => {
     const owned = portfolio.stocks[s.symbol] || 0;
@@ -745,6 +782,7 @@ function tickPrices() {
   dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
   checkMissions();
   updateHUD();
+  saveState(); // persist stock hold tick updates
 }
 
 function newsTick() {
@@ -811,7 +849,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const openS = document.getElementById('open-shop'); if (openS) openS.onclick = () => openModal('modal-shop');
     const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
     const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
-    const addWatchBtn = document.getElementById('add-watch'); if (addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
     setInterval(updateSeasonTimer, 1000);
     // run UI text fix (replaces any "Daily Missions" strings in text nodes)
     fixDailyMissionsLabel();
