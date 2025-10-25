@@ -733,6 +733,14 @@ window.sellStock = function (symbol) {
   updateTradeTable();
   updateStockTable();
 };
+window.sellAllStock = function (symbol) {
+  const owned = portfolio.stocks[symbol] || 0;
+  if (owned > 0) {
+    const el = document.getElementById(`sell_${symbol}`);
+    if (el) el.value = owned;
+    sellStock(symbol);
+  }
+};
 
 // ------------------ Order recording & Watchlist ------------------
 function recordOrder(type, symbol, qty, price) {
