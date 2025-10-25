@@ -570,7 +570,16 @@ function setRandomPrices(newsEffectMap = {}) {
     prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2));
   });
 }
-
+function newsTick() {
+  const newsMap = triggerRandomNews();
+  setRandomPrices(newsMap);
+  updateTradeTable();
+  updateStockTable();
+  updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  renderLeaderboard();
+  saveState();
+}
 // ------------------ Chart ------------------
 let portfolioChart = null;
 let chartData = null;
