@@ -1,86 +1,173 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Marketmasters</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>Market Masters Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <!-- Topbar / Header (New Game button will be placed here) -->
-  <header id="topbar" class="topbar">
-    <div class="topbar-left">
-      <h1 class="logo">Marketmasters</h1>
+    <div class="dashboard">
+        <!-- Header: Cash on the left, Marketmasters centered -->
+        <div class="header">
+            <div class="header-flex">
+                <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
+                <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
+            </div>
+        </div>
+
+        <!-- Left Panel (Portfolio Chart + My Portfolio) -->
+        <div class="left-panel">
+            <div class="panel">
+                <div class="panel-title">Portfolio Chart</div>
+                <div class="chart-container">
+                    <canvas id="portfolioChart"></canvas>
+                </div>
+            </div>
+
+            <!-- MY PORTFOLIO panel -->
+            <div class="panel">
+                <div class="panel-title">My Portfolio</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Owned</th>
+                            <th>Price</th>
+                            <th>Total Value</th>
+                            <th>Change</th>
+                            <th>Sell</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Center Panel (Trade only + reserved slot used for Missions/Achievements/Shop links) -->
+        <div class="center-panel">
+            <div class="panel">
+                <div class="panel-title">Trade</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Type</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Buy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table"></tbody>
+                </table>
+            </div>
+
+            <!-- Reserved slot: Missions / Progress (unchanged position & size) -->
+            <div class="panel" id="engage-panel">
+                <div class="panel-title">Missions & Progress</div>
+                <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
+                    <div>
+                        <div id="xp-display" style="font-weight:700; color:#21e6c1;">XP: <span id="xp">0</span></div>
+                        <div id="level-display" style="font-weight:700; color:#00fc87;">Level: <span id="level">1</span></div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="action-btn" id="open-missions">Missions</button>
+                        <button class="action-btn" id="open-achievements">Achievements</button>
+                        <button class="action-btn" id="open-shop">Shop</button>
+                    </div>
+                </div>
+
+                <!-- XP progress bar (new) -->
+                <div id="xp-bar-wrap" title="XP progress" style="margin-top:10px;">
+                    <div id="xp-bar"></div>
+                </div>
+
+                <!-- Next achievement (new) -->
+                <div id="next-achievement" style="margin-top:8px; color:#9aa7b2; font-size:0.95em;"></div>
+
+                <div id="missions-brief" style="margin-top:10px; font-size:0.95em; color:#e7ebf3;"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel (Leaderboard, Events/Watchlist, News) -->
+        <div class="right-panel">
+            <div class="panel">
+                <div class="panel-title">Leaderboard</div>
+                <ul class="leaderboard-list" id="scores"></ul>
+                <div class="buttons-row">
+                    <button id="save-score" class="action-btn">Save My Score</button>
+                </div>
+            </div>
+
+            <!-- Events / Watchlist panel (keeps space, new features added here) -->
+            <div class="panel" id="events-panel">
+                <div class="panel-title">Events & Watchlist</div>
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                    <input id="watch-input" placeholder="Add symbol to watchlist (e.g. ZOOMX)" style="background:#202539;color:#e7ebf3;border:1px solid #21e6c1;padding:6px;border-radius:6px;">
+                    <button id="add-watch" class="action-btn">Add</button>
+                </div>
+                <div id="watchlist" style="margin-bottom:10px;"></div>
+                <div style="margin-top:6px; font-weight:700; color:#21e6c1;">Recent Events</div>
+                <ul id="events-list" style="margin-top:6px; list-style:none; padding:0; margin:0;"></ul>
+            </div>
+
+            <!-- News panel in the red square -->
+            <div class="panel news-panel">
+                <div class="panel-title">News</div>
+                <div id="news-content"></div>
+            </div>
+        </div>
     </div>
-    <div class="topbar-right">
-      <div id="cash" class="cash-display">$10,000.00</div>
-      <!-- New Game button (script will also ensure it exists on load) -->
-      <button id="new-game-btn" aria-label="Start a new game">New Game</button>
+
+    <!-- Modals: Missions, Achievements, Shop, Prestige -->
+    <div id="modal-missions" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Daily Missions (3 active)</h3>
+            <div id="missions-list"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-missions" class="action-btn">Close</button>
+            </div>
+        </div>
     </div>
-  </header>
 
-  <!-- Main dashboard layout (simplified placeholders matching IDs script uses) -->
-  <main class="container">
-    <section class="left-col">
-      <canvas id="portfolioChart" width="600" height="200"></canvas>
+    <div id="modal-achievements" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Achievements</h3>
+            <div id="achievements-list"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-achievements" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
 
-      <div class="panel">
-        <h3>My Portfolio</h3>
-        <table id="portfolio-table" class="table"></table>
-      </div>
-    </section>
+    <div id="modal-shop" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Shop</h3>
+            <div id="shop-items"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="close-shop" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
 
-    <section class="center-col">
-      <div class="panel">
-        <h3>Trade</h3>
-        <table id="trade-table" class="table"></table>
-      </div>
+    <div id="modal-prestige" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>Prestige</h3>
+            <div id="prestige-content"></div>
+            <div style="margin-top:12px; text-align:right;">
+                <button id="do-prestige" class="action-btn">Prestige</button>
+                <button id="close-prestige" class="action-btn">Close</button>
+            </div>
+        </div>
+    </div>
 
-      <div class="panel">
-        <h3>Missions & Progress</h3>
-        <div id="missions-brief"></div>
-        <div id="xp-bar-wrap"><div id="xp-bar" style="width:0%"></div></div>
-        <div id="xp" class="xp-text">0 / 100 XP</div>
-        <div id="level" class="level-text">1</div>
-      </div>
-    </section>
+    <!-- Toaster -->
+    <div id="toasts" style="position:fixed; right:18px; bottom:18px; z-index:80;"></div>
 
-    <section class="right-col">
-      <div class="panel">
-        <h3>Leaderboard</h3>
-        <ul id="scores"></ul>
-      </div>
-
-      <div class="panel">
-        <h3>Events & Watchlist</h3>
-        <ul id="events-list"></ul>
-        <div id="watchlist"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Achievements</h3>
-        <div id="achievements-list"></div>
-        <div id="next-achievement"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Toast container -->
-  <div id="toasts" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- Modals (placeholders) -->
-  <div id="modal-missions" aria-hidden="true" class="modal">
-    <button id="close-missions">Close</button>
-    <div id="missions-list"></div>
-  </div>
-  <div id="modal-achievements" aria-hidden="true" class="modal">
-    <button id="close-achievements">Close</button>
-  </div>
-  <div id="modal-shop" aria-hidden="true" class="modal">
-    <button id="close-shop">Close</button>
-    <div id="shop-items"></div>
-  </div>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
