@@ -74,7 +74,7 @@ const STORAGE_KEY = "marketmasters_full_v1";
 let state = {
   xp: 0,
   level: 1,
-  coins: 0,
+  cash: 0,
   achievements: {},   // boolean flags only
   missions: [],
   missionsDate: null,
@@ -171,9 +171,9 @@ function checkLevelUp() {
     state.xp -= xpForLevel(state.level);
     state.level++;
     gained = true;
-    const rewardCoins = 50 + state.level * 5;
-    state.coins += rewardCoins;
-    toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
+    const rewardcash = 50 + state.level * 5;
+    state.cash += rewardcash;
+    toast(`Level up! Now level ${state.level}. +${rewardcash} cash`);
     launchConfetti(60);
     unlockAchievement('level_up');
   }
@@ -206,18 +206,18 @@ function updateHUD() {
 
 // ------------------ Achievements ------------------
 const ACHIEVEMENT_LIST = [
-  { id: 'first_trade', name: 'First Trade', desc: 'Make your first trade', coins: 50 },
-  { id: 'profit_1000', name: 'Profit $1,000', desc: 'Accumulate $1,000 profit total', coins: 150 },
-  { id: 'hold_50ticks', name: 'Patient Investor', desc: 'Hold a stock for 50 ticks', coins: 200 },
-  { id: 'level_10', name: 'Rising Star', desc: 'Reach level 10', coins: 300 }
+  { id: 'first_trade', name: 'First Trade', desc: 'Make your first trade', cash: 50 },
+  { id: 'profit_1000', name: 'Profit $1,000', desc: 'Accumulate $1,000 profit total', cash: 150 },
+  { id: 'hold_50ticks', name: 'Patient Investor', desc: 'Hold a stock for 50 ticks', cash: 200 },
+  { id: 'level_10', name: 'Rising Star', desc: 'Reach level 10', cash: 300 }
 ];
 function unlockAchievement(id) {
   if (state.achievements[id]) return;
   const spec = ACHIEVEMENT_LIST.find(a => a.id === id);
   state.achievements[id] = true;
   if (spec) {
-    state.coins += spec.coins;
-    toast(`Achievement unlocked: ${spec.name} (+${spec.coins} coins)`);
+    state.cash += spec.cash;
+    toast(`Achievement unlocked: ${spec.name} (+${spec.cash} cash)`);
     launchConfetti(80);
   } else {
     toast(`Achievement unlocked: ${id}`);
@@ -250,11 +250,11 @@ function renderNextAchievement() {
 // ------------------ Missions ------------------
 // NOTE: updated profit text requested -> "Make $500 profit (tick)"
 const MISSION_CANDIDATES = [
-  { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
-  { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { coins: 120, xp: 40 } },
-  { id: 'hold_10', text: 'Hold a stock for 10 ticks', check: (p) => false, reward: { coins: 80, xp: 30 } },
-  { id: 'trade_10', text: 'Execute 10 trades', check: (p) => p.trades >= 10, reward: { coins: 70, xp: 25 } },
-  { id: 'buy_food', text: 'Buy a Food stock', check: (p) => p.typesBought && p.typesBought.includes('Food'), reward: { coins: 40, xp: 12 } }
+  { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { cash: 60, xp: 20 } },
+  { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { cash: 120, xp: 40 } },
+  { id: 'hold_10', text: 'Hold a stock for 10 ticks', check: (p) => false, reward: { cash: 80, xp: 30 } },
+  { id: 'trade_10', text: 'Execute 10 trades', check: (p) => p.trades >= 10, reward: { cash: 70, xp: 25 } },
+  { id: 'buy_food', text: 'Buy a Food stock', check: (p) => p.typesBought && p.typesBought.includes('Food'), reward: { cash: 40, xp: 12 } }
 ];
 
 function attachMissionBaseline(m) {
@@ -366,9 +366,9 @@ function renderMissionsModal() {
   modalList.innerHTML = '';
   (state.missions || []).forEach((m, idx) => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
-    const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
+    const rewardCash = (m.reward && m.reward.cash) ? m.reward.cash : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
-    const rewardText = `Reward: $${rewardCoins}, ${rewardXP} XP`;
+    const rewardText = `Reward: $${rewardCash}, ${rewardXP} XP`;
     const div = document.createElement('div');
     div.className = 'mission';
     div.style.display = 'flex';
@@ -389,10 +389,10 @@ function renderMissionsModal() {
       const btn = div.querySelector('button');
       if (btn) {
         btn.onclick = () => {
-          const reward = m.reward || { coins: 50, xp: 15 };
-          state.coins += reward.coins || 0;
+          const reward = m.reward || { cash: 50, xp: 15 };
+          portfolio.cash += reward.cash || 0;
           addXP(reward.xp || 0);
-          toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
+          toast(`Mission claimed: +$${reward.cash} cash, +${reward.xp} XP`);
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
@@ -415,9 +415,9 @@ function renderMissionsBrief() {
   el.innerHTML = '';
   (state.missions || []).slice(0, 3).forEach(m => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
-    const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
+    const rewardcash = (m.reward && m.reward.cash) ? m.reward.cash : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
-    const txt = `${m.text} — Reward: $${rewardCoins}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
+    const txt = `${m.text} — Reward: $${rewardcash}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
     const div = document.createElement('div');
     div.textContent = txt;
     el.appendChild(div);
@@ -447,15 +447,15 @@ function renderShop() {
     if (!owned) {
       const btn = div.querySelector('button');
       btn.onclick = () => {
-        if (state.coins >= item.price) {
-          state.coins -= item.price;
+        if (state.cash >= item.price) {
+          state.cash -= item.price;
           state.shopOwned[item.id] = true;
           applyShopEffect(item);
           toast(`Purchased ${item.name}`);
           saveState();
           updateHUD();
           renderShop();
-        } else toast('Not enough coins');
+        } else toast('Not enough cash');
       };
     }
   });
@@ -648,7 +648,7 @@ window.buyStock = function (symbol) {
     const type = (STOCKS.find(s => s.symbol === symbol) || {}).type;
     if (type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
     addXP(Math.max(1, Math.round(cost / 200)));
-    state.coins += Math.max(0, Math.round(cost / 1000));
+    state.cash += Math.max(0, Math.round(cost / 1000));
     recordOrder('buy', symbol, qty, prices[symbol]);
     if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
     toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
@@ -675,7 +675,7 @@ window.sellStock = function (symbol) {
   const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
   if (profit > 0) {
     addXP(Math.round(profit / 10));
-    state.coins += Math.round(profit / 50);
+    state.cash += Math.round(profit / 50);
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
   }
   recordOrder('sell', symbol, qty, prices[symbol]);
