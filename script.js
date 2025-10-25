@@ -1,14 +1,12 @@
-// script.js - Full ready-to-use file (all-cash, profit achievement by portfolio value)
+// script.js - All-cash version with profit_1000 achievement based on portfolio value (startingCash + $1,000)
 //
-// Changes included in this full file:
-// - All reward flows use portfolio.cash (dollars). "coins" removed from game state.
-// - Persistent portfolio.cash stored in state.portfolioCash.
-// - Recorded state.startingCash (baseline) on new game / load for portfolio-based achievements.
-// - profit_1000 achievement now unlocks when portfolio value >= startingCash + 1000.
-// - Defensive fixes (symbol references corrected), persistence, and UI updates preserved.
-// - checkProfitAchievement() is called on startup and whenever portfolio value can change.
-//
-// Replace your existing script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
+// Fix applied:
+// - The "Profit $1,000" achievement now unlocks when your portfolio value (cash + holdings) >= startingCash + 1000.
+// - startingCash is recorded at new-game and preserved in saved state so the achievement threshold is stable.
+// - checkProfitAchievement() helper added and called whenever portfolio value can change (startup, ticks, news, buy/sell, mission claim, shop purchase).
+// - startingCash persisted in state.startingCash via saveState/loadState.
+// - Kept legacy compatibility (reward.coins treated as cash when paying out), but unlocking is now portfolio-based.
+
 
 // ------------------ Date / Season helpers (defined first) ------------------
 function getSeasonId() {
@@ -20,7 +18,7 @@ function getSeasonId() {
 }
 function getTodayStr() { return new Date().toISOString().slice(0,10); }
 
-// ------------------ Top-level single declarations ------------------
+// ------------------ Top-level declarations ------------------
 let priceInterval = null;
 let newsInterval = null;
 
@@ -93,17 +91,10 @@ let state = {
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      // No saved state => New game
-      return false;
-    }
+    if (!raw) return false;
     Object.assign(state, JSON.parse(raw));
     // restore persisted portfolio cash if present
     if (state.portfolioCash !== undefined) portfolio.cash = state.portfolioCash;
-    // restore startingCash if present (baseline for portfolio profit achievement)
-    if (state.startingCash !== undefined) {
-      // keep it as-is
-    }
     return true;
   } catch (e) { console.warn('loadState', e); return true; }
 }
@@ -111,19 +102,21 @@ function saveState() {
   try {
     // persist portfolio.cash and startingCash explicitly
     state.portfolioCash = portfolio.cash;
-    if (state.startingCash === undefined || state.startingCash === null) state.startingCash = portfolio.cash;
+    if (state.startingCash === undefined || state.startingCash === null) {
+      // ensure startingCash is recorded on first save
+      state.startingCash = portfolio.cash;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) { console.warn('saveState', e); }
 }
 const hadSavedState = loadState();
 
-// If no saved state existed, *this is a new game session* — ensure level is 1 and XP is 0 and record startingCash
+// New-game initialization (only when there was no saved state)
 if (!hadSavedState) {
   state.level = 1;
   state.xp = 0;
   state.achievements = {};
   state.shopOwned = {};
-  // ensure other tracking starts fresh
   state.totalProfit = 0;
   state.stockHoldTicks = {};
   state.missions = [];
@@ -139,11 +132,11 @@ if (!hadSavedState) {
   }
 }
 
-// Initialize tracking fields if they exist in storage but are missing
+// Ensure fields exist
 if (state.totalProfit === undefined) state.totalProfit = 0;
 if (!state.stockHoldTicks) state.stockHoldTicks = {};
 
-// ------------------ Small UI helpers ------------------
+// ------------------ UI helpers ------------------
 function toast(text, timeout = 3000) {
   const toasts = document.getElementById('toasts');
   if (!toasts) { console.debug('toast:', text); return; }
@@ -162,7 +155,7 @@ function updateCash() {
   el.textContent = formatCurrency(portfolio.cash || 0);
 }
 
-// ------------------ Global defensive logging ------------------
+// ------------------ Defensive logging ------------------
 window.addEventListener('error', function (ev) {
   try { console.error('Unhandled error event:', ev.error || ev.message || ev); } catch (e) {}
 });
@@ -204,13 +197,11 @@ function checkLevelUp() {
     state.xp -= xpForLevel(state.level);
     state.level++;
     gained = true;
-    // reward in dollars
-    const rewardCash = 50 + state.level * 5;
+    const rewardCash = 50 + state.level * 5; // dollars
     portfolio.cash += rewardCash;
     updateCash();
     toast(`Level up! Now level ${state.level}. +${formatCurrency(rewardCash)}`);
     launchConfetti(60);
-    // Unlock level achievement if reached
     if (state.level >= 10 && !state.achievements['level_10']) {
       unlockAchievement('level_10');
     }
@@ -244,6 +235,7 @@ function updateHUD() {
 }
 
 // ------------------ Achievements ------------------
+// NOTE: ACHIEVEMENT_LIST 'coins' values are interpreted as cash for compatibility.
 const ACHIEVEMENT_LIST = [
   { id: 'first_trade', name: 'First Trade', desc: 'Make your first trade', coins: 50 },
   { id: 'profit_1000', name: 'Profit $1,000', desc: 'Accumulate $1,000 profit total', coins: 150 },
@@ -310,7 +302,7 @@ function checkProfitAchievement() {
 }
 
 // ------------------ Missions ------------------
-// NOTE: mission rewards use reward.cash || reward.coins for legacy compatibility
+// mission rewards use reward.cash || reward.coins for legacy
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
   { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { coins: 120, xp: 40 } },
@@ -749,8 +741,9 @@ window.sellStock = function (symbol) {
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
     state.totalProfit = (state.totalProfit || 0) + profit;
     console.debug('DEBUG: profit added, totalProfit=', state.totalProfit);
+    // keep realized-profit fallback (no harm); portfolio-based check is authoritative
     if (state.totalProfit >= 1000 && !state.achievements['profit_1000']) {
-      // keep the old realized-profit fallback if needed, but prefer portfolio-based check
+      console.debug('DEBUG: totalProfit threshold reached; unlocking profit_1000 (fallback)');
       unlockAchievement('profit_1000');
     }
     saveState();
@@ -832,8 +825,8 @@ function tickPrices() {
   dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
   checkMissions();
   updateHUD();
-  saveState(); // persist stock hold tick updates and portfolio cash
-  // portfolio may have changed in tick -> check profit achievement
+  saveState();
+  // portfolio may have changed -> check profit achievement
   checkProfitAchievement();
 }
 
@@ -846,7 +839,7 @@ function newsTick() {
   pushChartSample(getPortfolioValue());
   renderLeaderboard();
   saveState();
-  // portfolio may change due to market moves -> check profit achievement
+  // portfolio may have changed -> check profit achievement
   checkProfitAchievement();
 }
 
@@ -869,7 +862,7 @@ function getPortfolioValue() {
   return +v;
 }
 
-// ------------------ Startup & wiring (defensive) ------------------
+// ------------------ Startup & wiring ------------------
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'add-watch') {
     const inp = document.getElementById('watch-input');
@@ -904,10 +897,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
     const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
     setInterval(updateSeasonTimer, 1000);
-    // run UI text fix (replaces any "Daily Missions" strings in text nodes)
     fixDailyMissionsLabel();
 
-    // Run profit achievement check once on startup (in case portfolio is already above baseline)
+    // Check the profit achievement once on startup in case the player already meets the threshold
     checkProfitAchievement();
   } catch (startupErr) {
     console.error('Startup error caught:', startupErr);
