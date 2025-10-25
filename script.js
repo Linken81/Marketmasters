@@ -1,11 +1,9 @@
-// script.js - full updated file
-// Changes in this update (minimal):
-// 1) Replace UI text "Daily Missions (N active)" -> "Missions (N active)" by scanning text nodes and replacing occurrences.
-// 2) Change mission label "Make $500 profit (day)" -> "Make $500 profit (tick)" in the mission definitions.
-// No other logic or behavior changed. Backup was created above prior to this change.
-// Replace your current script.js with this file and hard-refresh (Ctrl/Cmd+Shift+R).
+// script.js - All-cash version (removed coins entirely; shop/payouts use portfolio.cash)
+// - Level-ups, achievements, missions, shop purchases => modify portfolio.cash (dollars)
+// - state.coins removed; any legacy reward.coins values are treated as cash for compatibility
+// - portfolio.cash persisted via state.portfolioCash
 
-// ------------------ Date / Season helpers (defined first) ------------------
+// ------------------ Date / Season helpers ------------------
 function getSeasonId() {
   const d = new Date();
   const onejan = new Date(d.getFullYear(), 0, 1);
@@ -15,7 +13,7 @@ function getSeasonId() {
 }
 function getTodayStr() { return new Date().toISOString().slice(0,10); }
 
-// ------------------ Top-level single declarations ------------------
+// ------------------ Top-level declarations ------------------
 let priceInterval = null;
 let newsInterval = null;
 
@@ -74,7 +72,6 @@ const STORAGE_KEY = "marketmasters_full_v1";
 let state = {
   xp: 0,
   level: 1,
-  coins: 0,
   achievements: {},   // boolean flags only
   missions: [],
   missionsDate: null,
@@ -89,31 +86,43 @@ let state = {
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) Object.assign(state, JSON.parse(raw));
-  } catch (e) { console.warn('loadState', e); }
+    if (!raw) return false;
+    Object.assign(state, JSON.parse(raw));
+    // restore persisted portfolio cash if present
+    if (state.portfolioCash !== undefined) portfolio.cash = state.portfolioCash;
+    return true;
+  } catch (e) { console.warn('loadState', e); return true; }
 }
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn('saveState', e); }
+  try {
+    // persist portfolio.cash explicitly
+    state.portfolioCash = portfolio.cash;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) { console.warn('saveState', e); }
 }
-loadState();
+const hadSavedState = loadState();
 
-// Per earlier request: reset level/xp and clear achievements/shop on refresh
-state.level = 1;
-state.xp = 0;
-state.achievements = {};
-state.shopOwned = {};
-
-// Ensure saved missions don't start completed and attach baselines to loaded missions
-if (state.missions && Array.isArray(state.missions)) {
-  state.missions = state.missions.map(m => ({ ...m, done: false }));
-  state.missions.forEach(m => { if (!m.assignedAt) attachMissionBaseline(m); });
+// New-game initialization (only when there was no saved state)
+if (!hadSavedState) {
+  state.level = 1;
+  state.xp = 0;
+  state.achievements = {};
+  state.shopOwned = {};
+  state.totalProfit = 0;
+  state.stockHoldTicks = {};
+  state.missions = [];
+  state.missionsDate = null;
   saveState();
 }
 
-// ------------------ Small UI helpers ------------------
+// Ensure fields exist
+if (state.totalProfit === undefined) state.totalProfit = 0;
+if (!state.stockHoldTicks) state.stockHoldTicks = {};
+
+// ------------------ UI helpers ------------------
 function toast(text, timeout = 3000) {
   const toasts = document.getElementById('toasts');
-  if (!toasts) return;
+  if (!toasts) { console.debug('toast:', text); return; }
   const el = document.createElement('div');
   el.className = 'toast';
   el.textContent = text;
@@ -129,7 +138,7 @@ function updateCash() {
   el.textContent = formatCurrency(portfolio.cash || 0);
 }
 
-// ------------------ Global defensive logging ------------------
+// ------------------ Defensive logging ------------------
 window.addEventListener('error', function (ev) {
   try { console.error('Unhandled error event:', ev.error || ev.message || ev); } catch (e) {}
 });
@@ -171,11 +180,14 @@ function checkLevelUp() {
     state.xp -= xpForLevel(state.level);
     state.level++;
     gained = true;
-    const rewardCoins = 50 + state.level * 5;
-    state.coins += rewardCoins;
-    toast(`Level up! Now level ${state.level}. +${rewardCoins} coins`);
+    const rewardCash = 50 + state.level * 5; // dollars
+    portfolio.cash += rewardCash;
+    updateCash();
+    toast(`Level up! Now level ${state.level}. +${formatCurrency(rewardCash)}`);
     launchConfetti(60);
-    unlockAchievement('level_up');
+    if (state.level >= 10 && !state.achievements['level_10']) {
+      unlockAchievement('level_10');
+    }
   }
   if (gained) saveState();
 }
@@ -202,9 +214,12 @@ function updateHUD() {
   const xpRemEl = document.getElementById('xp-remaining');
   if (xpRemEl) xpRemEl.textContent = `${remaining} XP to next level`;
   renderNextAchievement();
+  updateCash();
 }
 
 // ------------------ Achievements ------------------
+// NOTE: ACHIEVEMENT_LIST 'coins' values are interpreted as cash for compatibility.
+// You can change the numbers to represent dollars.
 const ACHIEVEMENT_LIST = [
   { id: 'first_trade', name: 'First Trade', desc: 'Make your first trade', coins: 50 },
   { id: 'profit_1000', name: 'Profit $1,000', desc: 'Accumulate $1,000 profit total', coins: 150 },
@@ -212,16 +227,25 @@ const ACHIEVEMENT_LIST = [
   { id: 'level_10', name: 'Rising Star', desc: 'Reach level 10', coins: 300 }
 ];
 function unlockAchievement(id) {
-  if (state.achievements[id]) return;
+  if (!id) return;
+  if (!state.achievements) state.achievements = {};
+  if (state.achievements[id]) {
+    console.debug('unlockAchievement: already unlocked', id);
+    return;
+  }
   const spec = ACHIEVEMENT_LIST.find(a => a.id === id);
   state.achievements[id] = true;
   if (spec) {
-    state.coins += spec.coins;
-    toast(`Achievement unlocked: ${spec.name} (+${spec.coins} coins)`);
+    const cash = spec.cash || spec.coins || 0;
+    portfolio.cash += cash;
+    updateCash();
+    toast(`Achievement unlocked: ${spec.name} (+${formatCurrency(cash)})`);
     launchConfetti(80);
+    console.debug('unlockAchievement: unlocked', id, 'awarded $', cash);
   } else {
     toast(`Achievement unlocked: ${id}`);
     launchConfetti(40);
+    console.debug('unlockAchievement: unlocked (no spec)', id);
   }
   saveState();
   renderAchievements();
@@ -248,7 +272,7 @@ function renderNextAchievement() {
 }
 
 // ------------------ Missions ------------------
-// NOTE: updated profit text requested -> "Make $500 profit (tick)"
+// mission rewards use reward.cash || reward.coins for legacy
 const MISSION_CANDIDATES = [
   { id: 'buy_3', text: 'Buy 3 different stocks', check: (p) => p.buyDifferent >= 3, reward: { coins: 60, xp: 20 } },
   { id: 'profit_500', text: 'Make $500 profit (tick)', check: (p) => false, reward: { coins: 120, xp: 40 } },
@@ -336,7 +360,6 @@ function generateSingleMission() {
   return nm;
 }
 
-// Replace "Daily Missions" occurrences in text nodes with "Missions" to update any static UI labels
 function fixDailyMissionsLabel() {
   try {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
@@ -366,9 +389,9 @@ function renderMissionsModal() {
   modalList.innerHTML = '';
   (state.missions || []).forEach((m, idx) => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
-    const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
+    const rewardCash = (m.reward && (m.reward.cash || m.reward.coins)) ? (m.reward.cash || m.reward.coins) : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
-    const rewardText = `Reward: $${rewardCoins}, ${rewardXP} XP`;
+    const rewardText = `Reward: ${formatCurrency(rewardCash)}, ${rewardXP} XP`;
     const div = document.createElement('div');
     div.className = 'mission';
     div.style.display = 'flex';
@@ -390,9 +413,11 @@ function renderMissionsModal() {
       if (btn) {
         btn.onclick = () => {
           const reward = m.reward || { coins: 50, xp: 15 };
-          state.coins += reward.coins || 0;
+          const cashToAdd = reward.cash || reward.coins || 0;
+          portfolio.cash += cashToAdd;
+          updateCash();
           addXP(reward.xp || 0);
-          toast(`Mission claimed: +${reward.coins} coins, +${reward.xp} XP`);
+          toast(`Mission claimed: +${formatCurrency(cashToAdd)}, +${reward.xp || 0} XP`);
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
@@ -415,9 +440,9 @@ function renderMissionsBrief() {
   el.innerHTML = '';
   (state.missions || []).slice(0, 3).forEach(m => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
-    const rewardCoins = (m.reward && m.reward.coins) ? m.reward.coins : 0;
+    const rewardCash = (m.reward && (m.reward.cash || m.reward.coins)) ? (m.reward.cash || m.reward.coins) : 0;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
-    const txt = `${m.text} — Reward: $${rewardCoins}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
+    const txt = `${m.text} — Reward: ${formatCurrency(rewardCash)}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
     const div = document.createElement('div');
     div.textContent = txt;
     el.appendChild(div);
@@ -442,20 +467,21 @@ function renderShop() {
     const div = document.createElement('div');
     div.className = 'shop-item';
     div.innerHTML = `<div><strong>${item.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${item.desc}</div></div>
-      <div>${owned ? 'Owned' : `<button class="action-btn">Buy $${item.price}</button>`}</div>`;
+      <div>${owned ? 'Owned' : `<button class="action-btn">Buy ${formatCurrency(item.price)}</button>`}</div>`;
     el.appendChild(div);
     if (!owned) {
       const btn = div.querySelector('button');
       btn.onclick = () => {
-        if (state.coins >= item.price) {
-          state.coins -= item.price;
+        if (portfolio.cash >= item.price) {
+          portfolio.cash -= item.price;
+          updateCash();
           state.shopOwned[item.id] = true;
           applyShopEffect(item);
-          toast(`Purchased ${item.name}`);
+          toast(`Purchased ${item.name} for ${formatCurrency(item.price)}`);
           saveState();
           updateHUD();
           renderShop();
-        } else toast('Not enough coins');
+        } else toast('Not enough cash');
       };
     }
   });
@@ -554,8 +580,10 @@ function initChartIfPresent() {
   const canvas = document.getElementById('portfolioChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  chartData = { labels: [new Date().toLocaleTimeString()], datasets: [{ label: 'Portfolio Value', data: [getPortfolioValue()], borderColor: '#00FC87', backgroundColor: 'rgba(14,210,247,0.10)', fill: true, tension: 0.28 }] };
-  portfolioChart = new Chart(ctx, { type: 'line', data: chartData, options: { animation: { duration: 300 }, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } } });
+  chartData = { labels: [new Date().toLocaleTimeString()], datasets: [{ label: 'Portfolio Value', data: [getPortfolioValue()], borderColor: '#00FC87', backgroundColor: 'rgba(14,210,247,0.10)', fill: false }]};
+  try {
+    portfolioChart = new Chart(ctx, { type: 'line', data: chartData, options: { animation: { duration: 300 }, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } } });
+  } catch (e) { console.warn('Chart init failed', e); portfolioChart = null; }
 }
 function pushChartSample(v) {
   if (!portfolioChart) return;
@@ -648,7 +676,6 @@ window.buyStock = function (symbol) {
     const type = (STOCKS.find(s => s.symbol === symbol) || {}).type;
     if (type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
     addXP(Math.max(1, Math.round(cost / 200)));
-    state.coins += Math.max(0, Math.round(cost / 1000));
     recordOrder('buy', symbol, qty, prices[symbol]);
     if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
     toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
@@ -675,8 +702,14 @@ window.sellStock = function (symbol) {
   const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
   if (profit > 0) {
     addXP(Math.round(profit / 10));
-    state.coins += Math.round(profit / 50);
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
+    state.totalProfit = (state.totalProfit || 0) + profit;
+    console.debug('DEBUG: profit added, totalProfit=', state.totalProfit);
+    if (state.totalProfit >= 1000 && !state.achievements['profit_1000']) {
+      console.debug('DEBUG: totalProfit threshold reached; unlocking profit_1000');
+      unlockAchievement('profit_1000');
+    }
+    saveState();
   }
   recordOrder('sell', symbol, qty, prices[symbol]);
   if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
@@ -722,8 +755,17 @@ function tickPrices() {
   setRandomPrices({});
   STOCKS.forEach(s => {
     const owned = (portfolio.stocks[s.symbol] || 0);
-    if (owned > 0) { holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1; }
-    else { holdCounters[s.symbol] = 0; }
+    if (owned > 0) {
+      holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1;
+      state.stockHoldTicks[s.symbol] = (state.stockHoldTicks[s.symbol] || 0) + 1;
+      if (state.stockHoldTicks[s.symbol] >= 50 && !state.achievements['hold_50ticks']) {
+        console.debug('DEBUG: hold ticks threshold reached for', s.symbol, state.stockHoldTicks[s.symbol]);
+        unlockAchievement('hold_50ticks');
+      }
+    } else {
+      holdCounters[s.symbol] = 0;
+      state.stockHoldTicks[s.symbol] = 0;
+    }
   });
   let tickDelta = 0;
   STOCKS.forEach(s => {
@@ -744,6 +786,7 @@ function tickPrices() {
   dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
   checkMissions();
   updateHUD();
+  saveState();
 }
 
 function newsTick() {
@@ -776,7 +819,7 @@ function getPortfolioValue() {
   return +v;
 }
 
-// ------------------ Startup & wiring (defensive) ------------------
+// ------------------ Startup & wiring ------------------
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'add-watch') {
     const inp = document.getElementById('watch-input');
@@ -810,9 +853,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const openS = document.getElementById('open-shop'); if (openS) openS.onclick = () => openModal('modal-shop');
     const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
     const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
-    const addWatchBtn = document.getElementById('add-watch'); if (addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
     setInterval(updateSeasonTimer, 1000);
-    // run UI text fix (replaces any "Daily Missions" strings in text nodes)
     fixDailyMissionsLabel();
   } catch (startupErr) {
     console.error('Startup error caught:', startupErr);
@@ -835,6 +876,13 @@ window.addEventListener('DOMContentLoaded', () => {
 // ------------------ Modals ------------------
 function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
 function closeModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'true'); }
+
+// ------------------ New Game helper ------------------
+function newGame() {
+  if (!confirm('Start a NEW game? This will clear saved progress. Continue?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
 
 // persist final state
 saveState();
