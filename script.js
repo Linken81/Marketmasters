@@ -366,7 +366,8 @@ function renderMissionsModal() {
   modalList.innerHTML = '';
   (state.missions || []).forEach((m, idx) => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
-    const rewardCash = (m.reward && m.reward.cash) ? m.reward.cash : 0;
+    // Always show at least $1 reward
+    const rewardCash = (m.reward && m.reward.cash > 0) ? m.reward.cash : 1;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const rewardText = `Reward: $${rewardCash}, ${rewardXP} XP`;
     const div = document.createElement('div');
@@ -389,11 +390,13 @@ function renderMissionsModal() {
       const btn = div.querySelector('button');
       if (btn) {
         btn.onclick = () => {
+          // Always grant at least $1 cash
           const reward = m.reward || { cash: 50, xp: 15 };
-          portfolio.cash += reward.cash || 0;
+          const cashReward = (reward.cash > 0 ? reward.cash : 1);
+          portfolio.cash += cashReward;
           addXP(reward.xp || 0);
-          toast(`Mission claimed: +$${reward.cash} cash, +${reward.xp} XP`);
-          updateCash(); // <-- Ensure UI updates immediately!
+          toast(`Mission claimed: +$${cashReward} cash, +${reward.xp} XP`);
+          updateCash();
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
@@ -411,13 +414,15 @@ function renderMissionsModal() {
 }
 
 
+
 function renderMissionsBrief() {
   const el = document.getElementById('missions-brief');
   if (!el) return;
   el.innerHTML = '';
   (state.missions || []).slice(0, 3).forEach(m => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
-    const rewardcash = (m.reward && m.reward.cash) ? m.reward.cash : 0;
+    // Always show at least $1 reward
+    const rewardcash = (m.reward && m.reward.cash > 0) ? m.reward.cash : 1;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const txt = `${m.text} — Reward: $${rewardcash}, ${rewardXP} XP${m.done ? ' ✅' : ''}`;
     const div = document.createElement('div');
