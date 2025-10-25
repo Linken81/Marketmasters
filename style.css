@@ -1,474 +1,102 @@
-/* Move the Next Day button up from the bottom
-   NOTE: next-day button removed from HTML, related styles removed for cleanliness */
-#next-day {
-    display: none;
+/* Basic site styling and New Game button styles added */
+
+/* --- Layout --- */
+:root{
+  --bg:#08121a;
+  --panel:#0f232b;
+  --muted:#9aa7b2;
+  --accent:#00c4a7;
+  --danger:#ff2b56;
+  --glass: rgba(255,255,255,0.02);
 }
 
-/* ---- HEADER FLEX LAYOUT ---- */
-.header {
-    grid-area: header;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    background: #212433dd;
-    border-radius: 9px;
-    box-shadow: 0 4px 20px #0005;
-    padding: 0 24px;
-    letter-spacing: 0.7px;
-    color: #21e6c1;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    min-height: 56px;
-}
-.header-flex {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    justify-content: flex-start;
-    gap: 42px;
-    position: relative;
-}
-.header-cash {
-    flex: 0 1 auto;
-    color: #21e6c1;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-left: 0;
-    margin-right: 24px;
-}
-.header-cash span {
-    color: #00fc87;
-    font-weight: 700;
-}
-.header-title {
-    flex: 1 1 auto;
-    text-align: center;
-    margin-right: 42px;
+html,body{
+  height:100%;
+  margin:0;
+  font-family: Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(180deg,#071017 0%,#0b1720 100%);
+  color:#cfe7e1;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
-/* --- Modern/Professional "Marketmasters" title --- */
-.mm-pro {
-    display: inline-block;
-    font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: 2px;
-    background: linear-gradient(90deg, #1fc8db 0%, #21e6c1 45%, #00fc87 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-fill-color: transparent;
-    text-shadow: 
-        0 2px 4px rgba(33,230,193,0.15),
-        0 1px 0px #202539,
-        0 0px 14px #00fc8750;
-    transition: text-shadow 0.3s;
-    padding: 4px 0 2px 0;
-    word-spacing: 2px;
-}
-.mm-pro:hover {
-    text-shadow: 
-        0 3px 8px rgba(33,230,193,0.18),
-        0 2px 0px #202539,
-        0 0px 18px #00fc8780;
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 20px;
+  background: rgba(2,16,20,0.45);
+  border-bottom:1px solid rgba(255,255,255,0.02);
+  position:relative;
 }
 
-/* ---- END HEADER FLEX ---- */
+.logo{ margin:0; font-size:18px; color:var(--accent); letter-spacing:1px; }
 
-/* XP progress bar */
-#xp-bar-wrap {
-    width: 100%;
-    height: 10px;
-    background:#202539;
-    border-radius:8px;
-    border:1px solid #23263a;
-    overflow:hidden;
-    margin-top:6px;
-}
-#xp-bar {
-    height:100%;
-    width:0%;
-    background: linear-gradient(90deg,#00fc87,#21e6c1);
-    transition:width 400ms ease;
+.topbar-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
 
-/* Confetti */
-.confetti {
-    position:fixed;
-    width:10px;
-    height:14px;
-    z-index:9999;
-    pointer-events:none;
-    opacity:0.95;
-    transform-origin:center;
-    will-change: transform, opacity;
-    animation-name: confetti-fall, confetti-rotate, confetti-fade;
-    animation-timing-function: linear, ease-in-out, linear;
-}
-@keyframes confetti-fall {
-    from { transform: translateY(-10vh); }
-    to { transform: translateY(110vh); }
-}
-@keyframes confetti-rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(720deg); }
-}
-@keyframes confetti-fade {
-    0% { opacity: 0.95; }
-    80% { opacity: 0.95; }
-    100% { opacity: 0; }
+/* Cash display */
+.cash-display{
+  background: rgba(0,0,0,0.15);
+  padding:6px 10px;
+  border-radius:8px;
+  font-weight:700;
+  color: #7fffe1;
+  min-width:120px;
+  text-align:center;
 }
 
-/* ---- Other styles unchanged below ---- */
-
-/* Make buy input wider and align better in Trade panel */
-input[type="number"].buy-input {
-    width: 105px;
-    border-radius: 5px;
-    border: 1px solid #21e6c1;
-    background: #202539;
-    color: #e7ebf3;
-    font-size: 0.96em;
-    padding: 3px 4px;
-    margin-right: 4px;
-    outline: none;
-    transition: border 0.12s;
+/* --- Layout - main --- */
+.container{
+  display:grid;
+  grid-template-columns: 280px 1fr 320px;
+  gap:20px;
+  padding:24px;
 }
-input[type="number"].buy-input:focus {
-    border-color: #FC0032;
-    background: #181a20;
+.panel{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:12px;
+  padding:14px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  border:1px solid rgba(255,255,255,0.02);
 }
 
-/* Cost box for buy total (red rectangle) */
-.buy-cost {
-    display: inline-block;
-    min-width: 90px;
-    margin-left: 10px;
-    padding: 4px 10px;
-    border: 2px solid #fc0032;
-    border-radius: 5px;
-    background: transparent;
-    color: #fc0032;
-    font-weight: bold;
-    font-size: 1em;
-    text-align: right;
-}
+/* Simple table placeholders */
+.table{ width:100%; border-collapse:collapse; }
+.table td, .table th { padding:8px 6px; }
 
-/* Wider Sell/Buy columns in Portfolio for buttons */
-#portfolio-table td:last-child, #portfolio-table th:last-child {
-    min-width: 200px;
-    white-space: nowrap;
-}
+/* Toasts */
+#toasts{ position:fixed; right:18px; bottom:18px; display:flex; flex-direction:column; gap:8px; z-index:12000; }
+.toast{ background:#2b3840; padding:10px 14px; border-radius:10px; color:#e8f9f3; box-shadow:0 6px 18px rgba(0,0,0,0.45); }
 
-/* Ensure the right panel stacks Leaderboard and News vertically */
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
+/* Modal placeholders */
+.modal{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#07121a; padding:20px; border-radius:10px; display:none; z-index:20000; }
+.modal[aria-hidden="false"]{ display:block; }
 
-/* EVENTS / WATCHLIST PANEL special tweaks */
-#events-panel .action-btn { padding:6px 8px; font-size:0.95em; }
+/* --- New Game button styling (moved to stylesheet rather than injected) --- */
+#new-game-btn {
+  position:relative; /* header contained placement by default */
+  top:0;
+  right:0;
+  z-index:999;
+  background: linear-gradient(180deg,#00c4a7,#00a68f);
+  color: #031218;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  cursor: pointer;
+  font-family: inherit;
+}
+#new-game-btn:hover { filter: brightness(0.95); transform: translateY(-1px); }
+#new-game-btn:focus { outline: 3px solid rgba(0,196,167,0.18); outline-offset: 2px; }
 
-/* NEWS PANEL (red square under leaderboard) */
-.news-panel {
-    border: 2px solid #fc0032;
-    background: #23263a;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px #fc003222;
-    padding: 18px 18px 14px 18px;
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
-    position: relative;
-}
-#news-content {
-    font-size: 1.08em;
-    color: #e7ebf3;
-    margin-top: 7px;
-    white-space: pre-line;
-}
-
-/* Modal and toast basics (small and unobtrusive) */
-.modal { position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:80; }
-.modal[aria-hidden="false"] { display:flex; }
-.modal-content { background:#202539; padding:16px; border-radius:10px; width:440px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,0.7); color:#e7ebf3; }
-#toasts .toast { background:#23263a; color:#e7ebf3; padding:10px 12px; border-radius:8px; box-shadow:0 6px 18px #0008; margin-bottom:8px; }
-
-/* --- existing styles below (unchanged) --- */
-html, body {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', 'Roboto', Arial, sans-serif;
-    background: radial-gradient(circle at 45% 25%, #23263a 65%, #181a20 100%);
-    color: #e7ebf3;
-}
-
-.dashboard {
-    display: grid;
-    grid-template-columns: 1.6fr 2.4fr 1.3fr;
-    grid-template-rows: 56px 1fr;
-    grid-template-areas:
-        "header header header"
-        "left-panel center-panel right-panel";
-    height: 100vh;
-    width: 100vw;
-    gap: 20px;
-    padding: 18px;
-    box-sizing: border-box;
-}
-
-.left-panel, .center-panel, .right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.panel, .card {
-    background: linear-gradient(115deg, #23263a 89%, #212433 100%);
-    border-radius: 14px;
-    box-shadow: 0 4px 16px #0002;
-    padding: 18px 18px 14px 18px;
-    min-width: 0;
-    min-height: 0;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    border: 1.5px solid #212433;
-    transition: box-shadow 0.15s;
-}
-.panel:hover {
-    box-shadow: 0 6px 24px #21e6c11a;
-    border-color: #21e6c1;
-}
-
-.panel-title {
-    color: #21e6c1;
-    font-weight: 700;
-    font-size: 1.15rem;
-    margin-bottom: 9px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    position: relative;
-}
-.panel-title:after {
-    content: "";
-    display: block;
-    height: 2px;
-    width: 26px;
-    background: linear-gradient(90deg, #21e6c1 0%, #23263a 100%);
-    border-radius: 2px;
-    margin-left: 6px;
-}
-
-.chart-container {
-    background: #181a20cc;
-    border-radius: 8px;
-    box-shadow: 0 1px 7px #21e6c122;
-    padding: 10px 0 10px 0;
-    margin-bottom: 6px;
-    min-height: 90px;
-    max-height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.97em;
-    background: none;
-}
-
-th, td {
-    padding: 6px 10px;
-    text-align: left;
-    font-size: 0.97em;
-    border-bottom: 1px solid #222b;
-    transition: background 0.13s;
-}
-
-th {
-    color: #21e6c1;
-    font-weight: 600;
-    background: #202539;
-}
-
-tr {
-    transition: background 0.13s;
-}
-
-tr:hover {
-    background: #23263a99;
-}
-
-.price-up::before {
-    content: "▲ ";
-    color: #21e6c1;
-    font-weight: bold;
-}
-
-.price-down::before {
-    content: "▼ ";
-    color: #FC0032;
-    font-weight: bold;
-}
-
-.price-up { color: #21e6c1; font-weight: 700; }
-.price-down { color: #FC0032; font-weight: 700; }
-.price-same { color: #aaa; }
-
-.action-btn, #next-day, #save-score, .sell-btn, .sell-all-btn {
-    padding: 7px 20px;
-    background: #21e6c1;
-    color: #23263a;
-    border: none;
-    border-radius: 6px;
-    font-size: 1em;
-    font-weight: 600;
-    margin: 0 2px;
-    box-shadow: 0 2px 8px #21e6c133;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-
-.action-btn:hover, #next-day:hover, #save-score:hover, .sell-btn:hover {
-    background: #FC0032;
-    color: #fff;
-    box-shadow: 0 4px 18px #fc0032cc;
-}
-
-.sell-all-btn {
-    padding: 7px 12px;
-    background: #FC0032;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 1em;
-    font-weight: 600;
-    margin: 0 2px;
-    box-shadow: 0 2px 8px #fc003233;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-.sell-all-btn:hover {
-    background: #b00024;
-    color: #fff;
-    box-shadow: 0 4px 18px #fc0032cc;
-}
-
-.buttons-row {
-    display: flex;
-    gap: 12px;
-    margin-top: 7px;
-    justify-content: flex-end;
-}
-
-input[type="number"] {
-    width: 38px;
-    border-radius: 5px;
-    border: 1px solid #21e6c1;
-    background: #202539;
-    color: #e7ebf3;
-    font-size: 0.96em;
-    padding: 3px 2px;
-    margin-right: 2px;
-    outline: none;
-    transition: border 0.12s;
-}
-
-input[type="number"]:focus {
-    border-color: #FC0032;
-    background: #181a20;
-}
-
-ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.leaderboard-list li {
-    padding: 7px 12px;
-    background: #212433cc;
-    border-radius: 6px;
-    color: #21e6c1;
-    font-weight: 500;
-    font-size: 0.99em;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 1px 6px #21e6c144;
-    border-left: 3px solid #21e6c1;
-    position: relative;
-}
-
-.leaderboard-list li::after {
-    content: "🏆";
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.05em;
-    opacity: 0.7;
-}
-
-::-webkit-scrollbar {
-    width: 8px;
-    background: #181a20;
-}
-::-webkit-scrollbar-thumb {
-    background: #23263a;
-    border-radius: 6px;
-}
-
-/* Marketmasters styled header */
-.marketmasters-styled {
-    display: inline-block;
-    font-family: 'Montserrat', 'Inter', 'Segoe UI', 'Arial', sans-serif;
-    font-weight: 800;
-    letter-spacing: 2px;
-    background: linear-gradient(90deg, #1fc8db 0%, #21e6c1 45%, #00fc87 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-fill-color: transparent;
-    text-shadow: 0 2px 4px rgba(33,230,193,0.2), 0 0px 14px rgba(0,252,135,0.3);
-    transition: text-shadow 0.3s, transform 0.3s;
-    padding: 4px 0;
-}
-
-.marketmasters-styled:hover {
-    text-shadow: 0 3px 8px rgba(33,230,193,0.3), 0 0px 18px rgba(0,252,135,0.5);
-    transform: scale(1.02);
-}
-
-@media (max-width: 1200px) {
-    .dashboard {
-        grid-template-columns: 1fr 1.1fr 0.9fr;
-        grid-template-rows: 44px 1fr;
-        gap: 8px;
-        padding: 6px;
-    }
-    .panel, .card { padding: 8px 8px; }
-    .header { font-size: 1.08rem; padding: 0 7px;}
-    .marketmasters-styled {
-        font-size: 1.5rem;
-        letter-spacing: 1.5px;
-    }
-}
-
-@media (max-width: 768px) {
-    .marketmasters-styled {
-        font-size: 1.2rem;
-        letter-spacing: 1px;
-    }
+/* Responsive */
+@media (max-width: 980px) {
+  .container{ grid-template-columns: 1fr; padding:12px; }
+  #new-game-btn { padding:8px 10px; font-size:14px;}
 }
