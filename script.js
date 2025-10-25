@@ -1,14 +1,9 @@
-// script.js - All-cash version with profit_1000 achievement based on portfolio value (startingCash + $1,000)
-//
-// Fix applied:
-// - The "Profit $1,000" achievement now unlocks when your portfolio value (cash + holdings) >= startingCash + 1000.
-// - startingCash is recorded at new-game and preserved in saved state so the achievement threshold is stable.
-// - checkProfitAchievement() helper added and called whenever portfolio value can change (startup, ticks, news, buy/sell, mission claim, shop purchase).
-// - startingCash persisted in state.startingCash via saveState/loadState.
-// - Kept legacy compatibility (reward.coins treated as cash when paying out), but unlocking is now portfolio-based.
+// script.js - All-cash version (removed coins entirely; shop/payouts use portfolio.cash)
+// - Level-ups, achievements, missions, shop purchases => modify portfolio.cash (dollars)
+// - state.coins removed; any legacy reward.coins values are treated as cash for compatibility
+// - portfolio.cash persisted via state.portfolioCash
 
-
-// ------------------ Date / Season helpers (defined first) ------------------
+// ------------------ Date / Season helpers ------------------
 function getSeasonId() {
   const d = new Date();
   const onejan = new Date(d.getFullYear(), 0, 1);
@@ -100,12 +95,8 @@ function loadState() {
 }
 function saveState() {
   try {
-    // persist portfolio.cash and startingCash explicitly
+    // persist portfolio.cash explicitly
     state.portfolioCash = portfolio.cash;
-    if (state.startingCash === undefined || state.startingCash === null) {
-      // ensure startingCash is recorded on first save
-      state.startingCash = portfolio.cash;
-    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) { console.warn('saveState', e); }
 }
@@ -121,15 +112,7 @@ if (!hadSavedState) {
   state.stockHoldTicks = {};
   state.missions = [];
   state.missionsDate = null;
-  // record starting baseline cash for portfolio-based achievements
-  state.startingCash = portfolio.cash || 10000;
   saveState();
-} else {
-  // Ensure startingCash exists for older save data; fall back to current portfolio.cash if missing.
-  if (state.startingCash === undefined || state.startingCash === null) {
-    state.startingCash = state.portfolioCash !== undefined ? state.portfolioCash : (portfolio.cash || 10000);
-    saveState();
-  }
 }
 
 // Ensure fields exist
@@ -236,6 +219,7 @@ function updateHUD() {
 
 // ------------------ Achievements ------------------
 // NOTE: ACHIEVEMENT_LIST 'coins' values are interpreted as cash for compatibility.
+// You can change the numbers to represent dollars.
 const ACHIEVEMENT_LIST = [
   { id: 'first_trade', name: 'First Trade', desc: 'Make your first trade', coins: 50 },
   { id: 'profit_1000', name: 'Profit $1,000', desc: 'Accumulate $1,000 profit total', coins: 150 },
@@ -285,20 +269,6 @@ function renderNextAchievement() {
   if (!el) return;
   const next = ACHIEVEMENT_LIST.find(a => !state.achievements[a.id]);
   el.textContent = next ? `Next achievement: ${next.name} — ${next.desc}` : 'All achievements unlocked!';
-}
-
-// ------------------ Profit achievement helper ------------------
-// Unlock profit_1000 when net portfolio value >= startingCash + 1000
-function checkProfitAchievement() {
-  try {
-    const baseline = (state.startingCash !== undefined && state.startingCash !== null) ? state.startingCash : 10000;
-    const portfolioVal = getPortfolioValue();
-    const netProfit = portfolioVal - baseline;
-    console.debug('DEBUG: checkProfitAchievement baseline=', baseline, 'portfolio=', portfolioVal, 'netProfit=', netProfit);
-    if (netProfit >= 1000 && !state.achievements['profit_1000']) {
-      unlockAchievement('profit_1000');
-    }
-  } catch (e) { console.warn('checkProfitAchievement error', e); }
 }
 
 // ------------------ Missions ------------------
@@ -456,8 +426,6 @@ function renderMissionsModal() {
           renderMissionsBrief();
           updateMissionsButtonLabel();
           fixDailyMissionsLabel();
-          // portfolio changed -> check profit achievement
-          checkProfitAchievement();
         };
       }
     }
@@ -513,8 +481,6 @@ function renderShop() {
           saveState();
           updateHUD();
           renderShop();
-          // portfolio changed -> check profit achievement
-          checkProfitAchievement();
         } else toast('Not enough cash');
       };
     }
@@ -719,8 +685,6 @@ window.buyStock = function (symbol) {
     updateTradeTable();
     updateStockTable();
     renderWatchlist();
-    // portfolio changed -> check profit achievement
-    checkProfitAchievement();
   } else toast('Not enough cash');
 };
 
@@ -741,9 +705,8 @@ window.sellStock = function (symbol) {
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
     state.totalProfit = (state.totalProfit || 0) + profit;
     console.debug('DEBUG: profit added, totalProfit=', state.totalProfit);
-    // keep realized-profit fallback (no harm); portfolio-based check is authoritative
     if (state.totalProfit >= 1000 && !state.achievements['profit_1000']) {
-      console.debug('DEBUG: totalProfit threshold reached; unlocking profit_1000 (fallback)');
+      console.debug('DEBUG: totalProfit threshold reached; unlocking profit_1000');
       unlockAchievement('profit_1000');
     }
     saveState();
@@ -756,8 +719,6 @@ window.sellStock = function (symbol) {
   updatePortfolioTable();
   updateTradeTable();
   updateStockTable();
-  // portfolio changed -> check profit achievement
-  checkProfitAchievement();
 };
 
 window.sellAllStock = function (symbol) {
@@ -826,8 +787,6 @@ function tickPrices() {
   checkMissions();
   updateHUD();
   saveState();
-  // portfolio may have changed -> check profit achievement
-  checkProfitAchievement();
 }
 
 function newsTick() {
@@ -839,8 +798,6 @@ function newsTick() {
   pushChartSample(getPortfolioValue());
   renderLeaderboard();
   saveState();
-  // portfolio may have changed -> check profit achievement
-  checkProfitAchievement();
 }
 
 // ------------------ MISSIONS check (baseline-relative) ------------------
@@ -898,9 +855,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
     setInterval(updateSeasonTimer, 1000);
     fixDailyMissionsLabel();
-
-    // Check the profit achievement once on startup in case the player already meets the threshold
-    checkProfitAchievement();
   } catch (startupErr) {
     console.error('Startup error caught:', startupErr);
     try {
@@ -915,7 +869,6 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!priceInterval) priceInterval = setInterval(tickPrices, 10000);
       if (!newsInterval) newsInterval = setInterval(newsTick, 180000);
       fixDailyMissionsLabel();
-      checkProfitAchievement();
     } catch (e) { console.error('Error during recovery UI population:', e); }
   }
 });
