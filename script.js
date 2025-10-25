@@ -367,7 +367,7 @@ function renderMissionsModal() {
   (state.missions || []).forEach((m, idx) => {
     if (!m.done && isMissionComplete(m)) { m.done = true; saveState(); }
     // Always show at least $1 reward
-    const rewardCash = (m.reward && m.reward.cash > 0) ? m.reward.cash : 1;
+    const rewardCash = (m.reward && m.reward.cash > 0) ? m.reward.cash : 40;
     const rewardXP = (m.reward && m.reward.xp) ? m.reward.xp : 0;
     const rewardText = `Reward: $${rewardCash}, ${rewardXP} XP`;
     const div = document.createElement('div');
