@@ -436,8 +436,10 @@ function renderMissionsBrief() {
 // ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
 const SHOP_ITEMS = [
   { id: 'xp_boost_1', name: 'XP Booster (1h)', desc: '+50% XP for 1 hour', price: 300, effect: { xpMultiplier: 1.5, durationMs: 3600000 } },
-  { id: 'auto_rebuy', name: 'Auto Rebuy (permanent)', desc: 'Automatically re-buy small positions', price: 1200, effect: { autoRebuy: true } },
-  { id: 'chart_skin_neon', name: 'Chart Skin - Neon', desc: 'Cosmetic chart theme', price: 200, effect: { cosmetic: 'neon' } }
+  { id: 'trade_fee_discount', name: 'Trade Fee Discount (permanent)', desc: 'Reduces trading fees by 50%', price: 1200, effect: { tradeFeeDiscount: true } },
+  { id: 'dividend_collector', name: 'Dividend Collector (permanent)', desc: 'Earn dividends every 10 ticks from owned stocks', price: 900, effect: { dividendCollector: true } },
+  { id: 'portfolio_insurance', name: 'Portfolio Insurance (1 day)', desc: 'Refunds 10% of any portfolio loss for 1 day', price: 700, effect: { insurance: true, durationMs: 86400000 } },
+  { id: 'research_report', name: 'Research Report (one-time use)', desc: 'Reveal next price change for one chosen stock', price: 350, effect: { researchReport: true } }
 ];
 
 function renderShop() {
@@ -469,12 +471,26 @@ function renderShop() {
   });
 }
 function applyShopEffect(item) {
-  if (item.effect.autoRebuy) state.autoRebuy = true;
-  if (item.effect.cosmetic) state.cosmetic = item.effect.cosmetic;
   if (item.effect.xpMultiplier) {
     state.activeBoosts.xpMultiplier = item.effect.xpMultiplier;
-    setTimeout(() => { delete state.activeBoosts.xpMultiplier; toast('XP booster expired'); saveState(); }, item.effect.durationMs);
+    setTimeout(() => {
+      delete state.activeBoosts.xpMultiplier;
+      toast('XP booster expired');
+      saveState();
+    }, item.effect.durationMs);
   }
+  if (item.effect.tradeFeeDiscount) state.tradeFeeDiscount = true;
+  if (item.effect.dividendCollector) state.dividendCollector = true;
+  if (item.effect.insurance) {
+    state.portfolioInsuranceActive = true;
+    state.portfolioInsuranceExpires = Date.now() + item.effect.durationMs;
+    setTimeout(() => {
+      state.portfolioInsuranceActive = false;
+      toast('Portfolio insurance expired');
+      saveState();
+    }, item.effect.durationMs);
+  }
+  if (item.effect.researchReport) state.researchReportAvailable = true;
   saveState();
 }
 
@@ -638,17 +654,27 @@ function updatePortfolioTable() {
   });
 }
 
+function getTradeFee(price, qty) {
+  // Standard fee: 2% of trade value
+  let feeRate = 0.02;
+  if (state.tradeFeeDiscount) feeRate = 0.01;
+  return price * qty * feeRate;
+}
+
 // ------------------ Trading (buy/sell) ------------------
 window.buyStock = function (symbol) {
   const input = document.getElementById(`buy_${symbol}`);
   let qty = input ? parseInt(input.value, 10) : 1;
   qty = Math.max(1, qty || 1);
-  const cost = (prices[symbol] || 0) * qty;
-  if (cost <= portfolio.cash) {
+  const price = prices[symbol] || 0;
+  const cost = price * qty;
+  const fee = getTradeFee(price, qty);
+  const totalCost = cost + fee;
+  if (totalCost <= portfolio.cash) {
     const prevQty = portfolio.stocks[symbol] || 0;
     const totalQty = prevQty + qty;
-    averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + (prices[symbol] || 0) * qty) / Math.max(1, totalQty);
-    portfolio.cash -= cost;
+    averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + price * qty) / Math.max(1, totalQty);
+    portfolio.cash -= totalCost;
     updateCash();
     portfolio.stocks[symbol] = totalQty;
     dayProgress.trades = (dayProgress.trades || 0) + 1;
@@ -657,9 +683,9 @@ window.buyStock = function (symbol) {
     if (type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
     addXP(Math.max(1, Math.round(cost / 200)));
     state.cash += Math.max(0, Math.round(cost / 1000));
-    recordOrder('buy', symbol, qty, prices[symbol]);
+    recordOrder('buy', symbol, qty, price);
     if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
-    toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
+    toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)} (+${formatCurrency(fee)} fee)`);
     saveState();
     updateHUD();
     updatePortfolioTable();
@@ -675,34 +701,28 @@ window.sellStock = function (symbol) {
   qty = Math.max(1, qty || 1);
   const owned = portfolio.stocks[symbol] || 0;
   if (qty > owned) { toast('Not enough shares'); return; }
-  const revenue = (prices[symbol] || 0) * qty;
-  portfolio.cash += revenue;
+  const price = prices[symbol] || 0;
+  const revenue = price * qty;
+  const fee = getTradeFee(price, qty);
+  const netRevenue = revenue - fee;
+  portfolio.cash += netRevenue;
   updateCash();
   portfolio.stocks[symbol] = owned - qty;
   if (portfolio.stocks[symbol] === 0) averageBuyPrice[symbol] = 0;
-  const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
+  const profit = (price - averageBuyPrice[symbol]) * qty;
   if (profit > 0) {
     addXP(Math.round(profit / 10));
     state.cash += Math.round(profit / 50);
     dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
   }
-  recordOrder('sell', symbol, qty, prices[symbol]);
+  recordOrder('sell', symbol, qty, price);
   if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
-  toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
+  toast(`Sold ${qty} ${symbol} for ${formatCurrency(netRevenue)} (+${formatCurrency(fee)} fee deducted)`);
   saveState();
   updateHUD();
   updatePortfolioTable();
   updateTradeTable();
   updateStockTable();
-};
-
-window.sellAllStock = function (symbol) {
-  const owned = portfolio.stocks[symbol] || 0;
-  if (owned > 0) {
-    const el = document.getElementById(`sell_${symbol}`);
-    if (el) el.value = owned;
-    sellStock(symbol);
-  }
 };
 
 // ------------------ Order recording & Watchlist ------------------
@@ -726,8 +746,56 @@ function renderWatchlist() {
 }
 
 // ------------------ TICKS: update holdCounters & tick deltas ------------------
+let tickCount = 0;
 function tickPrices() {
   setRandomPrices({});
+  tickCount++;
+
+  // --- Dividend Collector (every 10 ticks) ---
+  if (state.dividendCollector && tickCount % 10 === 0) {
+    let dividendTotal = 0;
+    STOCKS.forEach(s => {
+      const owned = portfolio.stocks[s.symbol] || 0;
+      if (owned > 0) {
+        const dividend = Math.round(owned * (prices[s.symbol] || 0) * 0.005); // 0.5% of value
+        dividendTotal += dividend;
+      }
+    });
+    if (dividendTotal > 0) {
+      portfolio.cash += dividendTotal;
+      toast(`Dividend payout: +$${dividendTotal}`);
+      updateCash();
+      saveState();
+    }
+  }
+
+  // --- Portfolio Insurance (refund 10% of loss) ---
+  if (state.portfolioInsuranceActive) {
+    if (Date.now() > (state.portfolioInsuranceExpires || 0)) {
+      state.portfolioInsuranceActive = false;
+      toast('Portfolio insurance expired');
+      saveState();
+    }
+  }
+  if (state.portfolioInsuranceActive) {
+    const prevPortfolioValue = state.prevPortfolioValue || getPortfolioValue();
+    const currentPortfolioValue = getPortfolioValue();
+    if (currentPortfolioValue < prevPortfolioValue) {
+      const loss = prevPortfolioValue - currentPortfolioValue;
+      const refund = Math.round(loss * 0.1);
+      if (refund > 0) {
+        portfolio.cash += refund;
+        toast(`Insurance refund: +$${refund}`);
+        updateCash();
+        saveState();
+      }
+    }
+    state.prevPortfolioValue = currentPortfolioValue;
+  } else {
+    state.prevPortfolioValue = getPortfolioValue();
+  }
+
+  // --- Your existing tick logic below ---
   STOCKS.forEach(s => {
     const owned = (portfolio.stocks[s.symbol] || 0);
     if (owned > 0) { holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1; }
@@ -752,17 +820,6 @@ function tickPrices() {
   dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
   checkMissions();
   updateHUD();
-}
-
-function newsTick() {
-  const newsMap = triggerRandomNews();
-  setRandomPrices(newsMap);
-  updateTradeTable();
-  updateStockTable();
-  updatePortfolioTable();
-  pushChartSample(getPortfolioValue());
-  renderLeaderboard();
-  saveState();
 }
 
 // ------------------ MISSIONS check (baseline-relative) ------------------
@@ -822,6 +879,30 @@ window.addEventListener('DOMContentLoaded', () => {
     setInterval(updateSeasonTimer, 1000);
     // run UI text fix (replaces any "Daily Missions" strings in text nodes)
     fixDailyMissionsLabel();
+
+    // --- Research Report Button Handler ---
+    const researchBtn = document.getElementById('research-report-btn');
+    if (researchBtn) {
+      researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
+      researchBtn.onclick = () => {
+        toast('Select a stock to see its next price change.');
+        STOCKS.forEach(s => {
+          const buyInput = document.getElementById(`buy_${s.symbol}`);
+          if (buyInput) {
+            buyInput.onclick = () => {
+              const oldPrice = prices[s.symbol];
+              setRandomPrices({});
+              const newPrice = prices[s.symbol];
+              const diff = newPrice - oldPrice;
+              toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
+              state.researchReportAvailable = false;
+              researchBtn.style.display = 'none';
+              saveState();
+            };
+          }
+        });
+      };
+    }
   } catch (startupErr) {
     console.error('Startup error caught:', startupErr);
     try {
