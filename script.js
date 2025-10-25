@@ -1,7 +1,9 @@
-// script.js - All-cash version with New Game button wiring
-// Fix applied: moved and ensured getPortfolioValue is defined before chart init and added defensive fallback.
+// script.js - All-cash version (removed coins entirely; shop/payouts use portfolio.cash)
+// - Level-ups, achievements, missions, shop purchases => modify portfolio.cash (dollars)
+// - state.coins removed; any legacy reward.coins values are treated as cash for compatibility
+// - portfolio.cash persisted via state.portfolioCash
 
-// ------------------ Date / Season helpers (defined first) ------------------
+// ------------------ Date / Season helpers ------------------
 function getSeasonId() {
   const d = new Date();
   const onejan = new Date(d.getFullYear(), 0, 1);
@@ -217,6 +219,7 @@ function updateHUD() {
 
 // ------------------ Achievements ------------------
 // NOTE: ACHIEVEMENT_LIST 'coins' values are interpreted as cash for compatibility.
+// You can change the numbers to represent dollars.
 const ACHIEVEMENT_LIST = [
   { id: 'first_trade', name: 'First Trade', desc: 'Make your first trade', coins: 50 },
   { id: 'profit_1000', name: 'Profit $1,000', desc: 'Accumulate $1,000 profit total', coins: 150 },
@@ -449,21 +452,125 @@ function renderMissionsBrief() {
 }
 
 // ------------------ Shop / Leaderboard / News / Price Simulation / Chart / Trading ------------------
-// ... rest of script continues as in previous file (unchanged) ...
+const SHOP_ITEMS = [
+  { id: 'xp_boost_1', name: 'XP Booster (1h)', desc: '+50% XP for 1 hour', price: 300, effect: { xpMultiplier: 1.5, durationMs: 3600000 } },
+  { id: 'auto_rebuy', name: 'Auto Rebuy (permanent)', desc: 'Automatically re-buy small positions', price: 1200, effect: { autoRebuy: true } },
+  { id: 'chart_skin_neon', name: 'Chart Skin - Neon', desc: 'Cosmetic chart theme', price: 200, effect: { cosmetic: 'neon' } }
+];
 
-// ------------------ getPortfolioValue (moved earlier to avoid ReferenceError) ------------------
-function getPortfolioValue() {
-  let v = (portfolio && portfolio.cash) ? portfolio.cash : 0;
-  try {
-    STOCKS.forEach(s => {
-      const owned = (portfolio.stocks && portfolio.stocks[s.symbol]) ? portfolio.stocks[s.symbol] : 0;
-      const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0;
-      v += owned * p;
-    });
-  } catch (e) {
-    console.warn('getPortfolioValue fallback error', e);
+function renderShop() {
+  const el = document.getElementById('shop-items');
+  if (!el) return;
+  el.innerHTML = '';
+  SHOP_ITEMS.forEach(item => {
+    const owned = !!state.shopOwned[item.id];
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.innerHTML = `<div><strong>${item.name}</strong><div style="font-size:0.9em;color:#9aa7b2">${item.desc}</div></div>
+      <div>${owned ? 'Owned' : `<button class="action-btn">Buy ${formatCurrency(item.price)}</button>`}</div>`;
+    el.appendChild(div);
+    if (!owned) {
+      const btn = div.querySelector('button');
+      btn.onclick = () => {
+        if (portfolio.cash >= item.price) {
+          portfolio.cash -= item.price;
+          updateCash();
+          state.shopOwned[item.id] = true;
+          applyShopEffect(item);
+          toast(`Purchased ${item.name} for ${formatCurrency(item.price)}`);
+          saveState();
+          updateHUD();
+          renderShop();
+        } else toast('Not enough cash');
+      };
+    }
+  });
+}
+function applyShopEffect(item) {
+  if (item.effect.autoRebuy) state.autoRebuy = true;
+  if (item.effect.cosmetic) state.cosmetic = item.effect.cosmetic;
+  if (item.effect.xpMultiplier) {
+    state.activeBoosts.xpMultiplier = item.effect.xpMultiplier;
+    setTimeout(() => { delete state.activeBoosts.xpMultiplier; toast('XP booster expired'); saveState(); }, item.effect.durationMs);
   }
-  return +v;
+  saveState();
+}
+
+// ------------------ Leaderboard ------------------
+function renderLeaderboard() {
+  const ul = document.getElementById('scores');
+  if (!ul) return;
+  const list = (state.leaderboard || []).filter(s => s.season === state.seasonId).sort((a, b) => b.value - a.value).slice(0, 10);
+  ul.innerHTML = '';
+  list.forEach(item => {
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${item.name}</strong>: <span class="price-up">$${(+item.value).toFixed(2)}</span>`;
+    ul.appendChild(li);
+  });
+}
+function saveLeaderboardEntry(name = 'Player') {
+  const entry = { name, value: +getPortfolioValue().toFixed(2), ts: new Date().toISOString(), season: state.seasonId };
+  state.leaderboard = state.leaderboard || [];
+  state.leaderboard.push(entry);
+  localStorage.setItem('leaderboard_scores', JSON.stringify(state.leaderboard));
+  renderLeaderboard();
+}
+function updateSeasonTimer() {
+  const el = document.getElementById('season-timer');
+  if (!el) return;
+  const now = new Date();
+  const day = now.getDay();
+  const daysLeft = (7 - day) % 7;
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysLeft + 1);
+  const diff = end - now;
+  const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
+  const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+  const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+  el.textContent = `${hrs}:${mins}:${secs}`;
+}
+
+// ------------------ News events ------------------
+const NEWS_EVENTS = [
+  { type: "stock", symbol: "ZOOMX", text: "Zoomix launches new AI chip — big upside", effect: 0.22, mood: "good" },
+  { type: "stock", symbol: "FRUIQ", text: "FruityQ seasonal recall — selloff", effect: -0.11, mood: "bad" },
+  { type: "type", target: "Energy", text: "Energy subsidies announced.", effect: 0.08, mood: "good" },
+  { type: "market", text: "Market rally: broad gains.", effect: 0.10, mood: "good" },
+  { type: "market", text: "Market sell-off: volatility spikes.", effect: -0.14, mood: "bad" }
+];
+
+function triggerRandomNews() {
+  const news = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
+  const el = document.getElementById("news-content");
+  if (el) el.textContent = news.text;
+  const newsEffectMap = {};
+  if (news.type === 'stock') newsEffectMap[news.symbol] = news.effect;
+  else if (news.type === 'type') STOCKS.forEach(s => { if (s.type === news.target) newsEffectMap[s.symbol] = news.effect; });
+  else if (news.type === 'market') STOCKS.forEach(s => newsEffectMap[s.symbol] = news.effect);
+  if (news.mood === 'good') addXP(5 + Math.round(Math.abs(news.effect) * 100));
+  if (news.mood === 'bad') addXP(2);
+  addEventToList(news.text);
+  return newsEffectMap;
+}
+function addEventToList(text) {
+  const ul = document.getElementById('events-list');
+  if (!ul) return;
+  const li = document.createElement('li');
+  li.textContent = `${new Date().toLocaleTimeString()} — ${text}`;
+  ul.insertBefore(li, ul.firstChild);
+  while (ul.children.length > 8) ul.removeChild(ul.lastChild);
+}
+
+// ------------------ Price simulation ------------------
+function setRandomPrices(newsEffectMap = {}) {
+  prevPrices = { ...prices };
+  STOCKS.forEach(stock => {
+    let old = prices[stock.symbol] || randomPrice();
+    let changePercent = (Math.random() * 0.07) - 0.035;
+    if (Math.random() < 0.10) changePercent += (Math.random() * 0.06 - 0.03);
+    if (newsEffectMap[stock.symbol]) changePercent += newsEffectMap[stock.symbol];
+    changePercent = Math.max(-0.5, Math.min(0.5, changePercent));
+    prices[stock.symbol] = Math.max(5, +(old * (1 + changePercent)).toFixed(2));
+  });
 }
 
 // ------------------ Chart ------------------
@@ -473,11 +580,7 @@ function initChartIfPresent() {
   const canvas = document.getElementById('portfolioChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-
-  // Defensive: if getPortfolioValue isn't defined yet, compute a fallback using portfolio.cash
-  const initialValue = (typeof getPortfolioValue === 'function') ? getPortfolioValue() : (portfolio && portfolio.cash ? portfolio.cash : 0);
-
-  chartData = { labels: [new Date().toLocaleTimeString()], datasets: [{ label: 'Portfolio Value', data: [initialValue], borderColor: '#00FC87', backgroundColor: 'rgba(14,210,247,0.10)', fill: false }]};
+  chartData = { labels: [new Date().toLocaleTimeString()], datasets: [{ label: 'Portfolio Value', data: [getPortfolioValue()], borderColor: '#00FC87', backgroundColor: 'rgba(14,210,247,0.10)', fill: false }]};
   try {
     portfolioChart = new Chart(ctx, { type: 'line', data: chartData, options: { animation: { duration: 300 }, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } } });
   } catch (e) { console.warn('Chart init failed', e); portfolioChart = null; }
@@ -490,58 +593,252 @@ function pushChartSample(v) {
   portfolioChart.update();
 }
 
-// The rest of the file (updateStockTable, updateTradeTable, updatePortfolioTable, buy/sell, missions, leaderboards etc.)
-// remains unchanged from your last version. Only the position/availability of getPortfolioValue() and
-// the defensive fallback in initChartIfPresent() were adjusted to avoid the ReferenceError shown in your screenshot.
-
-// ------------------ New Game UI helper (tweak) ------------------
-function insertNewGameButton() {
-  try {
-    const existing = document.getElementById('new-game-btn');
-    if (existing) {
-      existing.addEventListener('click', function() {
-        if (typeof newGame === 'function') newGame();
-        else {
-          if (!confirm('Start a NEW game? This will clear saved progress. Continue?')) return;
-          localStorage.removeItem(STORAGE_KEY);
-          location.reload();
-        }
-      }, { once: false });
-      return;
-    }
-    const header = document.getElementById('topbar') || document.querySelector('header') || document.body;
-    const btn = document.createElement('button');
-    btn.id = 'new-game-btn';
-    btn.type = 'button';
-    btn.setAttribute('aria-label', 'New Game - reset progress');
-    btn.textContent = 'New Game';
-    btn.addEventListener('click', function() {
-      if (typeof newGame === 'function') newGame();
-      else {
-        if (!confirm('Start a NEW game? This will clear saved progress. Continue?')) return;
-        localStorage.removeItem(STORAGE_KEY);
-        location.reload();
-      }
-    }, { once: false });
-    header.appendChild(btn);
-  } catch (e) {
-    console.warn('insertNewGameButton error', e);
-  }
+// ------------------ Table updates ------------------
+function updateStockTable() {
+  const tbody = document.getElementById('stock-table'); if (!tbody) return;
+  tbody.innerHTML = '';
+  STOCKS.forEach(stock => {
+    const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0;
+    const change = +(price - (prevPrices[stock.symbol] || price));
+    const changeStr = (change > 0 ? '+' : '') + change.toFixed(2);
+    const className = change > 0 ? 'price-up' : change < 0 ? 'price-down' : 'price-same';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${stock.symbol}</td><td>${stock.type}</td><td>$${price.toFixed(2)}</td><td class="${className}">${changeStr}</td><td></td>`;
+    tbody.appendChild(tr);
+  });
 }
+function updateTradeTable() {
+  const tbody = document.getElementById('trade-table'); if (!tbody) return;
+  tbody.innerHTML = '';
+  STOCKS.forEach(stock => {
+    const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0;
+    const change = +(price - (prevPrices[stock.symbol] || price));
+    const changeStr = (change > 0 ? '+' : '') + change.toFixed(2);
+    const className = change > 0 ? 'price-up' : change < 0 ? 'price-down' : 'price-same';
+    const rowId = `buy_${stock.symbol}`, costId = `buy_cost_${stock.symbol}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${stock.symbol}</td><td>${stock.type}</td><td>$${price.toFixed(2)}</td><td class="${className}">${changeStr}</td>
+      <td>
+        <input type="number" min="1" value="1" class="buy-input" id="${rowId}">
+        <button onclick="buyStock('${stock.symbol}')" class="action-btn">Buy</button>
+        <span class="buy-cost" id="${costId}">$${price.toFixed(2)}</span>
+      </td>`;
+    tbody.appendChild(tr);
+    setTimeout(() => {
+      const qtyInput = document.getElementById(rowId), costSpan = document.getElementById(costId);
+      if (qtyInput && costSpan) {
+        function updateCost() { let q = parseInt(qtyInput.value) || 0; costSpan.textContent = `$${(q * price).toFixed(2)}`; }
+        qtyInput.addEventListener('input', updateCost);
+        updateCost();
+      }
+    }, 0);
+  });
+}
+function updatePortfolioTable() {
+  const tbody = document.getElementById('portfolio-table'); if (!tbody) return;
+  tbody.innerHTML = '';
+  STOCKS.forEach(stock => {
+    const owned = portfolio.stocks[stock.symbol] || 0;
+    if (owned > 0) {
+      const price = (prices[stock.symbol] !== undefined) ? prices[stock.symbol] : 0;
+      const total = owned * price;
+      const profitLoss = (price - averageBuyPrice[stock.symbol]) * owned;
+      const changeStr = (profitLoss > 0 ? '+' : '') + profitLoss.toFixed(2);
+      const className = profitLoss > 0 ? 'price-up' : profitLoss < 0 ? 'price-down' : 'price-same';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${stock.symbol}</td><td>${owned}</td><td>$${price.toFixed(2)}</td><td>$${total.toFixed(2)}</td>
+        <td class="${className}">${changeStr}</td>
+        <td style="white-space:nowrap;min-width:200px;">
+          <input type="number" min="1" value="1" id="sell_${stock.symbol}" style="width:40px;">
+          <button class="sell-btn action-btn" onclick="sellStock('${stock.symbol}')">Sell</button>
+          <button class="sell-all-btn action-btn" onclick="sellAllStock('${stock.symbol}')">Sell All</button>
+        </td>`;
+      tbody.appendChild(tr);
+    }
+  });
+}
+
+// ------------------ Trading (buy/sell) ------------------
+window.buyStock = function (symbol) {
+  const input = document.getElementById(`buy_${symbol}`);
+  let qty = input ? parseInt(input.value, 10) : 1;
+  qty = Math.max(1, qty || 1);
+  const cost = (prices[symbol] || 0) * qty;
+  if (cost <= portfolio.cash) {
+    const prevQty = portfolio.stocks[symbol] || 0;
+    const totalQty = prevQty + qty;
+    averageBuyPrice[symbol] = (averageBuyPrice[symbol] * prevQty + (prices[symbol] || 0) * qty) / Math.max(1, totalQty);
+    portfolio.cash -= cost;
+    updateCash();
+    portfolio.stocks[symbol] = totalQty;
+    dayProgress.trades = (dayProgress.trades || 0) + 1;
+    if (!dayProgress.typesBought) dayProgress.typesBought = [];
+    const type = (STOCKS.find(s => s.symbol === symbol) || {}).type;
+    if (type && !dayProgress.typesBought.includes(type)) dayProgress.typesBought.push(type);
+    addXP(Math.max(1, Math.round(cost / 200)));
+    recordOrder('buy', symbol, qty, prices[symbol]);
+    if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
+    toast(`Bought ${qty} ${symbol} for ${formatCurrency(cost)}`);
+    saveState();
+    updateHUD();
+    updatePortfolioTable();
+    updateTradeTable();
+    updateStockTable();
+    renderWatchlist();
+  } else toast('Not enough cash');
+};
+
+window.sellStock = function (symbol) {
+  const input = document.getElementById(`sell_${symbol}`);
+  let qty = input ? parseInt(input.value, 10) : 1;
+  qty = Math.max(1, qty || 1);
+  const owned = portfolio.stocks[symbol] || 0;
+  if (qty > owned) { toast('Not enough shares'); return; }
+  const revenue = (prices[symbol] || 0) * qty;
+  portfolio.cash += revenue;
+  updateCash();
+  portfolio.stocks[symbol] = owned - qty;
+  if (portfolio.stocks[symbol] === 0) averageBuyPrice[symbol] = 0;
+  const profit = (prices[symbol] - averageBuyPrice[symbol]) * qty;
+  if (profit > 0) {
+    addXP(Math.round(profit / 10));
+    dayProgress.dayProfit = (dayProgress.dayProfit || 0) + profit;
+    state.totalProfit = (state.totalProfit || 0) + profit;
+    console.debug('DEBUG: profit added, totalProfit=', state.totalProfit);
+    if (state.totalProfit >= 1000 && !state.achievements['profit_1000']) {
+      console.debug('DEBUG: totalProfit threshold reached; unlocking profit_1000');
+      unlockAchievement('profit_1000');
+    }
+    saveState();
+  }
+  recordOrder('sell', symbol, qty, prices[symbol]);
+  if (!state.achievements || !state.achievements['first_trade']) unlockAchievement('first_trade');
+  toast(`Sold ${qty} ${symbol} for ${formatCurrency(revenue)}`);
+  saveState();
+  updateHUD();
+  updatePortfolioTable();
+  updateTradeTable();
+  updateStockTable();
+};
+
+window.sellAllStock = function (symbol) {
+  const owned = portfolio.stocks[symbol] || 0;
+  if (owned > 0) {
+    const el = document.getElementById(`sell_${symbol}`);
+    if (el) el.value = owned;
+    sellStock(symbol);
+  }
+};
+
+// ------------------ Order recording & Watchlist ------------------
+function recordOrder(type, symbol, qty, price) {
+  orderHistory.unshift({ type, symbol, qty, price, ts: new Date().toISOString() });
+  if (orderHistory.length > 200) orderHistory.pop();
+}
+function renderWatchlist() {
+  const wrap = document.getElementById('watchlist');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  watchlist.forEach(sym => {
+    const div = document.createElement('div');
+    div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center'; div.style.marginBottom = '6px';
+    const price = prices[sym] ? `$${prices[sym].toFixed(2)}` : '—';
+    div.innerHTML = `<div style="font-weight:700">${sym}</div><div style="color:#9aa7b2">${price} <button class="action-btn" data-remove="${sym}" style="margin-left:8px;">Remove</button></div>`;
+    wrap.appendChild(div);
+    const btn = div.querySelector('button');
+    btn.onclick = () => { watchlist = watchlist.filter(s => s !== sym); renderWatchlist(); };
+  });
+}
+
+// ------------------ TICKS: update holdCounters & tick deltas ------------------
+function tickPrices() {
+  setRandomPrices({});
+  STOCKS.forEach(s => {
+    const owned = (portfolio.stocks[s.symbol] || 0);
+    if (owned > 0) {
+      holdCounters[s.symbol] = (holdCounters[s.symbol] || 0) + 1;
+      state.stockHoldTicks[s.symbol] = (state.stockHoldTicks[s.symbol] || 0) + 1;
+      if (state.stockHoldTicks[s.symbol] >= 50 && !state.achievements['hold_50ticks']) {
+        console.debug('DEBUG: hold ticks threshold reached for', s.symbol, state.stockHoldTicks[s.symbol]);
+        unlockAchievement('hold_50ticks');
+      }
+    } else {
+      holdCounters[s.symbol] = 0;
+      state.stockHoldTicks[s.symbol] = 0;
+    }
+  });
+  let tickDelta = 0;
+  STOCKS.forEach(s => {
+    const owned = portfolio.stocks[s.symbol] || 0;
+    const before = prevPrices[s.symbol] !== undefined ? prevPrices[s.symbol] : prices[s.symbol];
+    const after = prices[s.symbol] !== undefined ? prices[s.symbol] : before;
+    tickDelta += owned * (after - before);
+  });
+  state.tickDeltas = state.tickDeltas || [];
+  state.tickDeltas.push({ ts: new Date().toISOString(), delta: +tickDelta.toFixed(2) });
+  if (state.tickDeltas.length > 500) state.tickDeltas.shift();
+  updateTradeTable();
+  updateStockTable();
+  updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  let totalHoldTicks = 0;
+  STOCKS.forEach(s => { if (portfolio.stocks[s.symbol] > 0) totalHoldTicks += 1; });
+  dayProgress.holdTicks = (dayProgress.holdTicks || 0) + totalHoldTicks;
+  checkMissions();
+  updateHUD();
+  saveState();
+}
+
+function newsTick() {
+  const newsMap = triggerRandomNews();
+  setRandomPrices(newsMap);
+  updateTradeTable();
+  updateStockTable();
+  updatePortfolioTable();
+  pushChartSample(getPortfolioValue());
+  renderLeaderboard();
+  saveState();
+}
+
+// ------------------ MISSIONS check (baseline-relative) ------------------
+function checkMissions() {
+  dayProgress.buyDifferent = Object.values(portfolio.stocks).filter(v => v > 0).length;
+  dayProgress.trades = dayProgress.trades || 0;
+  dayProgress.typesBought = dayProgress.typesBought || [];
+  let changed = false;
+  (state.missions || []).forEach(m => {
+    if (m.done) return;
+    try { if (isMissionComplete(m)) { m.done = true; changed = true; } } catch (e) { console.warn('mission check error', e); }
+  });
+  if (changed) { saveState(); renderMissionsModal(); renderMissionsBrief(); }
+}
+
+function getPortfolioValue() {
+  let v = portfolio.cash || 0;
+  STOCKS.forEach(s => { const owned = portfolio.stocks[s.symbol] || 0; const p = (prices[s.symbol] !== undefined) ? prices[s.symbol] : 0; v += owned * p; });
+  return +v;
+}
+
+// ------------------ Startup & wiring ------------------
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'add-watch') {
+    const inp = document.getElementById('watch-input');
+    const sym = (inp && inp.value || '').trim().toUpperCase();
+    if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); }
+    else toast('Invalid symbol or already watched');
+  }
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   try {
-    // wire new game button early
-    insertNewGameButton();
-    // then run rest of initialization (kept from original)
-    generateDailyMissions && generateDailyMissions();
-    renderMissionsModal && renderMissionsModal();
-    renderMissionsBrief && renderMissionsBrief();
-    renderShop && renderShop();
-    renderAchievements && renderAchievements();
-    renderLeaderboard && renderLeaderboard();
-    updateHUD && updateHUD();
-    initChartIfPresent && initChartIfPresent();
+    generateDailyMissions();
+    renderMissionsModal();
+    renderMissionsBrief();
+    renderShop();
+    renderAchievements();
+    renderLeaderboard();
+    updateHUD();
+    initChartIfPresent();
     try { updateStockTable(); } catch (e) { console.warn('updateStockTable failed during startup', e); }
     try { updateTradeTable(); } catch (e) { console.warn('updateTradeTable failed during startup', e); }
     try { updatePortfolioTable(); } catch (e) { console.warn('updatePortfolioTable failed during startup', e); }
@@ -557,13 +854,28 @@ window.addEventListener('DOMContentLoaded', () => {
     const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
     const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
     setInterval(updateSeasonTimer, 1000);
-    fixDailyMissionsLabel && fixDailyMissionsLabel();
-  } catch (err) {
-    console.error('Startup error caught:', err);
-    // wire button in case of startup failure
-    try { insertNewGameButton(); } catch (e) {}
+    fixDailyMissionsLabel();
+  } catch (startupErr) {
+    console.error('Startup error caught:', startupErr);
+    try {
+      if (typeof updateStockTable === 'function') updateStockTable();
+      if (typeof updateTradeTable === 'function') updateTradeTable();
+      if (typeof updatePortfolioTable === 'function') updatePortfolioTable();
+      if (typeof updateHUD === 'function') updateHUD();
+      if (typeof renderMissionsModal === 'function') renderMissionsModal();
+      if (typeof renderAchievements === 'function') renderAchievements();
+      if (typeof renderShop === 'function') renderShop();
+      if (typeof renderLeaderboard === 'function') renderLeaderboard();
+      if (!priceInterval) priceInterval = setInterval(tickPrices, 10000);
+      if (!newsInterval) newsInterval = setInterval(newsTick, 180000);
+      fixDailyMissionsLabel();
+    } catch (e) { console.error('Error during recovery UI population:', e); }
   }
 });
+
+// ------------------ Modals ------------------
+function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
+function closeModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'true'); }
 
 // ------------------ New Game helper ------------------
 function newGame() {
