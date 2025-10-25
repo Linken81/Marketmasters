@@ -393,6 +393,7 @@ function renderMissionsModal() {
           portfolio.cash += reward.cash || 0;
           addXP(reward.xp || 0);
           toast(`Mission claimed: +$${reward.cash} cash, +${reward.xp} XP`);
+          updateCash(); // <-- Ensure UI updates immediately!
           const newM = generateSingleMission();
           if (newM) state.missions[idx] = newM;
           else state.missions.splice(idx, 1);
@@ -408,6 +409,7 @@ function renderMissionsModal() {
   updateMissionsButtonLabel();
   fixDailyMissionsLabel();
 }
+
 
 function renderMissionsBrief() {
   const el = document.getElementById('missions-brief');
