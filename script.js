@@ -454,15 +454,16 @@ function renderShop() {
     if (!owned) {
       const btn = div.querySelector('button');
       btn.onclick = () => {
-        if (state.cash >= item.price) {
-          state.cash -= item.price;
-          state.shopOwned[item.id] = true;
-          applyShopEffect(item);
-          toast(`Purchased ${item.name}`);
-          saveState();
-          updateHUD();
-          renderShop();
-        } else toast('Not enough cash');
+      if (portfolio.cash >= item.price) {
+      portfolio.cash -= item.price;
+      state.shopOwned[item.id] = true;
+      applyShopEffect(item);
+      toast(`Purchased ${item.name}`);
+      updateCash();
+      saveState();
+      updateHUD();
+      renderShop();
+    } else toast('Not enough cash');
       };
     }
   });
