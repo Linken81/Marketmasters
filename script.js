@@ -889,78 +889,8 @@ document.addEventListener('click', (e) => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-  try {
-    generateDailyMissions();
-    renderMissionsModal();
-    renderMissionsBrief();
-    renderShop();
-    renderAchievements();
-    renderLeaderboard();
-    updateHUD();
-    initChartIfPresent();
-    try { updateStockTable(); } catch (e) { console.warn('updateStockTable failed during startup', e); }
-    try { updateTradeTable(); } catch (e) { console.warn('updateTradeTable failed during startup', e); }
-    try { updatePortfolioTable(); } catch (e) { console.warn('updatePortfolioTable failed during startup', e); }
-    if (priceInterval) clearInterval(priceInterval);
-    priceInterval = setInterval(tickPrices, 10000);
-    if (newsInterval) clearInterval(newsInterval);
-    newsInterval = setInterval(newsTick, 180000);
-    const openM = document.getElementById('open-missions'); if (openM) openM.onclick = () => openModal('modal-missions');
-    const closeM = document.getElementById('close-missions'); if (closeM) closeM.onclick = () => closeModal('modal-missions');
-    const openA = document.getElementById('open-achievements'); if (openA) openA.onclick = () => openModal('modal-achievements');
-    const closeA = document.getElementById('close-achievements'); if (closeA) closeA.onclick = () => closeModal('modal-achievements');
-    const openS = document.getElementById('open-shop'); if (openS) openS.onclick = () => openModal('modal-shop');
-    const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
-    const saveBtn = document.getElementById('save-score');
-    if (saveBtn) saveBtn.onclick = () => {
-      const name = localStorage.getItem('player_name') || 'Player';
-      saveLeaderboardEntry(name);
-      toast('Score saved to local leaderboard');
-    };
-    const addWatchBtn = document.getElementById('add-watch'); if (addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
-    setInterval(updateSeasonTimer, 1000);
-    // run UI text fix (replaces any "Daily Missions" strings in text nodes)
-    fixDailyMissionsLabel();
-
-    // --- Research Report Button Handler ---
-    const researchBtn = document.getElementById('research-report-btn');
-    if (researchBtn) {
-      researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
-      researchBtn.onclick = () => {
-        toast('Select a stock to see its next price change.');
-        STOCKS.forEach(s => {
-          const buyInput = document.getElementById(`buy_${s.symbol}`);
-          if (buyInput) {
-            buyInput.onclick = () => {
-              const oldPrice = prices[s.symbol];
-              setRandomPrices({});
-              const newPrice = prices[s.symbol];
-              const diff = newPrice - oldPrice;
-              toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
-              state.researchReportAvailable = false;
-              researchBtn.style.display = 'none';
-              saveState();
-            };
-          }
-        });
-      };
-    }
-  } catch (startupErr) {
-    console.error('Startup error caught:', startupErr);
-    try {
-      if (typeof updateStockTable === 'function') updateStockTable();
-      if (typeof updateTradeTable === 'function') updateTradeTable();
-      if (typeof updatePortfolioTable === 'function') updatePortfolioTable();
-      if (typeof updateHUD === 'function') updateHUD();
-      if (typeof renderMissionsModal === 'function') renderMissionsModal();
-      if (typeof renderAchievements === 'function') renderAchievements();
-      if (typeof renderShop === 'function') renderShop();
-      if (typeof renderLeaderboard === 'function') renderLeaderboard();
-      if (!priceInterval) priceInterval = setInterval(tickPrices, 10000);
-      if (!newsInterval) newsInterval = setInterval(newsTick, 180000);
-      fixDailyMissionsLabel();
-    } catch (e) { console.error('Error during recovery UI population:', e); }
-  }
+  // Only show the New Game modal -- do not start game logic!
+  openModal('modal-newgame');
 });
 
 // --- New Game Button and Modal Logic ---
@@ -996,7 +926,7 @@ if (startNewGameBtn) {
     state.tickDeltas = [];
     state.missions = [];
     state.missionsDate = null;
-    generateDailyMissions(); // <-- Add this line!
+    generateDailyMissions();
 
     saveState();
     updateCash();
@@ -1016,6 +946,62 @@ if (startNewGameBtn) {
       chartData.labels = [new Date().toLocaleTimeString()];
       chartData.datasets[0].data = [getPortfolioValue()];
       portfolioChart.update();
+    }
+
+    // Timers and event handlers for game logic
+    if (priceInterval) clearInterval(priceInterval);
+    priceInterval = setInterval(tickPrices, 10000);
+    if (newsInterval) clearInterval(newsInterval);
+    newsInterval = setInterval(newsTick, 180000);
+    setInterval(updateSeasonTimer, 1000);
+
+    // Attach all button event handlers (move from DOMContentLoaded here)
+    const openM = document.getElementById('open-missions'); if (openM) openM.onclick = () => openModal('modal-missions');
+    const closeM = document.getElementById('close-missions'); if (closeM) closeM.onclick = () => closeModal('modal-missions');
+    const openA = document.getElementById('open-achievements'); if (openA) openA.onclick = () => openModal('modal-achievements');
+    const closeA = document.getElementById('close-achievements'); if (closeA) closeA.onclick = () => closeModal('modal-achievements');
+    const openS = document.getElementById('open-shop'); if (openS) openS.onclick = () => openModal('modal-shop');
+    const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
+    const saveBtn = document.getElementById('save-score');
+    if (saveBtn) saveBtn.onclick = () => {
+      const name = localStorage.getItem('player_name') || 'Player';
+      saveLeaderboardEntry(name);
+      toast('Score saved to local leaderboard');
+    };
+    const addWatchBtn = document.getElementById('add-watch');
+    if (addWatchBtn) addWatchBtn.onclick = () => {
+      const inp = document.getElementById('watch-input');
+      const sym = (inp && inp.value || '').trim().toUpperCase();
+      if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) {
+        watchlist.push(sym);
+        renderWatchlist();
+        inp.value = '';
+        toast(`${sym} added to watchlist`);
+      } else toast('Invalid symbol or already watched');
+    };
+
+    // --- Research Report Button Handler ---
+    const researchBtn = document.getElementById('research-report-btn');
+    if (researchBtn) {
+      researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
+      researchBtn.onclick = () => {
+        toast('Select a stock to see its next price change.');
+        STOCKS.forEach(s => {
+          const buyInput = document.getElementById(`buy_${s.symbol}`);
+          if (buyInput) {
+            buyInput.onclick = () => {
+              const oldPrice = prices[s.symbol];
+              setRandomPrices({});
+              const newPrice = prices[s.symbol];
+              const diff = newPrice - oldPrice;
+              toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
+              state.researchReportAvailable = false;
+              researchBtn.style.display = 'none';
+              saveState();
+            };
+          }
+        });
+      };
     }
 
     closeModal('modal-newgame');
