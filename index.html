@@ -17,6 +17,11 @@
             <div class="header-flex">
                 <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
                 <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
+                <div class="header-flex">
+                    <div class="header-cash">Cash: <span id="cash">$10,000.00</span></div>
+                     <div class="header-title"><span class="mm-pro">Marketmasters</span></div>
+                    <button id="new-game-btn" class="action-btn" style="position:absolute; right:20px; top:16px;">New Game</button>
+                </div>
             </div>
         </div>
 
@@ -168,7 +173,17 @@
 
     <!-- Toaster -->
     <div id="toasts" style="position:fixed; right:18px; bottom:18px; z-index:80;"></div>
-
+<div id="modal-newgame" class="modal" aria-hidden="true">
+  <div class="modal-content">
+    <h3>Start New Game</h3>
+    <label for="new-player-name">Enter your name:</label>
+    <input id="new-player-name" type="text" maxlength="24" style="margin-bottom:12px;">
+    <div style="margin-top:12px; text-align:right;">
+      <button id="start-new-game" class="action-btn">Start</button>
+      <button onclick="closeModal('modal-newgame')" class="action-btn">Cancel</button>
+    </div>
+  </div>
+</div>
     <script src="script.js"></script>
 </body>
 </html>
