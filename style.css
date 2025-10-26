@@ -48,6 +48,14 @@
     text-align: center;
     margin-right: 42px;
 }
+#new-game-btn {
+    /* Remove absolute positioning! */
+    /* position: absolute; */
+    /* right: 20px; top: 16px; */
+    z-index: 100;
+    padding: 10px 24px;
+    font-size: 1.1em;
+}
 
 /* --- Modern/Professional "Marketmasters" title --- */
 .mm-pro {
