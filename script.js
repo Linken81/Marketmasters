@@ -911,7 +911,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const closeA = document.getElementById('close-achievements'); if (closeA) closeA.onclick = () => closeModal('modal-achievements');
     const openS = document.getElementById('open-shop'); if (openS) openS.onclick = () => openModal('modal-shop');
     const closeS = document.getElementById('close-shop'); if (closeS) closeS.onclick = () => closeModal('modal-shop');
-    const saveBtn = document.getElementById('save-score'); if (saveBtn) saveBtn.onclick = () => { saveLeaderboardEntry(); toast('Score saved to local leaderboard'); };
+    const saveBtn = document.getElementById('save-score');
+    if (saveBtn) saveBtn.onclick = () => {
+      const name = localStorage.getItem('player_name') || 'Player';
+      saveLeaderboardEntry(name);
+      toast('Score saved to local leaderboard');
+    };
     const addWatchBtn = document.getElementById('add-watch'); if (addWatchBtn) addWatchBtn.onclick = () => { const inp = document.getElementById('watch-input'); const sym = (inp && inp.value || '').trim().toUpperCase(); if (sym && STOCKS.find(s => s.symbol === sym) && !watchlist.includes(sym)) { watchlist.push(sym); renderWatchlist(); inp.value = ''; toast(`${sym} added to watchlist`); } else toast('Invalid symbol or already watched'); };
     setInterval(updateSeasonTimer, 1000);
     // run UI text fix (replaces any "Daily Missions" strings in text nodes)
@@ -957,6 +962,59 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch (e) { console.error('Error during recovery UI population:', e); }
   }
 });
+
+// --- New Game Button and Modal Logic ---
+
+// Show "New Game" modal when button clicked
+const newGameBtn = document.getElementById('new-game-btn');
+if (newGameBtn) {
+  newGameBtn.onclick = () => openModal('modal-newgame');
+}
+
+// Start new game when modal button clicked
+const startNewGameBtn = document.getElementById('start-new-game');
+if (startNewGameBtn) {
+  startNewGameBtn.onclick = () => {
+    const nameInput = document.getElementById('new-player-name');
+    let playerName = nameInput ? nameInput.value.trim() : '';
+    if (!playerName) playerName = 'Player';
+    localStorage.setItem('player_name', playerName);
+
+    // Reset game state
+    state.level = 1;
+    state.xp = 0;
+    state.achievements = {};
+    state.shopOwned = {};
+    state.activeBoosts = {};
+    state.cash = 0;
+    portfolio = { cash: 10000, stocks: {} };
+    STOCKS.forEach(s => { portfolio.stocks[s.symbol] = 0; holdCounters[s.symbol] = 0; });
+    averageBuyPrice = {};
+    STOCKS.forEach(s => { averageBuyPrice[s.symbol] = 0; });
+    dayProgress = { buyDifferent: 0, dayProfit: 0, holdTicks: 0, trades: 0, typesBought: [] };
+    orderHistory = [];
+    state.tickDeltas = [];
+    state.missions = [];
+    state.missionsDate = null;
+
+    saveState();
+    updateCash();
+    updateHUD();
+    renderShop();
+    renderAchievements();
+    renderLeaderboard();
+    renderMissionsModal();
+    renderMissionsBrief();
+    updatePortfolioTable();
+    updateTradeTable();
+    updateStockTable();
+    renderWatchlist();
+    pushChartSample(getPortfolioValue());
+
+    closeModal('modal-newgame');
+    toast('New game started!');
+  };
+}
 
 // ------------------ Modals ------------------
 function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
