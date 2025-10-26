@@ -956,7 +956,7 @@ if (startNewGameBtn) {
 
     // Timers and event handlers for game logic
     if (priceInterval) clearInterval(priceInterval);
-    priceInterval = setInterval(tickPrices, 10000);
+    priceInterval = setInterval(tickPrices, 20000);
     if (newsInterval) clearInterval(newsInterval);
     newsInterval = setInterval(newsTick, 180000);
     setInterval(updateSeasonTimer, 1000);
