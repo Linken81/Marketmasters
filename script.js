@@ -486,15 +486,12 @@ function applyShopEffect(item) {
   }
   if (item.effect.tradeFeeDiscount) state.tradeFeeDiscount = true;
   if (item.effect.dividendCollector) state.dividendCollector = true;
-  if (item.effect.insurance) {
-    state.portfolioInsuranceActive = true;
-    state.portfolioInsuranceExpires = Date.now() + item.effect.durationMs;
-    setTimeout(() => {
-      state.portfolioInsuranceActive = false;
-      toast('Portfolio insurance expired');
-      saveState();
-    }, item.effect.durationMs);
-  }
+if (item.effect.insurance) {
+  state.portfolioInsuranceActive = true;
+  state.portfolioInsuranceTicks = 8; // Lasts for 8 ticks
+  toast('Portfolio insurance activated for 8 ticks');
+  saveState();
+}
   if (item.effect.researchReport) state.researchReportAvailable = true;
   saveState();
 }
@@ -827,31 +824,32 @@ updateTickTimerUI();
     }
   }
 
-  // --- Portfolio Insurance (refund 10% of loss) ---
-  if (state.portfolioInsuranceActive) {
-    if (Date.now() > (state.portfolioInsuranceExpires || 0)) {
-      state.portfolioInsuranceActive = false;
-      toast('Portfolio insurance expired');
+// --- Portfolio Insurance (refund 10% of loss, expires after 8 ticks) ---
+if (state.portfolioInsuranceActive) {
+  const prevPortfolioValue = state.prevPortfolioValue || getPortfolioValue();
+  const currentPortfolioValue = getPortfolioValue();
+  if (currentPortfolioValue < prevPortfolioValue) {
+    const loss = prevPortfolioValue - currentPortfolioValue;
+    const refund = Math.round(loss * 0.1);
+    if (refund > 0) {
+      portfolio.cash += refund;
+      toast(`Insurance refund: +$${refund}`);
+      updateCash();
       saveState();
     }
   }
-  if (state.portfolioInsuranceActive) {
-    const prevPortfolioValue = state.prevPortfolioValue || getPortfolioValue();
-    const currentPortfolioValue = getPortfolioValue();
-    if (currentPortfolioValue < prevPortfolioValue) {
-      const loss = prevPortfolioValue - currentPortfolioValue;
-      const refund = Math.round(loss * 0.1);
-      if (refund > 0) {
-        portfolio.cash += refund;
-        toast(`Insurance refund: +$${refund}`);
-        updateCash();
-        saveState();
-      }
-    }
-    state.prevPortfolioValue = currentPortfolioValue;
-  } else {
-    state.prevPortfolioValue = getPortfolioValue();
+  state.prevPortfolioValue = currentPortfolioValue;
+
+  // Tick down insurance
+  state.portfolioInsuranceTicks--;
+  if (state.portfolioInsuranceTicks <= 0) {
+    state.portfolioInsuranceActive = false;
+    toast('Portfolio insurance expired');
+    saveState();
   }
+} else {
+  state.prevPortfolioValue = getPortfolioValue();
+}
 
   // --- Your existing tick logic below ---
   STOCKS.forEach(s => {
@@ -950,8 +948,9 @@ if (startNewGameBtn) {
     state.shopOwned = {};
     state.portfolioInsuranceActive = false;
     state.portfolioInsuranceExpires = null;
+    state.portfolioInsuranceTicks = 0;
     state.dividendCollector = false;
-    state.tradeFeeDiscount = false;
+    state.tradeFeeDiscount = false;  
     state.researchReportAvailable = false;
     state.activeBoosts = {};
     state.cash = 0;
