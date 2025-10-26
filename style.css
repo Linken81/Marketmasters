@@ -27,9 +27,9 @@
     display: flex;
     align-items: center;
     width: 100%;
-    justify-content: flex-start; /* or space-between if you prefer */
+    justify-content: flex-start;
     gap: 42px;
-    position: relative; /* Needed for absolute centering */
+    position: relative;
 }
 .header-cash {
     flex: 0 1 auto;
@@ -52,15 +52,13 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    pointer-events: none; /* Allows clicks on buttons around it */
+    pointer-events: none;
     z-index: 1;
-    margin: 0; /* remove margin-right: 42px; */
+    margin: 0;
 }
 #new-game-btn {
-    /* Remove absolute positioning! */
-    /* position: absolute; */
-    /* right: 20px; top: 16px; */
-    z-index: 100;
+    margin-left: auto;
+    z-index: 2;
     padding: 4px 12px;
     font-size: 1em;
 }
