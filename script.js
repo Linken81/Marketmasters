@@ -812,7 +812,7 @@ updateTickTimerUI();
     STOCKS.forEach(s => {
       const owned = portfolio.stocks[s.symbol] || 0;
       if (owned > 0) {
-        const dividend = Math.round(owned * (prices[s.symbol] || 0) * 0.005); // 0.5% of value
+        const dividend = Math.round(owned * (prices[s.symbol] || 0) * 0.04); // 0.5% of value
         dividendTotal += dividend;
       }
     });
