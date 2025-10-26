@@ -507,9 +507,24 @@ function renderLeaderboard() {
   });
 }
 function saveLeaderboardEntry(name = 'Player') {
-  const entry = { name, value: +getPortfolioValue().toFixed(2), ts: new Date().toISOString(), season: state.seasonId };
-  state.leaderboard = state.leaderboard || [];
-  state.leaderboard.push(entry);
+  const score = +getPortfolioValue().toFixed(2);
+  const season = state.seasonId;
+  // Find existing entry for this player in this season
+  let existing = (state.leaderboard || []).find(e => e.name === name && e.season === season);
+  if (existing) {
+    // If new score is higher, update it
+    if (score > existing.value) {
+      existing.value = score;
+      existing.ts = new Date().toISOString();
+    }
+    // Otherwise, do nothing
+  } else {
+    // New entry for this player
+    const entry = { name, value: score, ts: new Date().toISOString(), season };
+    state.leaderboard = state.leaderboard || [];
+    state.leaderboard.push(entry);
+  }
+  // Save and render leaderboard
   localStorage.setItem('leaderboard_scores', JSON.stringify(state.leaderboard));
   renderLeaderboard();
 }
