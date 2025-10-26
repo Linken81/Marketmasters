@@ -844,7 +844,9 @@ if (state.portfolioInsuranceActive) {
   state.portfolioInsuranceTicks--;
   if (state.portfolioInsuranceTicks <= 0) {
     state.portfolioInsuranceActive = false;
+    state.shopOwned['portfolio_insurance'] = false; 
     toast('Portfolio insurance expired');
+    renderShop();
     saveState();
   }
 } else {
