@@ -1012,6 +1012,12 @@ if (startNewGameBtn) {
     renderWatchlist();
     pushChartSample(getPortfolioValue());
 
+    if (portfolioChart && chartData) {
+      chartData.labels = [new Date().toLocaleTimeString()];
+      chartData.datasets[0].data = [getPortfolioValue()];
+      portfolioChart.update();
+    }
+
     closeModal('modal-newgame');
     toast('New game started!');
   };
