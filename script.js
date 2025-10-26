@@ -807,7 +807,7 @@ updateGameDateUI();
 updateTickTimerUI();
 
   // --- Dividend Collector (every 10 ticks) ---
-  if (state.dividendCollector && tickCount % 10 === 0) {
+  if (state.dividendCollector && tickCount % 8 === 0) {
     let dividendTotal = 0;
     STOCKS.forEach(s => {
       const owned = portfolio.stocks[s.symbol] || 0;
