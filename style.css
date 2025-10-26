@@ -44,9 +44,12 @@
     font-weight: 700;
 }
 .header-title {
-    flex: 1 1 auto;
-    text-align: center;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     margin-right: 42px;
+    /* keep margin if you want spacing */
 }
 #new-game-btn {
     /* Remove absolute positioning! */
@@ -60,7 +63,7 @@
 /* --- Modern/Professional "Marketmasters" title --- */
 .mm-pro {
     display: inline-block;
-    font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+    font-family: 'Montserrat', 'Inter', 'Segoe UI', 'Arial', sans-serif;
     font-size: 2rem;
     font-weight: 800;
     letter-spacing: 2px;
@@ -76,6 +79,7 @@
     transition: text-shadow 0.3s;
     padding: 4px 0 2px 0;
     word-spacing: 2px;
+    text-align: center;
 }
 .mm-pro:hover {
     text-shadow: 
