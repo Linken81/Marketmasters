@@ -915,6 +915,11 @@ if (startNewGameBtn) {
     state.xp = 0;
     state.achievements = {};
     state.shopOwned = {};
+    state.portfolioInsuranceActive = false;
+    state.portfolioInsuranceExpires = null;
+    state.dividendCollector = false;
+    state.tradeFeeDiscount = false;
+    state.researchReportAvailable = false;
     state.activeBoosts = {};
     state.cash = 0;
     portfolio = { cash: 10000, stocks: {} };
