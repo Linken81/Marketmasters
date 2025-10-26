@@ -155,6 +155,11 @@ function launchConfetti(amount = 40) {
   }
 }
 
+// Reset leaderboard in script.js
+state.leaderboard = [];
+localStorage.setItem('leaderboard_scores', JSON.stringify([]));
+if (typeof renderLeaderboard === 'function') renderLeaderboard();
+
 // ------------------ XP / Leveling ------------------
 function xpForLevel(l) { return Math.floor(100 * Math.pow(l, 1.35)); }
 function addXP(amount) {
