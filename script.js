@@ -996,6 +996,7 @@ if (startNewGameBtn) {
     state.tickDeltas = [];
     state.missions = [];
     state.missionsDate = null;
+    generateDailyMissions(); // <-- Add this line!
 
     saveState();
     updateCash();
