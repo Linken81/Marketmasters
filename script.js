@@ -945,6 +945,7 @@ if (startNewGameBtn) {
     updateTradeTable();
     updateStockTable();
     renderWatchlist();
+    initChartIfPresent();
     pushChartSample(getPortfolioValue());
 
     if (portfolioChart && chartData) {
