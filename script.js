@@ -784,9 +784,30 @@ function renderWatchlist() {
 
 // ------------------ TICKS: update holdCounters & tick deltas ------------------
 let tickCount = 0;
+let gameDate = null; // {year, month, day}
+let gameTickCountdown = 20; // seconds left to next tick
+let tickTimerInterval = null;
 function tickPrices() {
   setRandomPrices({});
   tickCount++;
+  
+  // Advance game date every 8 ticks
+if (gameDate) {
+  if ((tickCount + 1) % 8 === 0) {
+    gameDate.day++;
+    if (gameDate.day > 30) {
+      gameDate.day = 1;
+      gameDate.month++;
+      if (gameDate.month > 12) {
+        gameDate.month = 1;
+        gameDate.year++;
+      }
+    }
+  }
+}
+gameTickCountdown = 20; // Reset countdown
+updateGameDateUI();
+updateTickTimerUI();
 
   // --- Dividend Collector (every 10 ticks) ---
   if (state.dividendCollector && tickCount % 10 === 0) {
@@ -893,6 +914,18 @@ window.addEventListener('DOMContentLoaded', () => {
   openModal('modal-newgame');
 });
 
+function updateGameDateUI() {
+  const dateEl = document.getElementById('game-date');
+  if (!dateEl || !gameDate) return;
+  dateEl.textContent = `Year ${gameDate.year}, Month ${gameDate.month}, Day ${gameDate.day}`;
+}
+
+function updateTickTimerUI() {
+  const timerEl = document.getElementById('tick-timer');
+  if (!timerEl) return;
+  timerEl.textContent = `Next tick in: ${gameTickCountdown}s`;
+}
+
 // --- New Game Button and Modal Logic ---
 
 // Show "New Game" modal when button clicked
@@ -954,6 +987,27 @@ if (startNewGameBtn) {
       portfolioChart.update();
     }
 
+    const now = new Date();
+    gameDate = {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      day: now.getDate()
+    };
+    tickCount = 0;
+    gameTickCountdown = 20;
+    if (tickTimerInterval) clearInterval(tickTimerInterval);
+    gameTickCountdown = 20;
+    updateGameDateUI();
+    updateTickTimerUI();
+    tickTimerInterval = setInterval(() => {
+      if (gameTickCountdown > 1) {
+        gameTickCountdown--;
+      } else {
+        gameTickCountdown = 20;
+      }
+      updateTickTimerUI();
+    }, 1000);
+    
     // Timers and event handlers for game logic
     if (priceInterval) clearInterval(priceInterval);
     priceInterval = setInterval(tickPrices, 20000);
