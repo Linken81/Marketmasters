@@ -386,6 +386,12 @@ tr:hover {
     justify-content: flex-end;
 }
 
+.report-select {
+  border: 2px solid #21e6c1 !important;
+  background: #181a20 !important;
+  color: #fff !important;
+}
+
 input[type="number"] {
     width: 38px;
     border-radius: 5px;
