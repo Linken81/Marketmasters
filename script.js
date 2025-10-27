@@ -1041,32 +1041,43 @@ if (startNewGameBtn) {
       } else toast('Invalid symbol or already watched');
     };
 
-    // --- Research Report Button Handler ---
-    const researchBtn = document.getElementById('research-report-btn');
-    if (researchBtn) {
-      researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
-      researchBtn.onclick = () => {
-        toast('Select a stock to see its next price change.');
-        STOCKS.forEach(s => {
-          const buyInput = document.getElementById(`buy_${s.symbol}`);
-          if (buyInput) {
-            buyInput.onclick = () => {
-              const oldPrice = prices[s.symbol];
-              setRandomPrices({});
-              const newPrice = prices[s.symbol];
-              const diff = newPrice - oldPrice;
-              toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
-              state.researchReportAvailable = false;
-              researchBtn.style.display = 'none';
-              saveState();
-            };
-          }
-        });
-      };
-    }
-
-    closeModal('modal-newgame');
-    toast('New game started!');
+// --- Research Report Button Handler ---
+const researchBtn = document.getElementById('research-report-btn');
+if (researchBtn) {
+  researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
+  researchBtn.onclick = () => {
+    toast('Select a stock "Buy" button below to see its next price change.');
+    // Add temporary click listeners to Buy buttons for all stocks
+    STOCKS.forEach(s => {
+      // Find the Buy button for this stock
+      const buyBtn = document.querySelector(`#trade-table button[onclick*="buyStock('${s.symbol}')"]`);
+      if (buyBtn) {
+        buyBtn.classList.add('report-select');
+        // Save original onclick so we can restore it later
+        if (!buyBtn._origOnClick) buyBtn._origOnClick = buyBtn.onclick;
+        buyBtn.onclick = () => {
+          // Simulate next price for that stock ONLY
+          const oldPrice = prices[s.symbol];
+          setRandomPrices({});
+          const newPrice = prices[s.symbol];
+          const diff = newPrice - oldPrice;
+          toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
+          state.researchReportAvailable = false;
+          researchBtn.style.display = 'none';
+          saveState();
+          // Remove highlight and restore original onclick for all Buy buttons
+          STOCKS.forEach(stockObj => {
+            const btn = document.querySelector(`#trade-table button[onclick*="buyStock('${stockObj.symbol}')"]`);
+            if (btn) {
+              btn.classList.remove('report-select');
+              if (btn._origOnClick) btn.onclick = btn._origOnClick;
+            }
+          });
+          renderShop(); // refresh shop UI
+          updateTradeTable(); // refresh table to remove highlights
+        };
+      }
+    });
   };
 }
 
