@@ -1081,6 +1081,7 @@ if (researchBtn) {
   };
 } // <-- MISSING CLOSING BRACE ADDED HERE!
 
+}
 // ------------------ Modals ------------------
 function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
 function closeModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'true'); }
