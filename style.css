@@ -44,21 +44,15 @@
     font-weight: 700;
 }
 .header-title {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: none;
-    z-index: 1;
-    margin: 0;
+    flex: 1 1 auto;
+    text-align: center;
+    margin-right: 42px;
 }
 #new-game-btn {
-    margin-left: auto;
-    z-index: 2;
+    /* Remove absolute positioning! */
+    /* position: absolute; */
+    /* right: 20px; top: 16px; */
+    z-index: 100;
     padding: 4px 12px;
     font-size: 1em;
 }
@@ -66,7 +60,7 @@
 /* --- Modern/Professional "Marketmasters" title --- */
 .mm-pro {
     display: inline-block;
-    font-family: 'Montserrat', 'Inter', 'Segoe UI', 'Arial', sans-serif;
+    font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
     font-size: 2rem;
     font-weight: 800;
     letter-spacing: 2px;
@@ -82,7 +76,6 @@
     transition: text-shadow 0.3s;
     padding: 4px 0 2px 0;
     word-spacing: 2px;
-    text-align: center;
 }
 .mm-pro:hover {
     text-shadow: 
@@ -384,12 +377,6 @@ tr:hover {
     gap: 12px;
     margin-top: 7px;
     justify-content: flex-end;
-}
-
-.report-select {
-  border: 2px solid #21e6c1 !important;
-  background: #181a20 !important;
-  color: #fff !important;
 }
 
 input[type="number"] {
