@@ -486,12 +486,15 @@ function applyShopEffect(item) {
   }
   if (item.effect.tradeFeeDiscount) state.tradeFeeDiscount = true;
   if (item.effect.dividendCollector) state.dividendCollector = true;
-if (item.effect.insurance) {
-  state.portfolioInsuranceActive = true;
-  state.portfolioInsuranceTicks = 8; // Lasts for 8 ticks
-  toast('Portfolio insurance activated for 8 ticks');
-  saveState();
-}
+  if (item.effect.insurance) {
+    state.portfolioInsuranceActive = true;
+    state.portfolioInsuranceExpires = Date.now() + item.effect.durationMs;
+    setTimeout(() => {
+      state.portfolioInsuranceActive = false;
+      toast('Portfolio insurance expired');
+      saveState();
+    }, item.effect.durationMs);
+  }
   if (item.effect.researchReport) state.researchReportAvailable = true;
   saveState();
 }
@@ -781,38 +784,17 @@ function renderWatchlist() {
 
 // ------------------ TICKS: update holdCounters & tick deltas ------------------
 let tickCount = 0;
-let gameDate = null; // {year, month, day}
-let gameTickCountdown = 20; // seconds left to next tick
-let tickTimerInterval = null;
 function tickPrices() {
   setRandomPrices({});
   tickCount++;
-  
-  // Advance game date every 8 ticks
-if (gameDate) {
-  if ((tickCount + 1) % 8 === 0) {
-    gameDate.day++;
-    if (gameDate.day > 30) {
-      gameDate.day = 1;
-      gameDate.month++;
-      if (gameDate.month > 12) {
-        gameDate.month = 1;
-        gameDate.year++;
-      }
-    }
-  }
-}
-gameTickCountdown = 20; // Reset countdown
-updateGameDateUI();
-updateTickTimerUI();
 
   // --- Dividend Collector (every 10 ticks) ---
-  if (state.dividendCollector && tickCount % 8 === 0) {
+  if (state.dividendCollector && tickCount % 10 === 0) {
     let dividendTotal = 0;
     STOCKS.forEach(s => {
       const owned = portfolio.stocks[s.symbol] || 0;
       if (owned > 0) {
-        const dividend = Math.round(owned * (prices[s.symbol] || 0) * 0.04); // 0.5% of value
+        const dividend = Math.round(owned * (prices[s.symbol] || 0) * 0.005); // 0.5% of value
         dividendTotal += dividend;
       }
     });
@@ -824,34 +806,31 @@ updateTickTimerUI();
     }
   }
 
-// --- Portfolio Insurance (refund 10% of loss, expires after 8 ticks) ---
-if (state.portfolioInsuranceActive) {
-  const prevPortfolioValue = state.prevPortfolioValue || getPortfolioValue();
-  const currentPortfolioValue = getPortfolioValue();
-  if (currentPortfolioValue < prevPortfolioValue) {
-    const loss = prevPortfolioValue - currentPortfolioValue;
-    const refund = Math.round(loss * 0.1);
-    if (refund > 0) {
-      portfolio.cash += refund;
-      toast(`Insurance refund: +$${refund}`);
-      updateCash();
+  // --- Portfolio Insurance (refund 10% of loss) ---
+  if (state.portfolioInsuranceActive) {
+    if (Date.now() > (state.portfolioInsuranceExpires || 0)) {
+      state.portfolioInsuranceActive = false;
+      toast('Portfolio insurance expired');
       saveState();
     }
   }
-  state.prevPortfolioValue = currentPortfolioValue;
-
-  // Tick down insurance
-  state.portfolioInsuranceTicks--;
-  if (state.portfolioInsuranceTicks <= 0) {
-    state.portfolioInsuranceActive = false;
-    state.shopOwned['portfolio_insurance'] = false; 
-    toast('Portfolio insurance expired');
-    renderShop();
-    saveState();
+  if (state.portfolioInsuranceActive) {
+    const prevPortfolioValue = state.prevPortfolioValue || getPortfolioValue();
+    const currentPortfolioValue = getPortfolioValue();
+    if (currentPortfolioValue < prevPortfolioValue) {
+      const loss = prevPortfolioValue - currentPortfolioValue;
+      const refund = Math.round(loss * 0.1);
+      if (refund > 0) {
+        portfolio.cash += refund;
+        toast(`Insurance refund: +$${refund}`);
+        updateCash();
+        saveState();
+      }
+    }
+    state.prevPortfolioValue = currentPortfolioValue;
+  } else {
+    state.prevPortfolioValue = getPortfolioValue();
   }
-} else {
-  state.prevPortfolioValue = getPortfolioValue();
-}
 
   // --- Your existing tick logic below ---
   STOCKS.forEach(s => {
@@ -914,18 +893,6 @@ window.addEventListener('DOMContentLoaded', () => {
   openModal('modal-newgame');
 });
 
-function updateGameDateUI() {
-  const dateEl = document.getElementById('game-date');
-  if (!dateEl || !gameDate) return;
-  dateEl.textContent = `Year ${gameDate.year}, Month ${gameDate.month}, Day ${gameDate.day}`;
-}
-
-function updateTickTimerUI() {
-  const timerEl = document.getElementById('tick-timer');
-  if (!timerEl) return;
-  timerEl.textContent = `Next tick in: ${gameTickCountdown}s`;
-}
-
 // --- New Game Button and Modal Logic ---
 
 // Show "New Game" modal when button clicked
@@ -950,9 +917,8 @@ if (startNewGameBtn) {
     state.shopOwned = {};
     state.portfolioInsuranceActive = false;
     state.portfolioInsuranceExpires = null;
-    state.portfolioInsuranceTicks = 0;
     state.dividendCollector = false;
-    state.tradeFeeDiscount = false;  
+    state.tradeFeeDiscount = false;
     state.researchReportAvailable = false;
     state.activeBoosts = {};
     state.cash = 0;
@@ -988,27 +954,6 @@ if (startNewGameBtn) {
       portfolioChart.update();
     }
 
-    const now = new Date();
-    gameDate = {
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-      day: now.getDate()
-    };
-    tickCount = 0;
-    gameTickCountdown = 20;
-    if (tickTimerInterval) clearInterval(tickTimerInterval);
-    gameTickCountdown = 20;
-    updateGameDateUI();
-    updateTickTimerUI();
-    tickTimerInterval = setInterval(() => {
-      if (gameTickCountdown > 1) {
-        gameTickCountdown--;
-      } else {
-        gameTickCountdown = 20;
-      }
-      updateTickTimerUI();
-    }, 1000);
-    
     // Timers and event handlers for game logic
     if (priceInterval) clearInterval(priceInterval);
     priceInterval = setInterval(tickPrices, 20000);
@@ -1041,46 +986,35 @@ if (startNewGameBtn) {
       } else toast('Invalid symbol or already watched');
     };
 
-// --- Research Report Button Handler ---
-const researchBtn = document.getElementById('research-report-btn');
-if (researchBtn) {
-  researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
-  researchBtn.onclick = () => {
-    toast('Select a stock "Buy" button below to see its next price change.');
-    // Add temporary click listeners to Buy buttons for all stocks
-    STOCKS.forEach(s => {
-      // Find the Buy button for this stock
-      const buyBtn = document.querySelector(`#trade-table button[onclick*="buyStock('${s.symbol}')"]`);
-      if (buyBtn) {
-        buyBtn.classList.add('report-select');
-        // Save original onclick so we can restore it later
-        if (!buyBtn._origOnClick) buyBtn._origOnClick = buyBtn.onclick;
-        buyBtn.onclick = () => {
-          // Simulate next price for that stock ONLY
-          const oldPrice = prices[s.symbol];
-          setRandomPrices({});
-          const newPrice = prices[s.symbol];
-          const diff = newPrice - oldPrice;
-          toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
-          state.researchReportAvailable = false;
-          researchBtn.style.display = 'none';
-          saveState();
-          // Remove highlight and restore original onclick for all Buy buttons
-          STOCKS.forEach(stockObj => {
-            const btn = document.querySelector(`#trade-table button[onclick*="buyStock('${stockObj.symbol}')"]`);
-            if (btn) {
-              btn.classList.remove('report-select');
-              if (btn._origOnClick) btn.onclick = btn._origOnClick;
-            }
-          });
-          renderShop(); // refresh shop UI
-          updateTradeTable(); // refresh table to remove highlights
-        };
-      }
-    });
+    // --- Research Report Button Handler ---
+    const researchBtn = document.getElementById('research-report-btn');
+    if (researchBtn) {
+      researchBtn.style.display = state.researchReportAvailable ? '' : 'none';
+      researchBtn.onclick = () => {
+        toast('Select a stock to see its next price change.');
+        STOCKS.forEach(s => {
+          const buyInput = document.getElementById(`buy_${s.symbol}`);
+          if (buyInput) {
+            buyInput.onclick = () => {
+              const oldPrice = prices[s.symbol];
+              setRandomPrices({});
+              const newPrice = prices[s.symbol];
+              const diff = newPrice - oldPrice;
+              toast(`Next price change for ${s.symbol}: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`);
+              state.researchReportAvailable = false;
+              researchBtn.style.display = 'none';
+              saveState();
+            };
+          }
+        });
+      };
+    }
+
+    closeModal('modal-newgame');
+    toast('New game started!');
   };
-} // <-- MISSING CLOSING BRACE ADDED HERE!
 }
+
 // ------------------ Modals ------------------
 function openModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'false'); }
 function closeModal(id) { const m = document.getElementById(id); if (m) m.setAttribute('aria-hidden', 'true'); }
