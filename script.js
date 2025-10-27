@@ -682,7 +682,7 @@ function updatePortfolioTable() {
 
 function getTradeFee(price, qty) {
   // Standard fee: 2% of trade value
-  let feeRate = 0.01;
+  let feeRate = 0.02;
   if (state.tradeFeeDiscount) feeRate = 0.01;
   return price * qty * feeRate;
 }
